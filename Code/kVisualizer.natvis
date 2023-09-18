@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+
+	<Type Name="kString">
+		<Intrinsic Name="count" Expression="count" />
+		<Intrinsic Name="data" Expression="data" />
+		<DisplayString>{data,[count]}</DisplayString>
+		<StringView>data,[count]</StringView>
+		<Expand>
+			<Item Name="[count]" ExcludeView="simple">count</Item>
+			<ArrayItems>
+				<Size>count</Size>
+				<ValuePointer>data</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+
+	<Type Name="kVec2">
+		<DisplayString>{{ {x}, {y} }}</DisplayString>
+		<Expand>
+			<Item Name="[x]" ExcludeView="simple">x</Item>
+			<Item Name="[y]" ExcludeView="simple">y</Item>
+		</Expand>
+	</Type>
+
+	<Type Name="kVec3">
+		<DisplayString>{{ {x}, {y}, {z} }}</DisplayString>
+		<Expand>
+			<Item Name="[x]" ExcludeView="simple">x</Item>
+			<Item Name="[y]" ExcludeView="simple">y</Item>
+			<Item Name="[z]" ExcludeView="simple">z</Item>
+		</Expand>
+	</Type>
+
+	<Type Name="kVec4">
+		<DisplayString>{{ {x}, {y}, {z}, {w} }}</DisplayString>
+		<Expand>
+			<Item Name="[x]" ExcludeView="simple">x</Item>
+			<Item Name="[y]" ExcludeView="simple">y</Item>
+			<Item Name="[z]" ExcludeView="simple">z</Item>
+			<Item Name="[w]" ExcludeView="simple">w</Item>
+		</Expand>
+	</Type>
+
+	<Type Name="kMat2">
+		<DisplayString>{{ {rows[0]}, {rows[1]} }}</DisplayString>
+		<Expand>
+			<Item Name="[0]" ExcludeView="simple">rows[0]</Item>
+			<Item Name="[1]" ExcludeView="simple">rows[1]</Item>
+		</Expand>
+	</Type>
+
+	<Type Name="kMat3">
+		<DisplayString>{{ {rows[0]}, {rows[1]}, {rows[2]} }}</DisplayString>
+		<Expand>
+			<Item Name="[0]" ExcludeView="simple">rows[0]</Item>
+			<Item Name="[1]" ExcludeView="simple">rows[1]</Item>
+			<Item Name="[2]" ExcludeView="simple">rows[2]</Item>
+		</Expand>
+	</Type>
+
+	<Type Name="kMat4">
+		<DisplayString>{{ {rows[0]}, {rows[1]}, {rows[2]}, {rows[3]} }}</DisplayString>
+		<Expand>
+			<Item Name="[0]" ExcludeView="simple">rows[0]</Item>
+			<Item Name="[1]" ExcludeView="simple">rows[1]</Item>
+			<Item Name="[2]" ExcludeView="simple">rows[2]</Item>
+			<Item Name="[3]" ExcludeView="simple">rows[3]</Item>
+		</Expand>
+	</Type>
+
+	<Type Name="kQuat">
+		<DisplayString>{{ {w}, {x}, {y}, {z} }}</DisplayString>
+		<Expand>
+			<Item Name="[w]" ExcludeView="simple">w</Item>
+			<Item Name="[x]" ExcludeView="simple">x</Item>
+			<Item Name="[y]" ExcludeView="simple">y</Item>
+			<Item Name="[z]" ExcludeView="simple">z</Item>
+		</Expand>
+	</Type>
+
+</AutoVisualizer>
