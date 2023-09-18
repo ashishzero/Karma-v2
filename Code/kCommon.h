@@ -452,14 +452,6 @@ typedef struct kLogger {
 	void *    data;
 } kLogger;
 
-typedef struct kContext {
-	kAllocator           allocator;
-	kRandomSource        random;
-	kHandleAssertionProc assertion;
-	kLogger              logger;
-	kFatalErrorProc      fatal;
-} kContext;
-
 //
 //
 //
@@ -548,19 +540,6 @@ bool       kSplitString(kString str, kString substr, kString *left, kString *rig
 //
 //
 
-void       kLogPrintVEx(kLogger *logger, kLogLevel level, const char *fmt, va_list list);
-void       kLogTraceVEx(kLogger *logger, const char *fmt, va_list list);
-void       kLogWarningVEx(kLogger *logger, const char *fmt, va_list list);
-void       kLogErrorVEx(kLogger *logger, const char *fmt, va_list list);
-void       kLogPrintEx(kLogger *logger, kLogLevel level, const char *fmt, ...);
-void       kLogTraceEx(kLogger *logger, const char *fmt, ...);
-void       kLogWarningEx(kLogger *logger, const char *fmt, ...);
-void       kLogErrorEx(kLogger *logger, const char *fmt, ...);
-
-//
-//
-//
-
 int        kAtomicLoad(kAtomic *atomic);
 void       kAtomicStore(kAtomic *atomic, int value);
 int        kAtomicInc(kAtomic *dst);
@@ -571,7 +550,3 @@ void *     kAtomicCmpExgPtr(void *volatile *dst, void *exchange, void *compare);
 int        kAtomicExg(kAtomic *dst, int val);
 void       kAtomicLock(kAtomic *lock);
 void       kAtomicUnlock(kAtomic *lock);
-
-//
-//
-//

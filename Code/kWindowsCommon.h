@@ -6,6 +6,9 @@
 #include <Windows.h>
 #include <stdio.h>
 
+#pragma comment(lib, "Kernel32.lib")
+#pragma comment(lib, "User32.lib")
+
 static void kWinLogError(kLogger *logger, DWORD error, const char *source, const char *fmt, ...) {
 	if (error) {
 		LPWSTR message = 0;

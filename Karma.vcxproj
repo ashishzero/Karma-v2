@@ -19,19 +19,23 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Code\kContext.h" />
+    <ClCompile Include="Code\Main.c" />
+    <ClInclude Include="Code\kMedia.h" />
     <ClInclude Include="Code\kCommon.h" />
     <ClInclude Include="Code\kFileSystem.h" />
     <ClInclude Include="Code\kMath.h" />
+    <ClInclude Include="Code\kContext.h" />
+    <ClInclude Include="Code\kPlatform.h" />
     <ClInclude Include="Code\kThread.h" />
     <ClCompile Include="Code\kCommon.c" />
     <ClCompile Include="Code\kFileSystem.c" />
+    <ClCompile Include="Code\kPlatform.c" />
     <ClCompile Include="Code\kThread.c" />
     <ClCompile Include="Code\kMath.c" />
     <ClInclude Include="Code\kWindowsCommon.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Code\kContext.c" />
+    <ClCompile Include="Code\kMedia.c" />
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="Code\kVisualizer.natvis" />

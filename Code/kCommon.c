@@ -487,60 +487,6 @@ bool kSplitString(kString str, kString substr, kString *left, kString *right) {
 //
 //
 
-void kLogPrintVEx(kLogger *logger, kLogLevel level, const char *fmt, va_list list) {
-	if (level >= logger->level) {
-		char buff[4096 + 2];
-		int len = vsnprintf(buff, 4096, fmt, list);
-		buff[len]     = '\n';
-		buff[len + 1] = 0;
-		logger->proc(logger->data, logger->level, (u8 *)buff, len + 1);
-	}
-}
-
-void kLogTraceVEx(kLogger *logger, const char *fmt, va_list list) {
-	kLogPrintVEx(logger, kLogLevel_Verbose, fmt, list);
-}
-
-void kLogWarningVEx(kLogger *logger, const char *fmt, va_list list) {
-	kLogPrintVEx(logger, kLogLevel_Warning, fmt, list);
-}
-
-void kLogErrorVEx(kLogger *logger, const char *fmt, va_list list) {
-	kLogPrintVEx(logger, kLogLevel_Error, fmt, list);
-}
-
-void kLogPrintEx(kLogger *logger, kLogLevel level, const char *fmt, ...) {
-	va_list args;
-	va_start(args, fmt);
-	kLogPrintVEx(logger, level, fmt, args);
-	va_end(args);
-}
-
-void kLogTraceEx(kLogger *logger, const char *fmt, ...) {
-	va_list args;
-	va_start(args, fmt);
-	kLogTraceVEx(logger, fmt, args);
-	va_end(args);
-}
-
-void kLogWarningEx(kLogger *logger, const char *fmt, ...) {
-	va_list args;
-	va_start(args, fmt);
-	kLogWarningVEx(logger, fmt, args);
-	va_end(args);
-}
-
-void kLogErrorEx(kLogger *logger, const char *fmt, ...) {
-	va_list args;
-	va_start(args, fmt);
-	kLogErrorVEx(logger, fmt, args);
-	va_end(args);
-}
-
-//
-//
-//
-
 #if K_COMPILER_MSVC == 1
 
 #include <intrin.h>

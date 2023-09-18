@@ -9,8 +9,6 @@
 #include <objbase.h>
 #include <shellapi.h>
 
-#pragma comment(lib, "Kernel32.lib")
-#pragma comment(lib, "User32.lib")
 #pragma comment(lib, "Ole32.lib")
 #pragma comment(lib, "Shell32.lib")
 
@@ -22,15 +20,6 @@
 // Window / Events Helpers
 //
 
-typedef struct kWinWindow {
-	HWND            wnd;
-	kMediaIo      * io;
-	int             monitor_w;
-	int             monitor_h;
-	u16             resized;
-	DWORD           style;
-	WINDOWPLACEMENT placement;
-} kWinWindow;
 
 static const kKey VirtualKeyMap[] = {
 	['A'] = kKey_A, ['B'] = kKey_B,
@@ -106,83 +95,6 @@ static bool kIsWindowFullscreen(kWindow id) {
 		return false;
 	}
 	return true;
-}
-
-static void kWinToggleWindowFullscreen(kMediaIo *io, kWindow id) {
-	kWinWindow *window = kWinGetWindow(id);
-	DWORD dw_style = (DWORD)GetWindowLongPtrW(window->wnd, GWL_STYLE);
-	if (dw_style & WS_OVERLAPPEDWINDOW) {
-		MONITORINFO mi = { .cbSize = sizeof(mi) };
-		if (GetWindowPlacement(window->wnd, &window->placement) &&
-			GetMonitorInfoW(MonitorFromWindow(window->wnd, MONITOR_DEFAULTTOPRIMARY), &mi)) {
-			SetWindowLongPtrW(window->wnd, GWL_STYLE, dw_style & ~WS_OVERLAPPEDWINDOW);
-			SetWindowPos(window->wnd, HWND_TOP, mi.rcMonitor.left, mi.rcMonitor.top,
-				mi.rcMonitor.right - mi.rcMonitor.left, mi.rcMonitor.bottom - mi.rcMonitor.top,
-				SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
-			window->style = dw_style;
-		}
-	} else {
-		SetWindowLongPtrW(window->wnd, GWL_STYLE, window->style);
-		SetWindowPlacement(window->wnd, &window->placement);
-		SetWindowPos(window->wnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
-	}
-}
-
-static void kWinResizeWindow(kMediaIo *io, kWindow id, u32 w, u32 h) {
-	kWinWindow *window = kWinGetWindow(id);
-
-	DWORD style = (DWORD)GetWindowLongPtrW(window->wnd, GWL_STYLE);
-	RECT rect   = {
-		.left   = 0,
-		.right  = w,
-		.top    = 0,
-		.bottom = h
-	};
-	AdjustWindowRect(&rect, style, FALSE);
-	int width  = rect.right - rect.left;
-	int height = rect.bottom - rect.top;
-
-	SetWindowPos(window->wnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
-}
-
-static void kWinClipCursor(kMediaIo *io, kWinWindow *window, RECT *rect) {
-	POINT pt  = { rect->left, rect->top };
-	POINT pt2 = { rect->right, rect->bottom };
-	ClientToScreen(window->wnd, &pt);
-	ClientToScreen(window->wnd, &pt2);
-
-	RECT sr;
-	SetRect(&sr, pt.x, pt.y, pt2.x, pt2.y);
-	ClipCursor(&sr);
-
-	int center_x = sr.left + (sr.right - sr.left) / 2;
-	int center_y = sr.top + (sr.bottom - sr.top) / 2;
-
-	SetCursorPos(center_x, center_y);
-}
-
-static void kWinHideCursor(kMediaIo *io) {
-	CURSORINFO ci = { .cbSize = sizeof(ci) };
-	if (GetCursorInfo(&ci) && (ci.flags == 0))
-		return;
-	ShowCursor(FALSE);
-
-	kWinWindow *window = kWinGetWindow(io->window.handle);
-
-	RECT rect;
-	GetClientRect(window->wnd, &rect);
-	kWinClipCursor(io, window, &rect);
-
-	kPushWindowCursorEvent(io, false);
-}
-
-static void kWinShowCursor(kMediaIo *io) {
-	CURSORINFO ci = { .cbSize = sizeof(ci) };
-	if (GetCursorInfo(&ci) && (ci.flags != 0))
-		return;
-	ShowCursor(TRUE);
-	ClipCursor(NULL);
-	kPushWindowCursorEvent(io, true);
 }
 
 static LRESULT CALLBACK kWinHandleWindowsEvent(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam) {

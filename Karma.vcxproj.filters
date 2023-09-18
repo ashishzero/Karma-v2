@@ -21,7 +21,7 @@
     <ClInclude Include="Code\kThread.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Code\kContext.h">
+    <ClInclude Include="Code\kMedia.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Code\kWindowsCommon.h">
@@ -33,9 +33,15 @@
     <ClInclude Include="Code\kFileSystem.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Code\kPlatform.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Code\kContext.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Code\kContext.c">
+    <ClCompile Include="Code\kMedia.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Code\kMath.c">
@@ -48,6 +54,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Code\kFileSystem.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Code\kPlatform.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Code\Main.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

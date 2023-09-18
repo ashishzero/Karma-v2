@@ -1,4 +1,4 @@
-#include "KrPlatform.h"
+#include "kMedia.h"
 #include "kMath.h"
 
 void Update(float dt) {
@@ -14,11 +14,10 @@ void Update(float dt) {
 	}
 
 	if (kKeyPressed(kKey_H)) {
-		u32 flags = kGetWindowFlags(io);
-		if (flags & kWindow_CursorHidden)
-			kEnableCursor(io);
+		if (kGetKeyModFlags() & kKeyMod_Ctrl)
+			kEnableCursor();
 		else
-			kDisableCursor(io);
+			kDisableCursor();
 	}
 }
 
