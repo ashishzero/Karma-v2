@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Code\kContext.c" />
+    <ClCompile Include="Code\Main.c" />
     <ClInclude Include="Code\kMedia.h" />
     <ClInclude Include="Code\kCommon.h" />
     <ClInclude Include="Code\kFileSystem.h" />

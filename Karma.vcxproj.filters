@@ -56,6 +56,9 @@
     <ClCompile Include="Code\kContext.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Code\Main.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="Code\kVisualizer.natvis" />

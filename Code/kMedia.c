@@ -491,19 +491,13 @@ static void kWinClipCursor(void) {
 
 	SetRect(&rect, pt.x, pt.y, pt2.x, pt2.y);
 	ClipCursor(&rect);
-}
 
-static void kWinCenterCursor(void) {
-	int center_x = media.window.state.width / 2;
-	int center_y = media.window.state.height / 2;
-
-	POINT pt = {
-		.x = center_x,
-		.y = center_y
+	POINT center_pt = {
+		.x = (rect.right - rect.left) / 2,
+		.y = (rect.bottom - rect.top) / 2
 	};
-
-	ClientToScreen(media.window.native->wnd, &pt);
-	SetCursorPos(pt.x, pt.y);
+	ClientToScreen(window->wnd, &center_pt);
+	SetCursorPos(center_pt.x, center_pt.y);
 }
 
 static void kWinForceEnableCursor(void) {
@@ -526,7 +520,6 @@ static void kWinForceDisableCursor(void) {
 	if (GetActiveWindow() == window->wnd) {
 		ShowCursor(FALSE);
 		kWinClipCursor();
-		kWinCenterCursor();
 	}
 
 	RAWINPUTDEVICE rid = {
@@ -696,6 +689,11 @@ static LRESULT CALLBACK kWinProcessWindowsEvent(HWND wnd, UINT msg, WPARAM wpara
 		case WM_SIZE:
 		{
 			media.window.flags |= kWindow_Resized;
+
+			if (!kIsCursorEnabled() && kIsWindowFocused()) {
+				kWinClipCursor();
+			}
+
 			res = DefWindowProcW(wnd, msg, wparam, lparam);
 		} break;
 
@@ -939,7 +937,7 @@ static void kWinCreateWindow(const char *mb_title, uint w, uint h, bool fullscre
 	}
 }
 
-static void kWinInitMedia(void) {
+static void kWinLoadInitialState(void) {
 	RECT rc = {0};
 	GetClientRect(media.window.native->wnd, &rc);
 
@@ -983,6 +981,70 @@ static void kWinInitMedia(void) {
 	media.events.data      = kAlloc(sizeof(kEvent) * media.events.allocated);
 }
 
+static int kWinRunEventLoop(void) {
+	int   status       = 0;
+	float dt           = 1.0f / 60.0f;
+	u64   counter      = kGetPerformanceCounter();
+	u64   frequency    = kGetPerformanceFrequency();
+
+	while (1) {
+		kNextFrame();
+
+		MSG msg;
+		while (PeekMessageW(&msg, 0, 0, 0, PM_REMOVE)) {
+			if (msg.message == WM_QUIT) {
+				status = (int)msg.wParam;
+				return status;
+			}
+			TranslateMessage(&msg);
+			DispatchMessageW(&msg);
+		}
+
+		if (media.window.flags & kWindow_Resized) {
+			RECT rc;
+			GetClientRect(media.window.native->wnd, &rc);
+
+			media.window.state.width  = (u32)(rc.right - rc.left);
+			media.window.state.height = (u32)(rc.bottom - rc.top);
+
+			kEvent ev    = {
+				.kind    = kEvent_Resized,
+				.resized = {.width = media.window.state.width, .height = media.window.state.height }
+			};
+			kAddEvent(&ev);
+		}
+
+		media.keyboard.mods = kWinGetKeyModFlags();
+
+		if (kIsWindowClosed())
+			break;
+
+		u64 new_counter = kGetPerformanceCounter();
+		u64 counts      = new_counter - counter;
+		counter         = new_counter;
+		dt              = (float)(((1000000.0 * (double)counts) / (double)frequency) / 1000000.0);
+	}
+
+	return status;
+}
+
+int kEventLoop(void) {
+	// TODO: Specification
+	memset(&media, 0, sizeof(media));
+
+	kWinCreateWindow(0, 0, 0, 0, 0);
+	kWinLoadInitialState();
+
+	int status = kWinRunEventLoop();
+
+	kWinDestroyWindow();
+
+	return status;
+}
+
+void kBreakLoop(int status) {
+	PostQuitMessage(status);
+}
 
 //
 // Main
@@ -991,11 +1053,8 @@ static void kWinInitMedia(void) {
 extern void Main(int argc, const char **argv);
 
 static int kMain(void) {
-	if (IsWindows10OrGreater()) {
-		SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
-	} else {
-		SetProcessDPIAware();
-	}
+	// TODO: move to manifest file??
+	SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
 #if defined(K_BUILD_DEBUG) || defined(M_BUILD_DEVELOPER)
 	AllocConsole();

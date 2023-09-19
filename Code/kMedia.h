@@ -218,3 +218,6 @@ void       kDisableCursor(void);
 //
 //
 //
+
+int        kEventLoop(void);
+void       kBreakLoop(int status);
