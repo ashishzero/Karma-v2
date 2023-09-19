@@ -1,34 +1,134 @@
 #pragma once
-#include "kContext.h"
+#include "kCommon.h"
 
-//
-//
-//
+typedef enum kKey {
+	kKey_Unknown,
+	kKey_A, kKey_B, kKey_C, kKey_D, kKey_E, kKey_F, kKey_G, kKey_H,
+	kKey_I, kKey_J, kKey_K, kKey_L, kKey_M, kKey_N, kKey_O, kKey_P,
+	kKey_Q, kKey_R, kKey_S, kKey_T, kKey_U, kKey_V, kKey_W, kKey_X,
+	kKey_Y, kKey_Z,
+	kKey_0, kKey_1, kKey_2, kKey_3, kKey_4,
+	kKey_5, kKey_6, kKey_7, kKey_8, kKey_9,
+	kKey_Return, kKey_Escape, kKey_Backspace, kKey_Tab, kKey_Space, kKey_Shift, kKey_Ctrl,
+	kKey_F1, kKey_F2, kKey_F3, kKey_F4, kKey_F5, kKey_F6,
+	kKey_F7, kKey_F8, kKey_F9, kKey_F10, kKey_F11, kKey_F12,
+	kKey_PrintScreen, kKey_Insert, kKey_Home,
+	kKey_PageUp, kKey_PageDown, kKey_Delete, kKey_End,
+	kKey_Right, kKey_Left, kKey_Down, kKey_Up,
+	kKey_Divide, kKey_Multiply, kKey_Minus, kKey_Plus,
+	kKey_Period, kKey_BackTick,
+	kKey_Count
+} kKey;
 
-void     * kAlloc(umem size);
-void     * kRealloc(void *ptr, umem prev, umem size);
-void       kFree(void *ptr, umem size);
+typedef enum kButton {
+	kButton_Left,
+	kButton_Right,
+	kButton_Middle,
+	kButton_Count
+} kButton;
 
-u32        kRandom(void);
-u32        kRandomBound(u32 bound);
-u32        kRandomRange(u32 min, u32 max);
-float      kRandomFloat01(void);
-float      kRandomFloatBound(float bound);
-float      kRandomFloatRange(float min, float max);
-float      kRandomFloat(void);
-void       kRandomSourceSeed(u64 state, u64 seq);
+enum kKeyModFlags {
+	kKeyMod_LeftShift  = 0x01,
+	kKeyMod_RightShift = 0x02,
+	kKeyMod_LeftCtrl   = 0x04,
+	kKeyMod_RightCtrl  = 0x08,
+	kKeyMod_LeftAlt    = 0x10,
+	kKeyMod_RightAlt   = 0x20,
+	kKeyMod_Ctrl       = kKeyMod_LeftCtrl  | kKeyMod_RightCtrl,
+	kKeyMod_Alt        = kKeyMod_LeftAlt   | kKeyMod_RightAlt,
+	kKeyMod_Shift      = kKeyMod_LeftShift | kKeyMod_RightShift,
+};
 
-void       kLogPrintV(kLogLevel level, const char *fmt, va_list list);
-void       kLogTraceV(const char *fmt, va_list list);
-void       kLogWarningV(const char *fmt, va_list list);
-void       kLogErrorV(const char *fmt, va_list list);
+typedef enum kEventKind {
+	kEvent_Activated,
+	kEvent_Deactivated,
+	kEvent_Resized,
+	kEvent_Closed,
+	kEvent_CursorEnter,
+	kEvent_CursorLeave,
+	kEvent_CursorMoved,
+	kEvent_ButtonPressed,
+	kEvent_ButtonReleased,
+	kEvent_DoubleClicked,
+	kEvent_WheelMoved,
+	kEvent_KeyPressed,
+	kEvent_KeyReleased,
+	kEvent_TextInput,
+} kEventKind;
 
-void       kLogPrint(kLogLevel level, const char *fmt, ...);
-void       kLogTrace(const char *fmt, ...);
-void       kLogWarning(const char *fmt, ...);
-void       kLogError(const char *fmt, ...);
+typedef struct kResizedEvent {
+	int width;
+	int height;
+} kResizedEvent;
 
-void       kFatalError(const char *msg);
+typedef struct kCursorEvent {
+	kVec2i position;
+} kCursorEvent;
+
+typedef struct kButtonEvent {
+	kButton symbol;
+} kButtonEvent;
+
+typedef struct kKeyEvent {
+	kKey symbol;
+	int  repeat;
+} kKeyEvent;
+
+typedef struct kWheelEvent {
+	float horizontal;
+	float vertical;
+} kWheelEvent;
+
+typedef struct kTextEvent {
+	u32 codepoint;
+	u32 mods;
+} kTextEvent;
+
+typedef struct kEvent {
+	kEventKind kind;
+	union {
+		kResizedEvent resized;
+		kCursorEvent  cursor;
+		kButtonEvent  button;
+		kKeyEvent     key;
+		kWheelEvent   wheel;
+		kTextEvent    text;
+	};
+} kEvent;
+
+enum kStateFlags {
+	kPressed       = 0x1,
+	kReleased      = 0x2,
+	kDoubleClicked = 0x4,
+};
+
+enum kWindowFlags {
+	kWindow_Fullscreen = 0x1,
+};
+
+typedef struct kState {
+	u8 down;
+	u8 flags;
+	u8 hits;
+} kState;
+
+typedef struct kKeyboardState {
+	uint       mods;
+	kState     keys[kKey_Count];
+} kKeyboardState;
+
+typedef struct kMouseState {
+	kVec2i cursor;
+	kVec2i delta;
+	kVec2  wheel;
+	kState buttons[kKey_Count];
+} kMouseState;
+
+typedef struct kWindowState {
+	u32     width;
+	u32     height;
+	u32     flags;
+} kWindowState;
 
 //
 //
@@ -50,9 +150,8 @@ bool       kIsButtonDown(kButton button);
 bool       kButtonPressed(kButton button);
 bool       kButtonReleased(kButton button);
 
-kVec2i     kGetCursorScreenPosition(void);
-kVec2      kGetCursorPosition(void);
-kVec2      kGetCursorDelta(void);
+kVec2i     kGetCursorPosition(void);
+kVec2i     kGetCursorDelta(void);
 float      kGetWheelHorizontal(void);
 float      kGetWheelVertical(void);
 
@@ -63,14 +162,20 @@ bool       kIsWindowFocused(void);
 bool       kIsWindowFullscreen(void);
 void       kGetWindowSize(u32 *w, u32 *h);
 
-//
-//
-//
+bool       kIsCursorEnabled(void);
+bool       kIsCursorHovered(void);
 
-void       kResizeWindow(u32 w, u32 h);
-void       kToggleWindowFullscreen(void);
-void       kEnableCursor(void);
-void       kDisableCursor(kContext *io);
+void       kGetKeyboardState(kKeyboardState *keyboard);
+void       kGetKeyState(kState *state, kKey key);
+void       kGetMouseState(kMouseState *mouse);
+void       kGetButtonState(kState *state, kButton button);
+void       kGetWindowState(kWindowState *state);
+
+void       kSetKeyboardState(kKeyboardState *keyboard);
+void       kSetKeyState(kState *state, kKey key);
+void       kSetMouseState(kMouseState *mouse);
+void       kSetButtonState(kState *state, kButton button);
+void       kSetWindowState(kWindowState *state);
 
 //
 //
@@ -79,12 +184,16 @@ void       kDisableCursor(kContext *io);
 void       kClearInput(void);
 void       kNextFrame(void);
 
-void       kAddEvent(kEvent ev);
+void       kAddEvent(kEvent *ev);
 void       kAddKeyEvent(kKey key, bool down, bool repeat);
 void       kAddButtonEvent(kButton button, bool down);
+void       kAddTextInputEvent(u32 codepoint, u32 mods);
 void       kAddDoubleClickEvent(kButton button);
-void       kAddCursorEvent(kVec2i pos, kVec2 delta);
+void       kAddCursorEvent(kVec2i pos);
+void       kAddCursorDeltaEvent(kVec2i delta);
 void       kAddWheelEvent(float horz, float vert);
+void       kAddCursorEnterEvent(void);
+void       kAddCursorLeaveEvent(void);
 void       kAddWindowResizeEvent(u32 width, u32 height, bool fullscreen);
 void       kAddWindowFocusEvent(bool focused);
 void       kAddWindowCloseEvent(void);
@@ -97,10 +206,14 @@ u64        kGetPerformanceFrequency(void);
 u64        kGetPerformanceCounter(void);
 void       kTerminate(uint code);
 
-void       kDefaultHandleAssertion(const char *file, int line, const char *proc, const char *string);
-void       kDefaultFatalError(const char *message);
-void       kDefaultHandleLog(void * data, kLogLevel level, const u8 *msg, imem len);
-void     * kDefaultHeapAllocator(kAllocatorMode mode, void *ptr, umem prev, umem size, void *context);
+//
+//
+//
+
+void       kResizeWindow(u32 w, u32 h);
+void       kToggleWindowFullscreen(void);
+void       kEnableCursor(void);
+void       kDisableCursor(void);
 
 //
 //

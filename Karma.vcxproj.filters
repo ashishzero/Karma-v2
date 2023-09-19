@@ -33,9 +33,6 @@
     <ClInclude Include="Code\kFileSystem.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Code\kPlatform.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Code\kContext.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -56,10 +53,7 @@
     <ClCompile Include="Code\kFileSystem.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Code\kPlatform.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Code\Main.c">
+    <ClCompile Include="Code\kContext.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

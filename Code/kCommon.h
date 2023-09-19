@@ -4,9 +4,16 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-#include <stdnoreturn.h>
 #include <float.h>
 #include <assert.h>
+
+#ifndef __has_include
+#define __has_include(x) 0
+#endif
+
+#if __has_include("stdnoreturn.h")
+#include <stdnoreturn.h>
+#endif
 
 #if defined(__clang__) || defined(__ibmxl__)
 #define K_COMPILER_CLANG 1
@@ -173,6 +180,9 @@
 #ifdef __GNUC__
 noreturn inproc __attribute__((always_inline)) void Unreachable() { kDebugTriggerbreakpoint(); __builtin_unreachable(); }
 #elif defined(_MSC_VER)
+#ifndef noreturn
+#define noreturn _Noreturn
+#endif
 noreturn __forceinline void kUnreachable() { kDebugTriggerbreakpoint(); __assume(false); }
 #else // ???
 inproc void kUnreachable() { kTriggerBreakpoint(); }
@@ -180,7 +190,7 @@ inproc void kUnreachable() { kTriggerBreakpoint(); }
 
 #define kNoDefaultCase() default: kUnreachable(); break
 
-noreturn inproc void kUnimplemented() { kTriggerBreakpoint(); kUnreachable(); }
+noreturn  inproc void kUnimplemented() { kTriggerBreakpoint(); kUnreachable(); }
 
 //
 //
@@ -398,7 +408,7 @@ typedef void *(*kAllocatorProc)(kAllocatorMode, void *, umem, umem , void *);
 
 typedef struct kAllocator {
 	kAllocatorProc proc;
-	void *        data;
+	void *         data;
 } kAllocator;
 
 enum kArenaFlags {

@@ -27,8 +27,7 @@ kFile kOpenFile(const char *mb_filepath, kFileAccess paccess, kFileShareMode psh
 
 	HANDLE file = CreateFileW(filepath, access, share_mode, NULL, disposition, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (file == INVALID_HANDLE_VALUE) {
-		kContext *ctx = kGetContext();
-		kWinLogError(&ctx->logger, GetLastError(), "Failed to open file: \"%s\"", mb_filepath);
+		kWinLogError(GetLastError(), "Failed to open file: \"%s\"", mb_filepath);
 		return (kFile) { .ptr = 0 };
 	}
 
@@ -53,8 +52,7 @@ umem kReadFile(kFile handle, u8 *buffer, umem size) {
 	while (remaining_bytes_to_read) {
 		DWORD read_bytes = 0;
 		if (!ReadFile((HANDLE)handle.ptr, buffer + total_bytes_read, read_size, &read_bytes, NULL)) {
-			kContext *ctx = kGetContext();
-			kWinLogError(&ctx->logger, GetLastError(), "Windows", "Failed while reading file");
+			kWinLogError(GetLastError(), "Windows", "Failed while reading file");
 			break;
 		}
 
@@ -82,8 +80,7 @@ umem kWriteFile(kFile handle, u8 *buff, umem size) {
 	while (remaining_bytes_to_write) {
 		DWORD written = 0;
 		if (!WriteFile((HANDLE)handle.ptr, buff + total_bytes_written, write_size, &written, NULL)) {
-			kContext *ctx = kGetContext();
-			kWinLogError(&ctx->logger, GetLastError(), "Windows", "Failed while writing file");
+			kWinLogError(GetLastError(), "Windows", "Failed while writing file");
 			break;
 		}
 

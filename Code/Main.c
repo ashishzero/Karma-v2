@@ -14,10 +14,11 @@ void Update(float dt) {
 	}
 
 	if (kKeyPressed(kKey_H)) {
-		if (kGetKeyModFlags() & kKeyMod_Ctrl)
-			kEnableCursor();
-		else
+		if (kIsCursorEnabled()) {
 			kDisableCursor();
+		} else {
+			kEnableCursor();
+		}
 	}
 }
 

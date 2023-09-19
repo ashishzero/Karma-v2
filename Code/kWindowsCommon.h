@@ -1,5 +1,5 @@
 #pragma once
-#include "kCommon.h"
+#include "kContext.h"
 
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN 
@@ -9,7 +9,7 @@
 #pragma comment(lib, "Kernel32.lib")
 #pragma comment(lib, "User32.lib")
 
-static void kWinLogError(kLogger *logger, DWORD error, const char *source, const char *fmt, ...) {
+static void kWinLogError(DWORD error, const char *source, const char *fmt, ...) {
 	if (error) {
 		LPWSTR message = 0;
 		FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
@@ -20,7 +20,7 @@ static void kWinLogError(kLogger *logger, DWORD error, const char *source, const
 		va_start(args, fmt);
 		vsnprintf(buff, sizeof(buff), fmt, args);
 		va_end(args);
-		kLogErrorEx(logger, "%s: %s: %S\n", source, buff, message);
+		kLogError("%s: %s: %S\n", source, buff, message);
 		LocalFree(message);
 	} else {
 		char buff[4096];
@@ -28,7 +28,7 @@ static void kWinLogError(kLogger *logger, DWORD error, const char *source, const
 		va_start(args, fmt);
 		vsnprintf(buff, sizeof(buff), fmt, args);
 		va_end(args);
-		kLogErrorEx(logger, "%s: %s: Unknown error\n", source, buff);
+		kLogError("%s: %s: Unknown error\n", source, buff);
 	}
 }
 
