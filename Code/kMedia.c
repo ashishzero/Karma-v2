@@ -27,10 +27,11 @@ typedef struct kWindow {
 } kWindow;
 
 typedef struct kMedia {
-	kEventList      events;
-	kKeyboardState  keyboard;
-	kMouseState     mouse;
-	kWindow         window;
+	kEventList       events;
+	kKeyboardState   keyboard;
+	kMouseState      mouse;
+	kWindow          window;
+	kMediaUserEvents user;
 } kMedia;
 
 static kMedia media;
@@ -42,6 +43,31 @@ static kMedia media;
 void kFallbackUserLoadProc(void) {}
 void kFallbackUserReleaseProc(void) {}
 void kFallbackUserUpdateProc(float dt) {}
+
+void *kGetUserEventData(void) {
+	return media.user.data;
+}
+
+void kSetUserEventData(void *data) {
+	media.user.data = data;
+}
+
+void kGetUserEvents(kMediaUserEvents *user) {
+	memcpy(user, &media.user, sizeof(media.user));
+}
+
+void kSetUserEvents(kMediaUserEvents *user) {
+	memcpy(&media.user, user, sizeof(media.user));
+
+	if (!media.user.load)
+		media.user.load    = kFallbackUserLoadProc;
+
+	if (!media.user.release)
+		media.user.release = kFallbackUserLoadProc;
+
+	if (!media.user.update)
+		media.user.update  = kFallbackUserUpdateProc;
+}
 
 kEvent *kGetEvents(int *count) {
 	*count = media.events.count;
@@ -1057,6 +1083,8 @@ static int kWinRunEventLoop(void) {
 
 		media.keyboard.mods = kWinGetKeyModFlags();
 
+		media.user.update(dt);
+
 		if (kIsWindowClosed())
 			break;
 
@@ -1069,14 +1097,19 @@ static int kWinRunEventLoop(void) {
 	return status;
 }
 
-int kEventLoop(void) {
-	// TODO: Specification
+int kEventLoop(const kMediaSpec *spec, kMediaUserEvents user) {
 	memset(&media, 0, sizeof(media));
 
-	kWinCreateWindow(0, 0, 0, 0, 0);
+	kWinCreateWindow(spec->window.title, spec->window.width, spec->window.height, spec->window.fullscreen, spec->window.resizable);
 	kWinLoadInitialState();
 
+	kSetUserEvents(&user);
+
+	media.user.load();
+
 	int status = kWinRunEventLoop();
+
+	media.user.release();
 
 	kWinDestroyWindow();
 

@@ -22,5 +22,9 @@ void Update(float dt) {
 }
 
 void Main(int argc, const char **argv) {
-	kEventLoop();
+	kMediaUserEvents user = {
+		.update = Update
+	};
+
+	kEventLoop(&kDefaultSpec, user);
 }

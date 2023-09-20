@@ -136,6 +136,31 @@ typedef struct kWindowState {
 	u32     flags;
 } kWindowState;
 
+typedef struct kMediaWindowSpec {
+	const char *title;
+	u32         width;
+	u32         height;
+	bool        fullscreen;
+	bool        resizable;
+} kMediaWindowSpec;
+
+typedef struct kMediaSpec {
+	kMediaWindowSpec window;
+} kMediaSpec;
+
+typedef struct kMediaUserEvents {
+	void  *data;
+	void (*update)(float);
+	void (*load)(void);
+	void (*release)(void);
+} kMediaUserEvents;
+
+static const kMediaSpec kDefaultSpec = {
+	.window = {
+		.resizable = true
+	}
+};
+
 //
 //
 //
@@ -143,6 +168,15 @@ typedef struct kWindowState {
 void       kFallbackUserLoadProc(void);
 void       kFallbackUserReleaseProc(void);
 void       kFallbackUserUpdateProc(float dt);
+
+//
+//
+//
+
+void     * kGetUserEventData(void);
+void       kSetUserEventData(void *);
+void       kGetUserEvents(kMediaUserEvents *user);
+void       kSetUserEvents(kMediaUserEvents *user);
 
 kEvent   * kGetEvents(int *count);
 
@@ -227,5 +261,5 @@ void       kDisableCursor(void);
 //
 //
 
-int        kEventLoop(void);
+int        kEventLoop(const kMediaSpec *spec, kMediaUserEvents user);
 void       kBreakLoop(int status);
