@@ -159,7 +159,7 @@ typedef struct kMediaUserEvents {
 
 static const kMediaSpec kDefaultSpec = {
 	.window = {
-		.flags = kWindow_Resizable
+		.flags = kWindow_Resizable | kWindow_NoTitleBar
 	}
 };
 
