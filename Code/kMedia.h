@@ -110,6 +110,9 @@ enum kStateFlags {
 
 enum kWindowFlags {
 	kWindow_Fullscreen = 0x1,
+	kWindow_Maximized  = 0x2,
+	kWindow_Resizable  = 0x4,
+	kWindow_NoTitleBar = 0x8,
 };
 
 typedef struct kState {
@@ -140,8 +143,7 @@ typedef struct kMediaWindowSpec {
 	const char *title;
 	u32         width;
 	u32         height;
-	bool        fullscreen;
-	bool        resizable;
+	u32         flags;
 } kMediaWindowSpec;
 
 typedef struct kMediaSpec {
@@ -157,7 +159,7 @@ typedef struct kMediaUserEvents {
 
 static const kMediaSpec kDefaultSpec = {
 	.window = {
-		.resizable = true
+		.flags = kWindow_Resizable
 	}
 };
 
@@ -200,6 +202,7 @@ bool       kIsWindowResized(void);
 void       kIgnoreWindowCloseEvent(void);
 bool       kIsWindowFocused(void);
 bool       kIsWindowFullscreen(void);
+bool       kIsWindowMaximized(void);
 void       kGetWindowSize(u32 *w, u32 *h);
 float      kGetWindowDpiScale(void);
 
@@ -256,6 +259,8 @@ void       kResizeWindow(u32 w, u32 h);
 void       kToggleWindowFullscreen(void);
 void       kEnableCursor(void);
 void       kDisableCursor(void);
+void       kMaximizeWindow(void);
+void       kRestoreWindow(void);
 
 //
 //

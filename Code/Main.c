@@ -19,6 +19,14 @@ void Update(float dt) {
 			kEnableCursor();
 		}
 	}
+
+	if (kKeyPressed(kKey_M)) {
+		if (kIsWindowMaximized()) {
+			kRestoreWindow();
+		} else {
+			kMaximizeWindow();
+		}
+	}
 }
 
 void Main(int argc, const char **argv) {
