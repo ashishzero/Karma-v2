@@ -44,6 +44,7 @@ typedef enum kEventKind {
 	kEvent_Deactivated,
 	kEvent_Resized,
 	kEvent_Closed,
+	kEvent_DpiChanged,
 	kEvent_CursorEnter,
 	kEvent_CursorLeave,
 	kEvent_CursorMoved,
@@ -60,6 +61,10 @@ typedef struct kResizedEvent {
 	int width;
 	int height;
 } kResizedEvent;
+
+typedef struct kDpiChangedEvent {
+	float scale;
+} kDpiChangedEvent;
 
 typedef struct kCursorEvent {
 	kVec2i position;
@@ -87,12 +92,13 @@ typedef struct kTextEvent {
 typedef struct kEvent {
 	kEventKind kind;
 	union {
-		kResizedEvent resized;
-		kCursorEvent  cursor;
-		kButtonEvent  button;
-		kKeyEvent     key;
-		kWheelEvent   wheel;
-		kTextEvent    text;
+		kResizedEvent    resized;
+		kDpiChangedEvent dpi;
+		kCursorEvent     cursor;
+		kButtonEvent     button;
+		kKeyEvent        key;
+		kWheelEvent      wheel;
+		kTextEvent       text;
 	};
 } kEvent;
 
@@ -161,6 +167,7 @@ void       kIgnoreWindowCloseEvent(void);
 bool       kIsWindowFocused(void);
 bool       kIsWindowFullscreen(void);
 void       kGetWindowSize(u32 *w, u32 *h);
+float      kGetWindowDpiScale(void);
 
 bool       kIsCursorEnabled(void);
 bool       kIsCursorHovered(void);
@@ -197,6 +204,7 @@ void       kAddCursorLeaveEvent(void);
 void       kAddWindowResizeEvent(u32 width, u32 height, bool fullscreen);
 void       kAddWindowFocusEvent(bool focused);
 void       kAddWindowCloseEvent(void);
+void       kAddWindowDpiChangedEvent(float scale);
 
 //
 //

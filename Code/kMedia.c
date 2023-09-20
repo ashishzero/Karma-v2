@@ -21,6 +21,7 @@ enum kWindowFlagsEx {
 
 typedef struct kWindow {
 	kWindowState     state;
+	float            yfactor;
 	u32              flags;
 	kPlatformWindow *native;
 } kWindow;
@@ -118,6 +119,10 @@ bool kIsWindowFullscreen(void) {
 void kGetWindowSize(u32 *w, u32 *h) {
 	*w = media.window.state.width;
 	*h = media.window.state.height;
+}
+
+float kGetWindowDpiScale(void) {
+	return media.window.yfactor;
 }
 
 bool kIsCursorEnabled(void) {
@@ -386,6 +391,15 @@ void kAddWindowCloseEvent(void) {
 	kAddEvent(&ev);
 }
 
+void kAddWindowDpiChangedEvent(float yfactor) {
+	media.window.yfactor = yfactor;
+
+	kEvent ev = {
+		.kind = kEvent_DpiChanged
+	};
+	kAddEvent(&ev);
+}
+
 //
 //
 //
@@ -397,9 +411,17 @@ void kAddWindowCloseEvent(void) {
 #include <malloc.h>
 #include <objbase.h>
 #include <shellapi.h>
+#include <ShellScalingApi.h>
 
-#pragma comment(lib, "Shell32.lib") // CommandLineToArgvW 
-#pragma comment(lib, "Ole32.lib")   // COM
+#include "kResource.h"
+
+#ifndef IDI_KICON
+#define IDI_KICON   101
+#endif
+
+#pragma comment(lib, "Shell32.lib")    // CommandLineToArgvW
+#pragma comment(lib, "Shcore.lib")     // GetDpiForMonitor
+#pragma comment(lib, "Ole32.lib")      // COM
 
 u64 kGetPerformanceFrequency(void) {
 	LARGE_INTEGER frequency;
@@ -426,6 +448,7 @@ typedef struct kPlatformWindow {
 	u32             high_surrogate;
 	u16             resizable;
 	u16             raw_input;
+	u32             dpi;
 	WINDOWPLACEMENT placement;
 } kPlatformWindow;
 
@@ -446,8 +469,8 @@ void kResizeWindow(u32 w, u32 h) {
 		.top = 0,
 		.bottom = h
 	};
-	AdjustWindowRect(&rect, style, FALSE);
-	int width = rect.right - rect.left;
+	AdjustWindowRectExForDpi(&rect, style, FALSE, 0, window->dpi);
+	int width  = rect.right - rect.left;
 	int height = rect.bottom - rect.top;
 	SetWindowPos(window->wnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
 
@@ -737,8 +760,8 @@ static LRESULT CALLBACK kWinProcessWindowsEvent(HWND wnd, UINT msg, WPARAM wpara
 						RAWMOUSE *mouse = &input->data.mouse;
 						if ((mouse->usFlags & MOUSE_MOVE_ABSOLUTE) == MOUSE_MOVE_ABSOLUTE) {
 							bool virtual  = (mouse->usFlags & MOUSE_VIRTUAL_DESKTOP) == MOUSE_VIRTUAL_DESKTOP;
-							int width     = GetSystemMetrics(virtual ? SM_CXVIRTUALSCREEN : SM_CXSCREEN);
-							int height    = GetSystemMetrics(virtual ? SM_CYVIRTUALSCREEN : SM_CYSCREEN);
+							int width     = GetSystemMetricsForDpi(virtual ? SM_CXVIRTUALSCREEN : SM_CXSCREEN, window->dpi);
+							int height    = GetSystemMetricsForDpi(virtual ? SM_CYVIRTUALSCREEN : SM_CYSCREEN, window->dpi);
 							int abs_x     = (int)((mouse->lLastX / 65535.0f) * width);
 							int abs_y     = (int)((mouse->lLastY / 65535.0f) * height);
 							POINT pt      = { .x = abs_x, .y = abs_y };
@@ -805,9 +828,9 @@ static LRESULT CALLBACK kWinProcessWindowsEvent(HWND wnd, UINT msg, WPARAM wpara
 		case WM_KEYDOWN:
 		{
 			if (wparam < kArrayCount(VirtualKeyMap)) {
-				kKey key = VirtualKeyMap[wparam];
+				kKey key    = VirtualKeyMap[wparam];
 				bool repeat = HIWORD(lparam) & KF_REPEAT;
-				bool down = (msg == WM_KEYDOWN);
+				bool down   = (msg == WM_KEYDOWN);
 				kAddKeyEvent(key, down, repeat);
 			}
 		} break;
@@ -834,7 +857,7 @@ static LRESULT CALLBACK kWinProcessWindowsEvent(HWND wnd, UINT msg, WPARAM wpara
 						codepoint += (window->high_surrogate - 0xD800) << 10;
 						codepoint += (u16)wparam - 0xDC00;
 						codepoint += 0x10000;
-						u32 mods = kWinGetKeyModFlags();
+						u32 mods   = kWinGetKeyModFlags();
 						kAddTextInputEvent(codepoint, mods);
 					}
 				} else {
@@ -853,6 +876,10 @@ static LRESULT CALLBACK kWinProcessWindowsEvent(HWND wnd, UINT msg, WPARAM wpara
 			LONG  width   = scissor->right - scissor->left;
 			LONG  height  = scissor->bottom - scissor->top;
 			SetWindowPos(wnd, 0, left, top, width, height, SWP_NOZORDER | SWP_NOACTIVATE);
+
+			window->dpi   = HIWORD(wparam);
+			float yfactor = (float)window->dpi / USER_DEFAULT_SCREEN_DPI;
+			kAddWindowDpiChangedEvent(yfactor);
 		} break;
 
 		default:
@@ -875,12 +902,17 @@ static void kWinCreateWindow(const char *mb_title, uint w, uint h, bool fullscre
 	WNDCLASSEXW window_class       = { 0 };
 
 	{
+		HICON   icon     = LoadImageW(instance, MAKEINTRESOURCEW(IDI_KICON), IMAGE_ICON, 0, 0, LR_SHARED);
+		HICON   icon_sm  = LoadImageW(instance, MAKEINTRESOURCEW(IDI_KICON), IMAGE_ICON, 0, 0, LR_SHARED);
+		HICON   win_icon = LoadImageW(0, IDI_APPLICATION, IMAGE_ICON, 0, 0, LR_SHARED);
+
 		window_class.cbSize        = sizeof(window_class);
 		window_class.style         = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
 		window_class.lpfnWndProc   = kWinProcessWindowsEvent;
 		window_class.hInstance     = instance;
-		window_class.hIcon         = (HICON)LoadImageW(instance, MAKEINTRESOURCEW(101), IMAGE_ICON, 0, 0, LR_SHARED);
-		window_class.hCursor       = (HCURSOR)LoadCursorW(NULL, (LPWSTR)IDC_ARROW);
+		window_class.hIcon         = icon ? icon : win_icon;
+		window_class.hIconSm       = icon_sm ? icon_sm : win_icon;
+		window_class.hCursor       = LoadImageW(0, IDC_ARROW, IMAGE_CURSOR, 0, 0, LR_SHARED);
 		window_class.lpszClassName = L"KrWindowClass";
 		RegisterClassExW(&window_class);
 	}
@@ -897,13 +929,20 @@ static void kWinCreateWindow(const char *mb_title, uint w, uint h, bool fullscre
 	DWORD style    = kWinGetWindowStyle(resizable);
 
 	if (w > 0 && h > 0) {
-		RECT rect = {
+		POINT    origin   = { .x = 0, .y = 0 };
+		HMONITOR mprimary = MonitorFromPoint(origin, MONITOR_DEFAULTTOPRIMARY);
+		UINT     xdpi     = 0;
+		UINT     ydpi     = 0;
+		UINT     dpi      = GetDpiForMonitor(mprimary, MDT_EFFECTIVE_DPI, &xdpi, &ydpi);
+
+		RECT rect   = {
 			.left   = 0,
 			.right  = w,
 			.top    = 0,
 			.bottom = h
 		};
-		AdjustWindowRect(&rect, style, FALSE);
+
+		AdjustWindowRectExForDpi(&rect, style, FALSE, 0, ydpi);
 		width  = rect.right - rect.left;
 		height = rect.bottom - rect.top;
 	}
@@ -931,6 +970,8 @@ static void kWinCreateWindow(const char *mb_title, uint w, uint h, bool fullscre
 
 	ShowWindow(window->wnd, SW_SHOWNORMAL);
 	UpdateWindow(window->wnd);
+
+	media.window.native = window;
 
 	if (fullscreen) {
 		kToggleWindowFullscreen();
@@ -1009,7 +1050,7 @@ static int kWinRunEventLoop(void) {
 
 			kEvent ev    = {
 				.kind    = kEvent_Resized,
-				.resized = {.width = media.window.state.width, .height = media.window.state.height }
+				.resized = { .width = media.window.state.width, .height = media.window.state.height }
 			};
 			kAddEvent(&ev);
 		}
@@ -1053,10 +1094,11 @@ void kBreakLoop(int status) {
 extern void Main(int argc, const char **argv);
 
 static int kMain(void) {
-	// TODO: move to manifest file??
+#ifdef K_WINDOW_DPI_AWARENESS_VIA_API
 	SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+#endif
 
-#if defined(K_BUILD_DEBUG) || defined(M_BUILD_DEVELOPER)
+#if defined(K_BUILD_DEBUG) || defined(K_BUILD_DEVELOPER)
 	AllocConsole();
 #endif
 

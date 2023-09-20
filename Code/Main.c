@@ -5,7 +5,7 @@ void Update(float dt) {
 	kEvent *events = kGetEvents(&count);
 
 	if (kKeyPressed(kKey_Escape)) {
-		//kBreakEventLoop(0);
+		kBreakLoop(0);
 	}
 
 	if (kKeyPressed(kKey_F11)) {
@@ -22,4 +22,5 @@ void Update(float dt) {
 }
 
 void Main(int argc, const char **argv) {
+	kEventLoop();
 }

@@ -36,6 +36,9 @@
     <ClInclude Include="Code\kContext.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Code\kResource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Code\kMedia.c">
@@ -62,5 +65,18 @@
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="Code\kVisualizer.natvis" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Code\kResource.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Code\kIcon.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <Manifest Include="Code\kWindows.manifest" />
   </ItemGroup>
 </Project>

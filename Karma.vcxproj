@@ -32,12 +32,22 @@
     <ClCompile Include="Code\kThread.c" />
     <ClCompile Include="Code\kMath.c" />
     <ClInclude Include="Code\kWindowsCommon.h" />
+    <ClInclude Include="Code\kResource.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Code\kMedia.c" />
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="Code\kVisualizer.natvis" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Code\kResource.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Code\kIcon.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Manifest Include="Code\kWindows.manifest" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
