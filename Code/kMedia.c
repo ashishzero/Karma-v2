@@ -483,8 +483,8 @@ typedef struct kPlatformWindow {
 	HWND            wnd;
 	u32             high_surrogate;
 	u16             raw_input;
-	u32             dpi;
 	WINDOWPLACEMENT placement;
+	RECT            border;
 } kPlatformWindow;
 
 static DWORD kWinGetWindowStyle(u32 flags) {
@@ -504,7 +504,8 @@ void kResizeWindow(u32 w, u32 h) {
 		.top = 0,
 		.bottom = h
 	};
-	AdjustWindowRectExForDpi(&rect, style, FALSE, 0, window->dpi);
+	UINT dpi = GetDpiForWindow(window->wnd);
+	AdjustWindowRectExForDpi(&rect, style, FALSE, 0, dpi);
 	int width  = rect.right - rect.left;
 	int height = rect.bottom - rect.top;
 	SetWindowPos(window->wnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
@@ -610,6 +611,14 @@ void kMaximizeWindow(void) {
 
 void kRestoreWindow(void) {
 	ShowWindow(media.window.native->wnd, SW_RESTORE);
+}
+
+void kMinimizeWindow(void) {
+	ShowWindow(media.window.native->wnd, SW_MINIMIZE);
+}
+
+void kCloseWindow(void) {
+	PostMessageW(media.window.native->wnd, WM_CLOSE, 0, 0);
 }
 
 static const kKey VirtualKeyMap[] = {
@@ -719,50 +728,62 @@ static u32 kWinGetKeyModFlags(void) {
 	return mods;
 }
 
-//static LRESULT wWinHitTestNCA(HWND wnd, WPARAM wparam, LPARAM lparam) {
-//	POINT cursor = {
-//		.x = GET_X_LPARAM(lparam),
-//		.y = GET_Y_LPARAM(lparam)
-//	};
-//
-//	RECT rc;
-//	GetWindowRect(wnd, &rc);
-//
-//	RECT frame = { 0 };
-//	AdjustWindowRectExForDpi(&frame, WS_OVERLAPPEDWINDOW & ~WS_CAPTION, FALSE, NULL, media.window.native->dpi);
-//
-//	USHORT row = 1;
-//	USHORT col = 1;
-//	bool border_resize = false;
-//
-//	if (cursor.y >= rc.top && cursor.y < rc.top + TOPEXTENDWIDTH) {
-//		border_resize = (cursor.y < (rc.top - frame.top));
-//		row = 0;
-//	} else if (cursor.y < rc.bottom && cursor.y >= rc.bottom - BOTTOMEXTENDWIDTH) {
-//		row = 2;
-//	}
-//
-//	if (cursor.x >= rc.left && cursor.x < rc.left + LEFTEXTENDWIDTH) {
-//		col = 0;
-//	} else if (cursor.x < rc.right && cursor.x >= rc.right - RIGHTEXTENDWIDTH) {
-//		col = 2;
-//	}
-//
-//	LRESULT hit_tests[3][3] =
-//	{
-//		{ HTTOPLEFT, border_resize ? HTTOP : HTCAPTION, HTTOPRIGHT },
-//		{ HTLEFT, HTNOWHERE, HTRIGHT },
-//		{ HTBOTTOMLEFT, HTBOTTOM, HTBOTTOMRIGHT },
-//	};
-//
-//	return hit_tests[row][col];
-//}
+static LRESULT kWinHitTestNonClientArea(HWND wnd, WPARAM wparam, LPARAM lparam) {
+	POINT cursor = {
+		.x = GET_X_LPARAM(lparam),
+		.y = GET_Y_LPARAM(lparam)
+	};
+
+	UINT dpi = GetDpiForWindow(wnd);
+
+	RECT rc;
+	GetWindowRect(wnd, &rc);
+
+	RECT frame = { 0 };
+	AdjustWindowRectExForDpi(&frame, WS_OVERLAPPEDWINDOW & ~WS_CAPTION, FALSE, 0, dpi);
+
+	USHORT row = 1;
+	USHORT col = 1;
+	bool border_resize = false;
+
+	RECT border = media.window.native->border;
+
+	if (cursor.y >= rc.top && cursor.y < rc.top + border.top) {
+		border_resize = (cursor.y < (rc.top - frame.top));
+		row = 0;
+	} else if (cursor.y < rc.bottom && cursor.y >= rc.bottom - border.bottom) {
+		row = 2;
+	}
+
+	if (cursor.x >= rc.left && cursor.x < rc.left + border.left) {
+		col = 0;
+	} else if (cursor.x < rc.right && cursor.x >= rc.right - border.right) {
+		col = 2;
+	}
+
+	LRESULT hit_tests[3][3] =
+	{
+		{ HTTOPLEFT, border_resize ? HTTOP : HTCAPTION, HTTOPRIGHT },
+		{ HTLEFT, HTNOWHERE, HTRIGHT },
+		{ HTBOTTOMLEFT, HTBOTTOM, HTBOTTOMRIGHT },
+	};
+
+	return hit_tests[row][col];
+}
 
 static bool kWinHandleCustomCaptionEvents(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam, LRESULT *result) {
 	*result      = 0;
 	bool forward = !DwmDefWindowProc(wnd, msg, wparam, lparam, result);
 
 	if (msg == WM_CREATE) {
+		UINT dpi    = GetDpiForWindow(wnd);
+		DWORD style = (DWORD)GetWindowLongPtrW(wnd, GWL_STYLE);
+		SetRectEmpty(&media.window.native->border);
+		AdjustWindowRectExForDpi(&media.window.native->border, style, FALSE, 0, dpi);
+
+		media.window.native->border.left *= -1;
+		media.window.native->border.top *= -1;
+
 		RECT rc;
 		GetWindowRect(wnd, &rc);
 
@@ -781,27 +802,18 @@ static bool kWinHandleCustomCaptionEvents(HWND wnd, UINT msg, WPARAM wparam, LPA
 		return true;
 	}
 
-	if (msg == WM_PAINT) {
-	/*	HDC hdc;
-		PAINTSTRUCT ps;
-		hdc = BeginPaint(wnd, &ps);
-		PaintCustomCaption(wnd, hdc);
-		EndPaint(wnd, &ps);*/
-		return true;
-	}
-
 	if ((msg == WM_NCCALCSIZE) && (wparam == TRUE)) {
 		*result = 0;
 		return false;
 	}
 
-	//if ((msg == WM_NCHITTEST) && (*result == 0)) {
-	//	*result = kWinHitTestNCA(wnd, wparam, lparam);
+	if ((msg == WM_NCHITTEST) && (*result == 0)) {
+		*result = kWinHitTestNonClientArea(wnd, wparam, lparam);
 
-	//	if (*result != HTNOWHERE) {
-	//		return false;
-	//	}
-	//}
+		if (*result != HTNOWHERE) {
+			return false;
+		}
+	}
 
 	return forward;
 }
@@ -894,7 +906,7 @@ static LRESULT kWinHandleEvents(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam
 				break;
 
 			RAWMOUSE *mouse = &input->data.mouse;
-			UINT     dpi    = media.window.native->dpi;
+			UINT     dpi    = GetDpiForWindow(wnd);
 
 			if ((mouse->usFlags & MOUSE_MOVE_ABSOLUTE) == MOUSE_MOVE_ABSOLUTE) {
 				bool virtual  = (mouse->usFlags & MOUSE_VIRTUAL_DESKTOP) == MOUSE_VIRTUAL_DESKTOP;
@@ -1024,8 +1036,8 @@ static LRESULT kWinHandleEvents(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam
 			LONG  height  = scissor->bottom - scissor->top;
 			SetWindowPos(wnd, 0, left, top, width, height, SWP_NOZORDER | SWP_NOACTIVATE);
 
-			media.window.native->dpi = HIWORD(wparam);
-			float yfactor = (float)media.window.native->dpi / USER_DEFAULT_SCREEN_DPI;
+			UINT dpi      = HIWORD(wparam);
+			float yfactor = (float)dpi / USER_DEFAULT_SCREEN_DPI;
 			kAddWindowDpiChangedEvent(yfactor);
 			return 0;
 		}
@@ -1065,7 +1077,6 @@ static void kWinCreateWindow(const char *mb_title, uint w, uint h, uint flags) {
 		window_class.hIcon         = icon ? icon : win_icon;
 		window_class.hIconSm       = icon_sm ? icon_sm : win_icon;
 		window_class.hCursor       = LoadImageW(0, IDC_ARROW, IMAGE_CURSOR, 0, 0, LR_SHARED);
-		window_class.hbrBackground = GetStockObject(BLACK_BRUSH);
 		window_class.lpszClassName = L"KrWindowClass";
 		RegisterClassExW(&window_class);
 	}
@@ -1086,7 +1097,8 @@ static void kWinCreateWindow(const char *mb_title, uint w, uint h, uint flags) {
 		HMONITOR mprimary = MonitorFromPoint(origin, MONITOR_DEFAULTTOPRIMARY);
 		UINT     xdpi     = 0;
 		UINT     ydpi     = 0;
-		UINT     dpi      = GetDpiForMonitor(mprimary, MDT_EFFECTIVE_DPI, &xdpi, &ydpi);
+
+		GetDpiForMonitor(mprimary, MDT_EFFECTIVE_DPI, &xdpi, &ydpi);
 
 		RECT rect   = {
 			.left   = 0,
@@ -1103,6 +1115,16 @@ static void kWinCreateWindow(const char *mb_title, uint w, uint h, uint flags) {
 	// Set the flags before CreateWindow is called, since WndProc uses kWindow_NoTitleBar flag
 	media.window.state.flags = flags;
 
+	// Allocate before CreateWindow because CreateWindow requires it
+	kPlatformWindow *window = kAlloc(sizeof(kPlatformWindow));
+	if (!window) {
+		kLogError("Windows: Failed to create window: out of memory");
+		return;
+	}
+
+	memset(window, 0, sizeof(*window));
+	media.window.native = window;
+
 	HWND hwnd = CreateWindowExW(WS_EX_APPWINDOW, window_class.lpszClassName, title, style,
 		CW_USEDEFAULT, CW_USEDEFAULT, width, height, 0, 0, instance, 0);
 
@@ -1117,22 +1139,12 @@ static void kWinCreateWindow(const char *mb_title, uint w, uint h, uint flags) {
 	DWM_WINDOW_CORNER_PREFERENCE corner = DWMWCP_ROUND;
 	DwmSetWindowAttribute(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, &corner, sizeof(corner));
 
-	kPlatformWindow *window = kAlloc(sizeof(kPlatformWindow));
-	if (!window) {
-		kLogError("Windows: Failed to create window: out of memory");
-		return;
-	}
-
-	memset(window, 0, sizeof(*window));
-
-	window->wnd       = hwnd;
+	window->wnd = hwnd;
 
 	SetWindowLongPtrW(window->wnd, GWLP_USERDATA, (LONG_PTR)window);
 
 	ShowWindow(window->wnd, SW_SHOWNORMAL);
 	UpdateWindow(window->wnd);
-
-	media.window.native = window;
 
 	if (flags & kWindow_Fullscreen) {
 		kToggleWindowFullscreen();
