@@ -1545,6 +1545,8 @@ static int kWinRunEventLoop(void) {
 int kEventLoop(const kMediaSpec *spec, kMediaUserEvents user) {
 	memset(&media, 0, sizeof(media));
 
+	kSetThreadAttribute(spec->thread.attribute);
+
 	kWinCreateWindow(spec->window.title, spec->window.width, spec->window.height, spec->window.flags);
 	kWinLoadInitialState();
 
@@ -1571,7 +1573,7 @@ void kBreakLoop(int status) {
 
 extern void Main(int argc, const char **argv);
 
-static int kMain(void) {
+static int kWinMain(void) {
 #ifdef K_WINDOW_DPI_AWARENESS_VIA_API
 	SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 #endif
@@ -1625,9 +1627,9 @@ static int kMain(void) {
 #endif
 
 // SUBSYSTEM:CONSOLE
-int wmain() { return kMain(); }
+int wmain() { return kWinMain(); }
 
 // SUBSYSTEM:WINDOWS
-int __stdcall wWinMain(HINSTANCE instance, HINSTANCE prev_instance, LPWSTR cmd, int n) { return kMain(); }
+int __stdcall wWinMain(HINSTANCE instance, HINSTANCE prev_instance, LPWSTR cmd, int n) { return kWinMain(); }
 
 #endif

@@ -139,29 +139,12 @@ typedef struct kWindowState {
 	u32     flags;
 } kWindowState;
 
-typedef struct kMediaWindowSpec {
-	const char *title;
-	u32         width;
-	u32         height;
-	u32         flags;
-} kMediaWindowSpec;
-
-typedef struct kMediaSpec {
-	kMediaWindowSpec window;
-} kMediaSpec;
-
 typedef struct kMediaUserEvents {
 	void  *data;
 	void (*update)(float);
 	void (*load)(void);
 	void (*release)(void);
 } kMediaUserEvents;
-
-static const kMediaSpec kDefaultSpec = {
-	.window = {
-		.flags = kWindow_Resizable
-	}
-};
 
 //
 //
@@ -375,6 +358,31 @@ void       kCloseWindow(void);
 //
 //
 //
+
+typedef struct kMediaWindowSpec {
+	const char *title;
+	u32         width;
+	u32         height;
+	u32         flags;
+} kMediaWindowSpec;
+
+typedef struct kMediaThreadSpec {
+	kThreadAttribute attribute;
+} kMediaThreadSpec;
+
+typedef struct kMediaSpec {
+	kMediaWindowSpec window;
+	kMediaThreadSpec thread;
+} kMediaSpec;
+
+static const kMediaSpec kDefaultSpec = {
+	.window = {
+		.flags = kWindow_Resizable
+	},
+	.thread = {
+		.attribute = kThreadAttribute_Games
+	}
+};
 
 int        kEventLoop(const kMediaSpec *spec, kMediaUserEvents user);
 void       kBreakLoop(int status);
