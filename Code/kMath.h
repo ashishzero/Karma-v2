@@ -51,16 +51,22 @@ kVec2 kVec2Add(kVec2 a, kVec2 b);
 kVec2 kVec2Sub(kVec2 a, kVec2 b);
 kVec2 kVec2Mul(kVec2 a, kVec2 b);
 kVec2 kVec2Div(kVec2 a, kVec2 b);
+kVec2 kVec2AddScaled(kVec2 a, float f, kVec2 b);
+kVec2 kVec2SubScaled(kVec2 a, float f, kVec2 b);
 
 kVec3 kVec3Add(kVec3 a, kVec3 b);
 kVec3 kVec3Sub(kVec3 a, kVec3 b);
 kVec3 kVec3Mul(kVec3 a, kVec3 b);
 kVec3 kVec3Div(kVec3 a, kVec3 b);
+kVec3 kVec3AddScaled(kVec3 a, float f, kVec3 b);
+kVec3 kVec3SubScaled(kVec3 a, float f, kVec3 b);
 
 kVec4 kVec4Add(kVec4 a, kVec4 b);
 kVec4 kVec4Sub(kVec4 a, kVec4 b);
 kVec4 kVec4Mul(kVec4 a, kVec4 b);
 kVec4 kVec4Div(kVec4 a, kVec4 b);
+kVec4 kVec4AddScaled(kVec4 a, float f, kVec4 b);
+kVec4 kVec4SubScaled(kVec4 a, float f, kVec4 b);
 
 kVec2i kVec2iNeg(kVec2i a);
 kVec3i kVec3iNeg(kVec3i a);
@@ -70,16 +76,22 @@ kVec2i kVec2iAdd(kVec2i a, kVec2i b);
 kVec2i kVec2iSub(kVec2i a, kVec2i b);
 kVec2i kVec2iMul(kVec2i a, kVec2i b);
 kVec2i kVec2iDiv(kVec2i a, kVec2i b);
+kVec2i kVec2iAddScaled(kVec2i a, int f, kVec2i b);
+kVec2i kVec2iSubScaled(kVec2i a, int f, kVec2i b);
 
 kVec3i kVec3iAdd(kVec3i a, kVec3i b);
 kVec3i kVec3iSub(kVec3i a, kVec3i b);
 kVec3i kVec3iMul(kVec3i a, kVec3i b);
 kVec3i kVec3iDiv(kVec3i a, kVec3i b);
+kVec3i kVec3iAddScaled(kVec3i a, int f, kVec3i b);
+kVec3i kVec3iSubScaled(kVec3i a, int f, kVec3i b);
 
 kVec4i kVec4iAdd(kVec4i a, kVec4i b);
 kVec4i kVec4iSub(kVec4i a, kVec4i b);
 kVec4i kVec4iMul(kVec4i a, kVec4i b);
 kVec4i kVec4iDiv(kVec4i a, kVec4i b);
+kVec4i kVec4iAddScaled(kVec4i a, int f, kVec4i b);
+kVec4i kVec4iSubScaled(kVec4i a, int f, kVec4i b);
 
 kVec2 kComplexProduct(kVec2 a, kVec2 b);
 kVec2 kComplexConjugate(kVec2 a);
@@ -329,6 +341,24 @@ kVec3 kRGBToHSV(kVec3 c);
                            kVec3i: kVec3iDiv, \
                            kVec4i: kVec4iDiv  \
                            ) (A, B)
+
+#define kAddScaled(A, f, B) _Generic((A),            \
+                            kVec2:  kVec2AddScaled,  \
+                            kVec3:  kVec3AddScaled,  \
+                            kVec4:  kVec4AddScaled,  \
+                            kVec2i: kVec2iAddScaled, \
+                            kVec3i: kVec3iAddScaled, \
+                            kVec4i: kVec4iAddScaled  \
+                            ) (A, f, B)
+
+#define kSubScaled(A, f, B) _Generic((A),            \
+                            kVec2:  kVec2SubScaled,  \
+                            kVec3:  kVec3SubScaled,  \
+                            kVec4:  kVec4SubScaled,  \
+                            kVec2i: kVec2iSubScaled, \
+                            kVec3i: kVec3iSubScaled, \
+                            kVec4i: kVec4iSubScaled  \
+                            ) (A, f, B)
 
 #define kDotProduct(A, B) _Generic((A),          \
                            kVec2:  kVec2DotProduct, \

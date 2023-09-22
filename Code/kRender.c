@@ -1,51 +1,106 @@
 #pragma once
+#include "kMath.h"
+#include "kRender.h"
 #include "kContext.h"
 
-typedef struct kVertex2d {
-	kVec2 pos;
-	kVec2 tex;
-	kVec4 col;
-} kVertex2d;
+#include <string.h>
 
-typedef u32 kIndex2d;
+//
+//
+//
 
-typedef struct kVertex2dList {
-	kVertex2d *data;
+typedef struct kVertexList2D {
+	kVertex2D *data;
 	u32        count;
 	u32        allocated;
-} kVertex2dList;
+} kVertexList2D;
 
-typedef struct kIndex2dList {
-	kIndex2d *data;
+typedef struct kIndexList2D {
+	kIndex2D *data;
 	u32       count;
 	u32       allocated;
-} kIndex2dList;
+} kIndexList2D;
 
-typedef struct kRenderContext2d {
-	kVertex2dList vertex;
-	kIndex2dList  index;
-} kRenderContext2d;
+typedef struct kRenderState2D {
+	u32       count;
+	u32       next;
+	float     thickness;
+} kRenderState2D;
 
-void kEnsureVertexSize(kVertex2dList *vertex, u32 count) {
-	if (vertex->count + count < vertex->allocated)
-		return;
-	u32 allocate      = kMax(vertex->allocated ? (vertex->allocated << 1) : 64 * 4, vertex->count + 4);
-	vertex->data      = (kVertex2d *)kRealloc(vertex->data, vertex->allocated * sizeof(kVertex2d), allocate * sizeof(kVertex2d));
-	vertex->allocated = allocate;
+typedef struct kVectorList2D {
+	kVec2 *data;
+	u32    count;
+	u32    allocated;
+} kVectorList2D;
+
+typedef struct kRenderContext2D {
+	kVertexList2D  vertex;
+	kIndexList2D   index;
+	kRenderState2D state;
+
+	kVectorList2D  builder;
+} kRenderContext2D;
+
+typedef struct kRenderContext {
+	kRenderContext2D context2d;
+} kRenderContext;
+
+static kRenderContext render;
+
+static float          sines[K_MAX_CIRCLE_SEGMENTS];
+static float          cosines[K_MAX_CIRCLE_SEGMENTS];
+
+//
+//
+//
+
+static kRenderContext2D *kGetRenderContext2D(void) {
+	return &render.context2d;
 }
 
-void kEnsureIndexSize(kIndex2dList *index, u32 count) {
-	if (index->count + count < index->allocated)
-		return;
-	u32 allocate     = kMax(index->allocated ? (index->allocated << 1) : 64 * 6, index->count + 6);
-	index->data      = (kIndex2d *)kRealloc(index->data, index->allocated * sizeof(kIndex2d), allocate * sizeof(kIndex2d));
-	index->allocated = allocate;
+//
+//
+//
+
+static float kWrapTurns(float turns) {
+	while (turns < 0.0f)
+		turns += 1.0f;
+	while (turns > 1.0f)
+		turns -= 1.0f;
+	return turns;
 }
 
-void kEnsurePrimitive(kRenderContext2d *ctx, u32 vertex, u32 index) {
-	kEnsureVertexSize(&ctx->vertex, vertex);
-	kEnsureIndexSize(&ctx->index, index);
+static float kSinLookupEx(int index, int segments) {
+	float lookup = ((float)index / (float)segments) * (K_MAX_CIRCLE_SEGMENTS - 1);
+	int a = (int)lookup;
+	int b = (int)(a + 1) & (K_MAX_CIRCLE_SEGMENTS - 1);
+	return kLerp(sines[a], sines[b], lookup - a);
 }
+
+static float kCosLookupEx(int index, int segments) {
+	float lookup = ((float)index / (float)segments) * (K_MAX_CIRCLE_SEGMENTS - 1);
+	int a = (int)lookup;
+	int b = (int)(a + 1) & (K_MAX_CIRCLE_SEGMENTS - 1);
+	return kLerp(cosines[a], cosines[b], lookup - a);
+}
+
+static float kSinLookup(float turns) {
+	float lookup = turns * (K_MAX_CIRCLE_SEGMENTS - 1);
+	int a = (int)lookup;
+	int b = (int)(a + 1) & (K_MAX_CIRCLE_SEGMENTS - 1);
+	return kLerp(sines[a], sines[b], lookup - a);
+}
+
+static float kCosLookup(float turns) {
+	float lookup = turns * (K_MAX_CIRCLE_SEGMENTS - 1);
+	int a = (int)lookup;
+	int b = (int)(a + 1) & (K_MAX_CIRCLE_SEGMENTS - 1);
+	return kLerp(cosines[a], cosines[b], lookup - a);
+}
+
+//
+//
+//
 
 //void BeginCameraRegion(float left, float right, float bottom, float top) {
 //	Mat4 proj = OrthographicLH(left, right, top, bottom, -1, 1);
@@ -176,30 +231,30 @@ void kEnsurePrimitive(kRenderContext2d *ctx, u32 vertex, u32 index) {
 //
 //void PushTransform(const Mat3 &transform) {
 //	Mat4 m4;
-//	m4.rows[0] = Vec4(transform.rows[0]._0.xy, 0.0f, transform.rows[0].z);
-//	m4.rows[1] = Vec4(transform.rows[1]._0.xy, 0.0f, transform.rows[1].z);
-//	m4.rows[2] = Vec4(transform.rows[2]._0.xy, 0.0f, 0.0f);
-//	m4.rows[3] = Vec4(0.0f, 0.0f, 0.0f, 1.0f);
+//	m4.rows[0] = kVec4(transform.rows[0]._0.xy, 0.0f, transform.rows[0].z);
+//	m4.rows[1] = kVec4(transform.rows[1]._0.xy, 0.0f, transform.rows[1].z);
+//	m4.rows[2] = kVec4(transform.rows[2]._0.xy, 0.0f, 0.0f);
+//	m4.rows[3] = kVec4(0.0f, 0.0f, 0.0f, 1.0f);
 //	PushTransform(m4);
 //}
 //
 //void PushTransform(const Mat2 &transform) {
 //	Mat4 m4;
-//	m4.rows[0] = Vec4(transform.rows[0], 0.0f, 0.0f);
-//	m4.rows[1] = Vec4(transform.rows[1], 0.0f, 0.0f);
-//	m4.rows[2] = Vec4(0.0f, 0.0f, 1.0f, 0.0f);
-//	m4.rows[3] = Vec4(0.0f, 0.0f, 0.0f, 1.0f);
+//	m4.rows[0] = kVec4(transform.rows[0], 0.0f, 0.0f);
+//	m4.rows[1] = kVec4(transform.rows[1], 0.0f, 0.0f);
+//	m4.rows[2] = kVec4(0.0f, 0.0f, 1.0f, 0.0f);
+//	m4.rows[3] = kVec4(0.0f, 0.0f, 0.0f, 1.0f);
 //	PushTransform(m4);
 //}
 //
-//void PushTransform(Vec2 pos, float angle) {
-//	Vec2 arm = Arm(angle);
+//void PushTransform(kVec2 pos, float angle) {
+//	kVec2 arm = Arm(angle);
 //
 //	Mat4 mat;
-//	mat.rows[0] = Vec4(arm.x, -arm.y, 0.0f, pos.x);
-//	mat.rows[1] = Vec4(arm.y, arm.x, 0.0f, pos.y);
-//	mat.rows[2] = Vec4(0.0f, 0.0f, 1.0f, 0.0f);
-//	mat.rows[2] = Vec4(0.0f, 0.0f, 0.0f, 1.0f);
+//	mat.rows[0] = kVec4(arm.x, -arm.y, 0.0f, pos.x);
+//	mat.rows[1] = kVec4(arm.y, arm.x, 0.0f, pos.y);
+//	mat.rows[2] = kVec4(0.0f, 0.0f, 1.0f, 0.0f);
+//	mat.rows[2] = kVec4(0.0f, 0.0f, 0.0f, 1.0f);
 //	PushTransform(mat);
 //}
 //
@@ -213,135 +268,233 @@ void kEnsurePrimitive(kRenderContext2d *ctx, u32 vertex, u32 index) {
 //
 //
 
-void kRender2d_DrawTriangleTexGrad(
-		kRenderContext2d *ctx,
+static u32 kNextVertexListCap(u32 count) {
+	kRenderContext2D *ctx = kGetRenderContext2D();
+	u32 next = ctx->vertex.allocated ? ctx->vertex.allocated << 1 : K_INITIAL_VERTEX_ALLOC;
+	return kMax(next, ctx->vertex.count + count);
+}
+
+static u32 kNextIndexListCap(u32 count) {
+	kRenderContext2D *ctx = kGetRenderContext2D();
+	u32 next = ctx->index.allocated ? ctx->index.allocated << 1 : K_INITIAL_INDEX_ALLOC;
+	return kMax(next, ctx->index.count + count);
+}
+
+static void kReserveVertex(u32 count) {
+	kRenderContext2D *ctx = kGetRenderContext2D();
+	if (ctx->vertex.count + count < ctx->vertex.allocated)
+		return;
+	u32 allocate          = kNextVertexListCap(count);
+	ctx->vertex.data      = (kVertex2D *)kRealloc(ctx->vertex.data, ctx->vertex.allocated * sizeof(kVertex2D), allocate * sizeof(kVertex2D));
+	ctx->vertex.allocated = allocate;
+}
+
+static void kReserveIndex(u32 count) {
+	kRenderContext2D *ctx = kGetRenderContext2D();
+	if (ctx->index.count + count < ctx->index.allocated)
+		return;
+	u32 allocate         = kNextIndexListCap(count);
+	ctx->index.data      = (kIndex2D *)kRealloc(ctx->index.data, ctx->index.allocated * sizeof(kIndex2D), allocate * sizeof(kIndex2D));
+	ctx->index.allocated = allocate;
+}
+
+static void kReservePrimitive(u32 vertex, u32 index) {
+	kReserveVertex(vertex);
+	kReserveIndex(index);
+}
+
+static void kCommitPrimitive(u32 vertex, u32 index) {
+	kRenderContext2D *ctx = kGetRenderContext2D();
+	kAssert(ctx->vertex.count + vertex < ctx->vertex.allocated &&
+		ctx->index.count + index < ctx->index.allocated);
+	ctx->vertex.count += vertex;
+	ctx->index.count  += index;
+	ctx->state.count  += index;
+	ctx->state.next   += vertex;
+}
+
+static u32 kNextBuilderListCap(u32 count) {
+	kRenderContext2D *ctx = kGetRenderContext2D();
+	u32 next = ctx->builder.allocated ? ctx->builder.allocated << 2 : K_INITIAL_PATH_ALLOC;
+	return kMax(next, ctx->builder.count + count);
+}
+
+static void kReserveBuilder(u32 count) {
+	kRenderContext2D *ctx = kGetRenderContext2D();
+	kVectorList2D    *vec = &ctx->builder;
+	if (vec->count + count < vec->allocated)
+		return;
+	u32 allocate   = kNextBuilderListCap(count);
+	vec->data      = (kVec2 *)kRealloc(vec->data, vec->allocated * sizeof(kVec2), allocate * sizeof(kVec2));
+	vec->allocated = allocate;
+}
+
+static void kCommitBuilder(u32 count) {
+	kRenderContext2D *ctx = kGetRenderContext2D();
+	kVectorList2D    *vec = &ctx->builder;
+	kAssert(vec->count + count < vec->allocated);
+	vec->count += count;
+}
+
+//
+//
+//
+
+void kDrawTriangleUvGradient(
 		kVec2 va, kVec2 vb, kVec2 vc,
 		kVec2 ta, kVec2 tb, kVec2 tc,
 		kVec4 ca, kVec4 cb, kVec4 cc) {
-	kEnsurePrimitive(ctx, 3, 3);
+	kRenderContext2D *ctx = kGetRenderContext2D();
 
-	kVertex2d *vtx = ctx->vertex.data + ctx->vertex.count;
+	kReservePrimitive(3, 3);
+
+	kVertex2D *vtx = ctx->vertex.data + ctx->vertex.count;
 	vtx[0].pos = va; vtx[0].tex = ta; vtx[0].col = ca;
 	vtx[1].pos = vb; vtx[1].tex = tb; vtx[1].col = cb;
 	vtx[2].pos = vc; vtx[2].tex = tc; vtx[2].col = cc;
 
-	kIndex2d *idx = ctx->index.data + ctx->index.count;
-	idx[0] = ctx->draw.next + 0;
-	idx[1] = ctx->draw.next + 1;
-	idx[2] = ctx->draw.next + 2;
+	kIndex2D *idx = ctx->index.data + ctx->index.count;
+	idx[0] = ctx->state.next + 0;
+	idx[1] = ctx->state.next + 1;
+	idx[2] = ctx->state.next + 2;
 
-	ctx->vertex.count += 3;
-	ctx->index.count  += 6;
-	ctx->draw.next    += 3;
-	ctx->draw.count   += 6;
+	kCommitPrimitive(3, 3);
 }
 
-void kRender2d_DrawTriangleTex(
-		kRenderContext2d *ctx,
+void kDrawTriangleUv(
 		kVec2 a, kVec2 b, kVec2 c,
 		kVec2 ta, kVec2 tb, kVec2 tc,
 		kVec4 col) {
-	kRender2d_DrawTriangleTexGrad(ctx, a, b, c, ta, tb, tc, col, col , col);
+	kDrawTriangleUvGradient(a, b, c, ta, tb, tc, col, col, col);
 }
 
-void kRender2d_DrawTriangleGrad(
-		kRenderContext2d *ctx,
+void kDrawTriangleGradient(
 		kVec2 a, kVec2 b, kVec2 c,
 		kVec4 ca, kVec4 cb, kVec4 cc) {
 	kVec2 zero = { 0 };
-	kRender2d_DrawTriangleTexGrad(ctx, a, b, c, zero, zero, zero, ca, cb, cc);
+	kDrawTriangleUvGradient(a, b, c, zero, zero, zero, ca, cb, cc);
 }
 
-void kRender2d_DrawTriangle(
-		kRenderContext2d *ctx,
-		kVec2 a, kVec2 b, kVec2 c,
-		kVec4 color) {
+void kDrawTriangle(kVec2 a, kVec2 b, kVec2 c, kVec4 color) {
 	kVec2 zero = { 0 };
-	kRender2d_DrawTriangleTexGrad(ctx, a, b, c, zero, zero, zero, color, color, color);
+	kDrawTriangleUvGradient(a, b, c, zero, zero, zero, color, color, color);
 }
 
-void kAddQuadTexGrad(kRenderContext2d *ctx, kVec2 va, kVec2 vb, kVec2 vc, kVec2 vd, kVec2 ta, kVec2 tb, kVec2 tc, kVec2 td, kVec4 ca, kVec4 cb, kVec4 cc, kVec4 cd) {
-	kEnsurePrimitive(ctx, 4, 6);
+void kDrawQuadUvGradient(
+	kVec2 va, kVec2 vb, kVec2 vc, kVec2 vd,
+	kVec2 ta, kVec2 tb, kVec2 tc, kVec2 td,
+	kVec4 ca, kVec4 cb, kVec4 cc, kVec4 cd) {
+	kRenderContext2D *ctx = kGetRenderContext2D();
 
-	kVertex2d *vtx = ctx->vertex.data + ctx->vertex.count;
+	kReservePrimitive(4, 6);
+
+	kVertex2D *vtx = ctx->vertex.data + ctx->vertex.count;
 	vtx[0].pos = va; vtx[0].tex = ta; vtx[0].col = ca;
 	vtx[1].pos = vb; vtx[1].tex = tb; vtx[1].col = cb;
 	vtx[2].pos = vc; vtx[2].tex = tc; vtx[2].col = cc;
 	vtx[3].pos = vd; vtx[3].tex = td; vtx[3].col = cd;
 
-	kIndex2d *idx = ctx->index.data + ctx->index.count;
-	idx[0] = ctx->draw.next + 0;
-	idx[1] = ctx->draw.next + 1;
-	idx[2] = ctx->draw.next + 2;
-	idx[3] = ctx->draw.next + 0;
-	idx[4] = ctx->draw.next + 2;
-	idx[5] = ctx->draw.next + 3;
+	u32 next = ctx->state.next;
 
-	ctx->vertex.count += 4;
-	ctx->index.count  += 6;
-	ctx->draw.next    += 4;
-	ctx->draw.count   += 6;
+	kIndex2D *idx = ctx->index.data + ctx->index.count;
+	idx[0] = next + 0;
+	idx[1] = next + 1;
+	idx[2] = next + 2;
+	idx[3] = next + 0;
+	idx[4] = next + 2;
+	idx[5] = next + 3;
+
+	kCommitPrimitive(4, 6);
 }
 
-void kAddQuadTex(kRenderContext2d *ctx, kVec2 a, kVec2 b, kVec2 c, kVec2 d, kVec2 ta, kVec2 tb, kVec2 tc, kVec2 td, kVec4 color) {
-	kAddQuadTexGrad(ctx, a, b, c, d, ta, tb, tc, td, color, color, color, color);
+void kDrawQuadUv(
+	kVec2 a, kVec2 b, kVec2 c, kVec2 d,
+	kVec2 ta, kVec2 tb, kVec2 tc, kVec2 td, kVec4 color) {
+	kDrawQuadUvGradient(a, b, c, d, ta, tb, tc, td, color, color, color, color);
 }
 
-void kAddQuad(kRenderContext2d *ctx, kVec2 a, kVec2 b, kVec2 c, kVec2 d, kVec4 color) {
+void kDrawQuadGradient(
+	kVec2 a, kVec2 b, kVec2 c, kVec2 d,
+	kVec4 ca, kVec4 cb, kVec4 cc, kVec4 cd) {
 	kVec2 ta = { 0, 0 };
 	kVec2 tb = { 0, 1 };
 	kVec2 tc = { 1, 1 };
 	kVec2 td = { 1, 0 };
-	kAddQuadTexGrad(ctx, a, b, c, d, ta, tb, tc, td, color, color, color, color);
+	kDrawQuadUvGradient(a, b, c, d, ta, tb, tc, td, ca, cb, cc, cd);
 }
 
-void DrawRect(Vec3 pos, Vec2 dim, Vec2 uv_a, Vec2 uv_b, Vec2 uv_c, Vec2 uv_d, Vec4 color) {
-	Vec3 a = pos;
-	Vec3 b = Vec3(pos.x, pos.y + dim.y, pos.z);
-	Vec3 c = Vec3(pos._0.xy + dim, pos.z);
-	Vec3 d = Vec3(pos.x + dim.x, pos.y, pos.z);
-	DrawQuad(a, b, c, d, uv_a, uv_b, uv_c, uv_d, color);
+void kDrawQuad(kVec2 a, kVec2 b, kVec2 c, kVec2 d, kVec4 color) {
+	kVec2 ta = { 0, 0 };
+	kVec2 tb = { 0, 1 };
+	kVec2 tc = { 1, 1 };
+	kVec2 td = { 1, 0 };
+	kDrawQuadUvGradient(a, b, c, d, ta, tb, tc, td, color, color, color, color);
 }
 
-void DrawRect(Vec2 pos, Vec2 dim, Vec2 uv_a, Vec2 uv_b, Vec2 uv_c, Vec2 uv_d, Vec4 color) {
-	DrawRect(Vec3(pos, 0), dim, uv_a, uv_b, uv_c, uv_d, color);
+void kDrawRectUvGradient(
+	kVec2 pos, kVec2 dim,
+	kVec2 uv_a, kVec2 uv_b, kVec2 uv_c, kVec2 uv_d,
+	kVec4 ca, kVec4 cb, kVec4 cc, kVec4 cd) {
+	kVec2 a = pos;
+	kVec2 b = { pos.x, pos.y + dim.y };
+	kVec2 c = kAdd(pos, dim);
+	kVec2 d = { pos.x + dim.x, pos.y };
+	kDrawQuadUvGradient(a, b, c, d, uv_a, uv_b, uv_c, uv_d, ca, cb, cc, cd);
 }
 
-void DrawRect(Vec3 pos, Vec2 dim, Vec4 color) {
-	DrawRect(pos, dim, Vec2(0, 0), Vec2(0, 1), Vec2(1, 1), Vec2(1, 0), color);
+void kDrawRectUv(
+	kVec2 pos, kVec2 dim,
+	kVec2 uv_a, kVec2 uv_b, kVec2 uv_c, kVec2 uv_d, kVec4 color) {
+	kVec2 a = pos;
+	kVec2 b = { pos.x, pos.y + dim.y };
+	kVec2 c = kAdd(pos, dim);
+	kVec2 d = { pos.x + dim.x, pos.y };
+	kDrawQuadUv(a, b, c, d, uv_a, uv_b, uv_c, uv_d, color);
 }
 
-void DrawRect(Vec2 pos, Vec2 dim, Vec4 color) {
-	DrawRect(Vec3(pos, 0), dim, color);
+void kDrawRectGradient(
+	kVec2 pos, kVec2 dim,
+	kVec4 ca, kVec4 cb, kVec4 cc, kVec4 cd) {
+	kVec2 a  = pos;
+	kVec2 b  = { pos.x, pos.y + dim.y };
+	kVec2 c  = kAdd(pos, dim);
+	kVec2 d  = { pos.x + dim.x, pos.y };
+	kVec2 ta = { 0, 0 };
+	kVec2 tb = { 0, 1 };
+	kVec2 tc = { 1, 1 };
+	kVec2 td = { 1, 0 };
+	kDrawQuadUvGradient(a, b, c, d, ta, tb, tc, td, ca, cb, cc, cd);
 }
 
-void DrawRect(Vec3 pos, Vec2 dim, Region rect, Vec4 color) {
-	Vec2 uv_a = rect.min;
-	Vec2 uv_b = Vec2(rect.min.x, rect.max.y);
-	Vec2 uv_c = rect.max;
-	Vec2 uv_d = Vec2(rect.max.x, rect.min.y);
-	DrawRect(pos, dim, uv_a, uv_b, uv_c, uv_d, color);
+void kDrawRect(kVec2 pos, kVec2 dim, kVec4 color) {
+	kVec2 ta = { 0, 0 };
+	kVec2 tb = { 0, 1 };
+	kVec2 tc = { 1, 1 };
+	kVec2 td = { 1, 0 };
+	kDrawRectUv(pos, dim, ta, tb, tc, td, color);
 }
 
-void DrawRect(Vec2 pos, Vec2 dim, Region rect, Vec4 color) {
-	DrawRect(Vec3(pos, 0), dim, rect, color);
-}
+void kDrawRectRotatedUvGradient(
+	kVec2 pos, kVec2 dim, float angle,
+	kVec2 uv_a, kVec2 uv_b, kVec2 uv_c, kVec2 uv_d,
+	kVec4 ca, kVec4 cb, kVec4 cc, kVec4 cd) {
+	kVec2 center = {
+		.x = pos.x + 0.5f * dim.x,
+		.y = pos.y + 0.5f * dim.y
+	};
 
-void DrawRectRotated(Vec3 pos, Vec2 dim, float angle, Vec2 uv_a, Vec2 uv_b, Vec2 uv_c, Vec2 uv_d, Vec4 color) {
-	Vec2  center = 0.5f * (2.0f * pos._0.xy + dim);
+	kVec2 a  = pos;
+	kVec2 b  = { pos.x, pos.y + dim.y };
+	kVec2 c  = kAdd(pos, dim);
+	kVec2 d  = { pos.x + dim.x, pos.y };
 
-	Vec2  a = pos._0.xy;
-	Vec2  b = Vec2(pos.x, pos.y + dim.y);
-	Vec2  c = pos._0.xy + dim;
-	Vec2  d = Vec2(pos.x + dim.x, pos.y);
+	kVec2 t0 = kSub(a, center);
+	kVec2 t1 = kSub(b, center);
+	kVec2 t2 = kSub(c, center);
+	kVec2 t3 = kSub(d, center);
 
-	auto  t0 = a - center;
-	auto  t1 = b - center;
-	auto  t2 = c - center;
-	auto  t3 = d - center;
-
-	float cv = Cos(angle);
-	float sv = Sin(angle);
+	float cv = kCos(angle);
+	float sv = kSin(angle);
 
 	a.x = t0.x * cv - t0.y * sv;
 	a.y = t0.x * sv + t0.y * cv;
@@ -352,96 +505,102 @@ void DrawRectRotated(Vec3 pos, Vec2 dim, float angle, Vec2 uv_a, Vec2 uv_b, Vec2
 	d.x = t3.x * cv - t3.y * sv;
 	d.y = t3.x * sv + t3.y * cv;
 
-	a += center;
-	b += center;
-	c += center;
-	d += center;
+	a = kAdd(a, center);
+	b = kAdd(b, center);
+	c = kAdd(c, center);
+	d = kAdd(d, center);
 
-	DrawQuad(Vec3(a, pos.z), Vec3(b, pos.z), Vec3(c, pos.z), Vec3(d, pos.z), uv_a, uv_b, uv_c, uv_d, color);
+	kDrawQuadUvGradient(a, b, c, d, uv_a, uv_b, uv_c, uv_d, ca, cb, cc, cd);
 }
 
-void DrawRectRotated(Vec2 pos, Vec2 dim, float angle, Vec2 uv_a, Vec2 uv_b, Vec2 uv_c, Vec2 uv_d, Vec4 color) {
-	DrawRectRotated(Vec3(pos, 0), dim, angle, uv_a, uv_b, uv_c, uv_d, color);
+void kDrawRectRotatedUv(
+	kVec2 pos, kVec2 dim, float angle,
+	kVec2 uv_a, kVec2 uv_b, kVec2 uv_c, kVec2 uv_d, kVec4 color) {
+	kDrawRectRotatedUvGradient(pos, dim, angle, uv_a, uv_b, uv_c, uv_d, color, color, color, color);
 }
 
-void DrawRectRotated(Vec3 pos, Vec2 dim, float angle, Vec4 color) {
-	DrawRectRotated(pos, dim, angle, Vec2(0, 0), Vec2(0, 1), Vec2(1, 1), Vec2(1, 0), color);
+void kDrawRectRotatedGradient(
+	kVec2 pos, kVec2 dim, float angle,
+	kVec4 ca, kVec4 cb, kVec4 cc, kVec4 cd) {
+	kVec2 ta = { 0, 0 };
+	kVec2 tb = { 0, 1 };
+	kVec2 tc = { 1, 1 };
+	kVec2 td = { 1, 0 };
+	kDrawRectRotatedUvGradient(pos, dim, angle, ta, tb, tc, td, ca, cb, cc, cd);
 }
 
-void DrawRectRotated(Vec2 pos, Vec2 dim, float angle, Vec4 color) {
-	DrawRectRotated(Vec3(pos, 0), dim, angle, color);
+void kDrawRectRotated(kVec2 pos, kVec2 dim, float angle, kVec4 color) {
+	kVec2 ta = { 0, 0 };
+	kVec2 tb = { 0, 1 };
+	kVec2 tc = { 1, 1 };
+	kVec2 td = { 1, 0 };
+	kDrawRectRotatedUvGradient(pos, dim, angle, ta, tb, tc, td, color, color, color, color);
 }
 
-void DrawRectRotated(Vec3 pos, Vec2 dim, float angle, Region rect, Vec4 color) {
-	Vec2 uv_a = rect.min;
-	Vec2 uv_b = Vec2(rect.min.x, rect.max.y);
-	Vec2 uv_c = rect.max;
-	Vec2 uv_d = Vec2(rect.max.x, rect.min.y);
-	DrawRectRotated(pos, dim, angle, uv_a, uv_b, uv_c, uv_d, color);
+void kDrawRectCenteredUvGradient(
+	kVec2 pos, kVec2 dim,
+	kVec2 uv_a, kVec2 uv_b, kVec2 uv_c, kVec2 uv_d,
+	kVec4 ca, kVec4 cb, kVec4 cc, kVec4 cd) {
+	kVec2 half_dim = {
+		.x = 0.5f * dim.x,
+		.y = 0.5f * dim.y,
+	};
+
+	kVec2 a = kSub(pos, half_dim);
+	kVec2 b = { .x = pos.x - half_dim.x, .y = pos.y + half_dim.y };
+	kVec2 c = kAdd(pos, half_dim);
+	kVec2 d = { .x = pos.x + half_dim.x, .y = pos.y - half_dim.y };
+
+	kDrawQuadUvGradient(a, b, c, d, uv_a, uv_b, uv_c, uv_d, ca, cb, cc, cd);
 }
 
-void DrawRectRotated(Vec2 pos, Vec2 dim, float angle, Region rect, Vec4 color) {
-	DrawRectRotated(Vec3(pos, 0), dim, angle, rect, color);
+void kDrawRectCenteredUv(
+	kVec2 pos, kVec2 dim,
+	kVec2 uv_a, kVec2 uv_b, kVec2 uv_c, kVec2 uv_d, kVec4 color) {
+	kDrawRectCenteredUvGradient(pos, dim, uv_a, uv_b, uv_c, uv_d, color, color, color, color);
 }
 
-void DrawRectCentered(Vec3 pos, Vec2 dim, Vec2 uv_a, Vec2 uv_b, Vec2 uv_c, Vec2 uv_d, Vec4 color) {
-	Vec2 half_dim = 0.5f * dim;
-
-	Vec3 a, b, c, d;
-	a._0.xy = pos._0.xy - half_dim;
-	b._0.xy = Vec2(pos.x - half_dim.x, pos.y + half_dim.y);
-	c._0.xy = pos._0.xy + half_dim;
-	d._0.xy = Vec2(pos.x + half_dim.x, pos.y - half_dim.y);
-
-	a.z = pos.z;
-	b.z = pos.z;
-	c.z = pos.z;
-	d.z = pos.z;
-
-	DrawQuad(a, b, c, d, uv_a, uv_b, uv_c, uv_d, color);
+void kDrawRectCenteredGradient(
+	kVec2 pos, kVec2 dim,
+	kVec4 ca, kVec4 cb, kVec4 cc, kVec4 cd) {
+	kVec2 ta = { 0, 0 };
+	kVec2 tb = { 0, 1 };
+	kVec2 tc = { 1, 1 };
+	kVec2 td = { 1, 0 };
+	kDrawRectCenteredUvGradient(pos, dim, ta, tb, tc, td, ca, cb, cc, cd);
 }
 
-void DrawRectCentered(Vec2 pos, Vec2 dim, Vec2 uv_a, Vec2 uv_b, Vec2 uv_c, Vec2 uv_d, Vec4 color) {
-	DrawRectCentered(Vec3(pos, 0), dim, uv_a, uv_b, uv_c, uv_d, color);
+void kDrawRectCentered(kVec2 pos, kVec2 dim, kVec4 color) {
+	kVec2 ta = { 0, 0 };
+	kVec2 tb = { 0, 1 };
+	kVec2 tc = { 1, 1 };
+	kVec2 td = { 1, 0 };
+	kDrawRectCenteredUvGradient(pos, dim, ta, tb, tc, td, color, color, color, color);
 }
 
-void DrawRectCentered(Vec3 pos, Vec2 dim, Vec4 color) {
-	DrawRectCentered(pos, dim, Vec2(0, 0), Vec2(0, 1), Vec2(1, 1), Vec2(1, 0), color);
-}
+void kDrawRectCenteredRotatedUvGradient(
+	kVec2 pos, kVec2 dim, float angle,
+	kVec2 uv_a, kVec2 uv_b, kVec2 uv_c, kVec2 uv_d,
+	kVec4 ca, kVec4 cb, kVec4 cc, kVec4 cd) {
+	kVec2 center = pos;
 
-void DrawRectCentered(Vec2 pos, Vec2 dim, Vec4 color) {
-	DrawRectCentered(Vec3(pos, 0), dim, Vec2(0, 0), Vec2(0, 1), Vec2(1, 1), Vec2(1, 0), color);
-}
+	kVec2 half_dim = {
+		.x = 0.5f * dim.x,
+		.y = 0.5f * dim.y,
+	};
 
-void DrawRectCentered(Vec3 pos, Vec2 dim, Region rect, Vec4 color) {
-	Vec2 uv_a = rect.min;
-	Vec2 uv_b = Vec2(rect.min.x, rect.max.y);
-	Vec2 uv_c = rect.max;
-	Vec2 uv_d = Vec2(rect.max.x, rect.min.y);
-	DrawRectCentered(pos, dim, uv_a, uv_b, uv_c, uv_d, color);
-}
+	kVec2  a = kSub(pos, half_dim);
+	kVec2  b = { .x = pos.x - half_dim.x, .y = pos.y + half_dim.y };
+	kVec2  c = kAdd(pos, half_dim);
+	kVec2  d = { .x = pos.x + half_dim.x, .y = pos.y - half_dim.y };
 
-void DrawRectCentered(Vec2 pos, Vec2 dim, Region rect, Vec4 color) {
-	DrawRectCentered(Vec3(pos, 0), dim, rect, color);
-}
+	kVec2 t0 = kSub(a, center);
+	kVec2 t1 = kSub(b, center);
+	kVec2 t2 = kSub(c, center);
+	kVec2 t3 = kSub(d, center);
 
-void DrawRectCenteredRotated(Vec3 pos, Vec2 dim, float angle, Vec2 uv_a, Vec2 uv_b, Vec2 uv_c, Vec2 uv_d, Vec4 color) {
-	Vec2 center = pos._0.xy;
-
-	Vec2 half_dim = 0.5f * dim;
-	Vec2 a, b, c, d;
-	a = pos._0.xy - half_dim;
-	b = Vec2(pos.x - half_dim.x, pos.y + half_dim.y);
-	c = pos._0.xy + half_dim;
-	d = Vec2(pos.x + half_dim.x, pos.y - half_dim.y);
-
-	auto  t0 = a - center;
-	auto  t1 = b - center;
-	auto  t2 = c - center;
-	auto  t3 = d - center;
-
-	float cv = Cos(angle);
-	float sv = Sin(angle);
+	float cv = kCos(angle);
+	float sv = kSin(angle);
 
 	a.x = t0.x * cv - t0.y * sv;
 	a.y = t0.x * sv + t0.y * cv;
@@ -452,72 +611,122 @@ void DrawRectCenteredRotated(Vec3 pos, Vec2 dim, float angle, Vec2 uv_a, Vec2 uv
 	d.x = t3.x * cv - t3.y * sv;
 	d.y = t3.x * sv + t3.y * cv;
 
-	a += center;
-	b += center;
-	c += center;
-	d += center;
+	a = kAdd(a, center);
+	b = kAdd(b, center);
+	c = kAdd(c, center);
+	d = kAdd(d, center);
 
-	DrawQuad(Vec3(a, pos.z), Vec3(b, pos.z), Vec3(c, pos.z), Vec3(d, pos.z), uv_a, uv_b, uv_c, uv_d, color);
+	kDrawQuadUvGradient(a, b, c, d, uv_a, uv_b, uv_c, uv_d, ca, cb, cc, cd);
 }
 
-void DrawRectCenteredRotated(Vec2 pos, Vec2 dim, float angle, Vec2 uv_a, Vec2 uv_b, Vec2 uv_c, Vec2 uv_d, Vec4 color) {
-	DrawRectCenteredRotated(Vec3(pos, 0), dim, angle, uv_a, uv_b, uv_c, uv_d, color);
+void kDrawRectCenteredRotatedUv(
+	kVec2 pos, kVec2 dim, float angle,
+	kVec2 uv_a, kVec2 uv_b, kVec2 uv_c, kVec2 uv_d, kVec4 color) {
+	kDrawRectCenteredRotatedUvGradient(pos, dim, angle, uv_a, uv_b, uv_c, uv_d, color, color, color, color);
 }
 
-void DrawRectCenteredRotated(Vec3 pos, Vec2 dim, float angle, Vec4 color) {
-	DrawRectCenteredRotated(pos, dim, angle, Vec2(0, 0), Vec2(0, 1), Vec2(1, 1), Vec2(1, 0), color);
+void kDrawRectCenteredRotatedGradient(
+	kVec2 pos, kVec2 dim, float angle,
+	kVec4 ca, kVec4 cb, kVec4 cc, kVec4 cd) {
+	kVec2 ta = { 0, 0 };
+	kVec2 tb = { 0, 1 };
+	kVec2 tc = { 1, 1 };
+	kVec2 td = { 1, 0 };
+	kDrawRectCenteredRotatedUvGradient(pos, dim, angle, ta, tb, tc, td, ca, cb, cc, cd);
 }
 
-void DrawRectCenteredRotated(Vec2 pos, Vec2 dim, float angle, Vec4 color) {
-	DrawRectCenteredRotated(Vec3(pos, 0), dim, angle, Vec2(0, 0), Vec2(0, 1), Vec2(1, 1), Vec2(1, 0), color);
+void kDrawRectCenteredRotated(kVec2 pos, kVec2 dim, float angle, kVec4 color) {
+	kVec2 ta = { 0, 0 };
+	kVec2 tb = { 0, 1 };
+	kVec2 tc = { 1, 1 };
+	kVec2 td = { 1, 0 };
+	kDrawRectCenteredRotatedUvGradient(pos, dim, angle, ta, tb, tc, td, color, color, color, color);
 }
 
-void DrawRectCenteredRotated(Vec3 pos, Vec2 dim, float angle, Region rect, Vec4 color) {
-	Vec2 uv_a = rect.min;
-	Vec2 uv_b = Vec2(rect.min.x, rect.max.y);
-	Vec2 uv_c = rect.max;
-	Vec2 uv_d = Vec2(rect.max.x, rect.min.y);
-	DrawRectCenteredRotated(pos, dim, angle, uv_a, uv_b, uv_c, uv_d, color);
+void kDrawRoundedRect(kVec2 pos, kVec2 dim, kVec4 color, float radius) {
+	if (radius) {
+		float rad_x = kMin(radius, 0.5f * dim.x);
+		float rad_y = kMin(radius, 0.5f * dim.y);
+
+		kVec2 p0 = { pos.x + rad_x, pos.y + rad_y };
+		kVec2 p1 = { pos.x + dim.x - rad_x, pos.y + rad_y };
+		kVec2 p2 = { pos.x + dim.x - rad_x, pos.y + dim.y - rad_y };
+		kVec2 p3 = { pos.x + rad_x, pos.y + dim.y - rad_y };
+
+		kArcTo(p0, rad_x, rad_y, 2.0f / 4.0f, 3.0f / 4.0f);
+		kArcTo(p1, rad_x, rad_y, 3.0f / 4.0f, 4.0f / 4.0f);
+		kArcTo(p2, rad_x, rad_y, 0.0f / 4.0f, 1.0f / 4.0f);
+		kArcTo(p3, rad_x, rad_y, 1.0f / 4.0f, 2.0f / 4.0f);
+
+		kDrawPathFilled(color);
+	} else {
+		kDrawRect(pos, dim, color);
+	}
 }
 
-void DrawRectCenteredRotated(Vec2 pos, Vec2 dim, float angle, Region rect, Vec4 color) {
-	DrawRectCenteredRotated(Vec3(pos, 0), dim, angle, rect, color);
-}
+void kDrawEllipseGradient(kVec2 pos, float radius_a, float radius_b, kVec4 center, kVec4 first, kVec4 last) {
+	int segments = (int)kCeil(2 * K_PI * kSquareRoot(0.5f * (radius_a * radius_a + radius_b * radius_b)));
 
-void DrawEllipse(Vec3 pos, float radius_a, float radius_b, Vec4 color) {
-	int length = (int)Ceil(2 * PI * SquareRoot(0.5f * (radius_a * radius_a + radius_b * radius_b)));
-	int segments = Max(MIN_CIRCLE_SEGMENTS, (int)length);
+	float px = kCosLookup(0) * radius_a;
+	float py = kSinLookup(0) * radius_b;
 
-	float px = cos_map[0] * radius_a;
-	float py = sin_map[0] * radius_b;
+	kVec4 pc = first;
 
 	float npx, npy;
 	for (int index = 1; index <= segments; ++index) {
-		npx = CosLookup(index, segments) * radius_a;
-		npy = SinLookup(index, segments) * radius_b;
+		float t    = (float)index / (float)segments;
 
-		DrawTriangle(pos, pos + Vec3(npx, npy, 0), pos + Vec3(px, py, 0), color);
+		npx = kCosLookupEx(index, segments) * radius_a;
+		npy = kSinLookupEx(index, segments) * radius_b;
+
+		kVec2 pos1 = { .x = npx, .y = npy };
+		kVec2 pos2 = { .x =  px, .y =  py };
+
+		kVec4 nc   = kLerp(first, last, t);
+
+		kDrawTriangleGradient(pos, kAdd(pos, pos1), kAdd(pos, pos2), center, nc, pc);
+
+		px = npx;
+		py = npy;
+		pc = nc;
+	}
+}
+
+void kDrawEllipse(kVec2 pos, float radius_a, float radius_b, kVec4 color) {
+	int segments = (int)kCeil(2 * K_PI * kSquareRoot(0.5f * (radius_a * radius_a + radius_b * radius_b)));
+
+	float px = kCosLookup(0) * radius_a;
+	float py = kSinLookup(0) * radius_b;
+
+	float npx, npy;
+	for (int index = 1; index <= segments; ++index) {
+		npx = kCosLookupEx(index, segments) * radius_a;
+		npy = kSinLookupEx(index, segments) * radius_b;
+
+		kVec2 pos1 = { .x = npx, .y = npy };
+		kVec2 pos2 = { .x =  px, .y =  py };
+
+		kDrawTriangle(pos, kAdd(pos, pos1), kAdd(pos, pos2), color);
 
 		px = npx;
 		py = npy;
 	}
 }
 
-void DrawEllipse(Vec2 pos, float radius_a, float radius_b, Vec4 color) {
-	DrawEllipse(Vec3(pos, 0), radius_a, radius_b, color);
+void kDrawCircleGradient(kVec2 pos, float radius, kVec4 center, kVec4 first, kVec4 last) {
+	kDrawEllipseGradient(pos, radius, radius, center, first, last);
 }
 
-void DrawCircle(Vec3 pos, float radius, Vec4 color) {
-	DrawEllipse(pos, radius, radius, color);
+void kDrawCircle(kVec2 pos, float radius, kVec4 color) {
+	kDrawEllipse(pos, radius, radius, color);
 }
 
-void DrawCircle(Vec2 pos, float radius, Vec4 color) {
-	DrawEllipse(Vec3(pos, 0), radius, radius, color);
-}
-
-void DrawPie(Vec3 pos, float radius_a, float radius_b, float theta_a, float theta_b, Vec4 color) {
-	theta_a = WrapTurns(theta_a);
-	theta_b = WrapTurns(theta_b);
+void kDrawEllipticPieGradient(
+	kVec2 pos, float radius_a, float radius_b,
+	float theta_a, float theta_b,
+	kVec4 center, kVec4 first, kVec4 last) {
+	theta_a = kWrapTurns(theta_a);
+	theta_b = kWrapTurns(theta_b);
 
 	if (theta_b < theta_a) {
 		float t = theta_a;
@@ -525,39 +734,39 @@ void DrawPie(Vec3 pos, float radius_a, float radius_b, float theta_a, float thet
 		theta_b = t;
 	}
 
-	float segments = Ceil(2 * PI * SquareRoot(0.5f * (radius_a * radius_a + radius_b * radius_b)) / (theta_b - theta_a));
+	float segments = kCeil(2 * K_PI * kSquareRoot(0.5f * (radius_a * radius_a + radius_b * radius_b)) / (theta_b - theta_a));
 	float dt = 1.0f / segments;
 
-	float px = CosLookup(theta_a) * radius_a;
-	float py = SinLookup(theta_a) * radius_b;
+	float px = kCosLookup(theta_a) * radius_a;
+	float py = kSinLookup(theta_a) * radius_b;
+	kVec4 pc = first;
+
+	int index = 1;
 
 	float npx, npy;
 	for (theta_a += dt; theta_a <= theta_b; theta_a += dt) {
-		npx = CosLookup(theta_a) * radius_a;
-		npy = SinLookup(theta_a) * radius_b;
+		npx = kCosLookup(theta_a) * radius_a;
+		npy = kSinLookup(theta_a) * radius_b;
 
-		DrawTriangle(pos, pos + Vec3(npx, npy, 0), pos + Vec3(px, py, 0), color);
+		kVec2 pos1 = { .x = npx, .y = npy };
+		kVec2 pos2 = { .x =  px, .y =  py };
+
+		float t    = (float)index / (float)segments;
+		kVec4 nc   = kLerp(first, last, t);
+
+		kDrawTriangleGradient(pos, kAdd(pos, pos1), kAdd(pos, pos2), center, nc, pc);
 
 		px = npx;
 		py = npy;
+		pc = nc;
+
+		index += 1;
 	}
 }
 
-void DrawPie(Vec2 pos, float radius_a, float radius_b, float theta_a, float theta_b, Vec4 color) {
-	DrawPie(Vec3(pos, 0), radius_a, radius_b, theta_a, theta_b, color);
-}
-
-void DrawPie(Vec3 pos, float radius, float theta_a, float theta_b, Vec4 color) {
-	DrawPie(pos, radius, radius, theta_a, theta_b, color);
-}
-
-void DrawPie(Vec2 pos, float radius, float theta_a, float theta_b, Vec4 color) {
-	DrawPie(Vec3(pos, 0), radius, radius, theta_a, theta_b, color);
-}
-
-void DrawPiePart(Vec3 pos, float radius_a_min, float radius_b_min, float radius_a_max, float radius_b_max, float theta_a, float theta_b, Vec4 color) {
-	theta_a = WrapTurns(theta_a);
-	theta_b = WrapTurns(theta_b);
+void kDrawEllipticPie(kVec2 pos, float radius_a, float radius_b, float theta_a, float theta_b, kVec4 color) {
+	theta_a = kWrapTurns(theta_a);
+	theta_b = kWrapTurns(theta_b);
 
 	if (theta_b < theta_a) {
 		float t = theta_a;
@@ -565,23 +774,128 @@ void DrawPiePart(Vec3 pos, float radius_a_min, float radius_b_min, float radius_
 		theta_b = t;
 	}
 
-	float segments = Ceil(2 * PI * SquareRoot(0.5f * (radius_a_max * radius_a_max + radius_b_max * radius_b_max)) / (theta_b - theta_a));
+	float segments = kCeil(2 * K_PI * kSquareRoot(0.5f * (radius_a * radius_a + radius_b * radius_b)) / (theta_b - theta_a));
 	float dt = 1.0f / segments;
 
-	float min_px = CosLookup(theta_a) * radius_a_min;
-	float min_py = SinLookup(theta_a) * radius_b_min;
-	float max_px = CosLookup(theta_a) * radius_a_max;
-	float max_py = SinLookup(theta_a) * radius_b_max;
+	float px = kCosLookup(theta_a) * radius_a;
+	float py = kSinLookup(theta_a) * radius_b;
+
+	float npx, npy;
+	for (theta_a += dt; theta_a <= theta_b; theta_a += dt) {
+		npx = kCosLookup(theta_a) * radius_a;
+		npy = kSinLookup(theta_a) * radius_b;
+
+		kVec2 pos1 = { .x = npx, .y = npy };
+		kVec2 pos2 = { .x =  px, .y =  py };
+
+		kDrawTriangle(pos, kAdd(pos, pos1), kAdd(pos, pos2), color);
+
+		px = npx;
+		py = npy;
+	}
+}
+
+void kDrawPieGradient(kVec2 pos, float radius, float theta_a, float theta_b, kVec4 center, kVec4 first, kVec4 last) {
+	kDrawEllipticPieGradient(pos, radius, radius, theta_a, theta_b, center, first, last);
+}
+
+void kDrawPie(kVec2 pos, float radius, float theta_a, float theta_b, kVec4 color) {
+	kDrawEllipticPie(pos, radius, radius, theta_a, theta_b, color);
+}
+
+void kDrawEllipticPiePartGradient(
+	kVec2 pos, float radius_a_min, float radius_b_min,
+	float radius_a_max, float radius_b_max,
+	float theta_a, float theta_b,
+	kVec4 minc_a, kVec4 minc_b, kVec4 maxc_a, kVec4 maxc_b) {
+	theta_a = kWrapTurns(theta_a);
+	theta_b = kWrapTurns(theta_b);
+
+	if (theta_b < theta_a) {
+		float t = theta_a;
+		theta_a = theta_b;
+		theta_b = t;
+	}
+
+	float segments = kCeil(2 * K_PI * kSquareRoot(0.5f * (radius_a_max * radius_a_max + radius_b_max * radius_b_max)) / (theta_b - theta_a));
+	float dt = 1.0f / segments;
+
+	float min_px = kCosLookup(theta_a) * radius_a_min;
+	float min_py = kSinLookup(theta_a) * radius_b_min;
+	float max_px = kCosLookup(theta_a) * radius_a_max;
+	float max_py = kSinLookup(theta_a) * radius_b_max;
+
+	kVec4 min_pc = minc_a;
+	kVec4 max_pc = maxc_a;
+
+	int index = 1;
 
 	float min_npx, min_npy;
 	float max_npx, max_npy;
 	for (theta_a += dt; theta_a <= theta_b; theta_a += dt) {
-		min_npx = CosLookup(theta_a) * radius_a_min;
-		min_npy = SinLookup(theta_a) * radius_b_min;
-		max_npx = CosLookup(theta_a) * radius_a_max;
-		max_npy = SinLookup(theta_a) * radius_b_max;
+		min_npx = kCosLookup(theta_a) * radius_a_min;
+		min_npy = kSinLookup(theta_a) * radius_b_min;
+		max_npx = kCosLookup(theta_a) * radius_a_max;
+		max_npy = kSinLookup(theta_a) * radius_b_max;
 
-		DrawQuad(pos + Vec3(min_npx, min_npy, 0), pos + Vec3(max_npx, max_npy, 0), pos + Vec3(max_px, max_py, 0), pos + Vec3(min_px, min_py, 0), color);
+		kVec2 q0 = { pos.x + min_npx, pos.y + min_npy };
+		kVec2 q1 = { pos.x + max_npx, pos.y + max_npy };
+		kVec2 q2 = { pos.x + max_px,  pos.y + max_py  };
+		kVec2 q3 = { pos.x + min_px,  pos.y + min_py  };
+
+		float t  = (float)index / (float)segments;
+
+		kVec4 min_nc = kLerp(minc_a, minc_b, t);
+		kVec4 max_nc = kLerp(maxc_a, maxc_b, t);
+
+		kDrawQuadGradient(q0, q1, q2, q3, min_nc, max_nc, max_pc, min_pc);
+
+		min_px = min_npx;
+		min_py = min_npy;
+		max_px = max_npx;
+		max_py = max_npy;
+		min_pc = min_nc;
+		max_pc = max_nc;
+
+		index += 1;
+	}
+}
+
+void kDrawEllipticPiePart(
+	kVec3 pos, float radius_a_min, float radius_b_min,
+	float radius_a_max, float radius_b_max,
+	float theta_a, float theta_b, kVec4 color) {
+	theta_a = kWrapTurns(theta_a);
+	theta_b = kWrapTurns(theta_b);
+
+	if (theta_b < theta_a) {
+		float t = theta_a;
+		theta_a = theta_b;
+		theta_b = t;
+	}
+
+	float segments = kCeil(2 * K_PI * kSquareRoot(0.5f * (radius_a_max * radius_a_max + radius_b_max * radius_b_max)) / (theta_b - theta_a));
+	float dt = 1.0f / segments;
+
+	float min_px = kCosLookup(theta_a) * radius_a_min;
+	float min_py = kSinLookup(theta_a) * radius_b_min;
+	float max_px = kCosLookup(theta_a) * radius_a_max;
+	float max_py = kSinLookup(theta_a) * radius_b_max;
+
+	float min_npx, min_npy;
+	float max_npx, max_npy;
+	for (theta_a += dt; theta_a <= theta_b; theta_a += dt) {
+		min_npx = kCosLookup(theta_a) * radius_a_min;
+		min_npy = kSinLookup(theta_a) * radius_b_min;
+		max_npx = kCosLookup(theta_a) * radius_a_max;
+		max_npy = kSinLookup(theta_a) * radius_b_max;
+
+		kVec2 q0 = { pos.x + min_npx, pos.y + min_npy };
+		kVec2 q1 = { pos.x + max_npx, pos.y + max_npy };
+		kVec2 q2 = { pos.x + max_px,  pos.y + max_py  };
+		kVec2 q3 = { pos.x + min_px,  pos.y + min_py  };
+
+		kDrawQuad(q0, q1, q2, q3, color);
 
 		min_px = min_npx;
 		min_py = min_npy;
@@ -590,54 +904,98 @@ void DrawPiePart(Vec3 pos, float radius_a_min, float radius_b_min, float radius_
 	}
 }
 
-void DrawPiePart(Vec2 pos, float radius_a_min, float radius_b_min, float radius_a_max, float radius_b_max, float theta_a, float theta_b, Vec4 color) {
-	DrawPiePart(Vec3(pos, 0), radius_a_min, radius_b_min, radius_a_max, radius_b_max, theta_a, theta_b, color);
+void kDrawPiePartGradient(
+	kVec2 pos, float radius_min, float radius_max,
+	float theta_a, float theta_b,
+	kVec4 minc_a, kVec4 minc_b, kVec4 maxc_a, kVec4 maxc_b) {
+	kDrawEllipticPiePartGradient(pos, radius_min, radius_min, radius_max, radius_max, theta_a, theta_b, minc_a, minc_b, maxc_a, maxc_b);
 }
 
-void DrawPiePart(Vec3 pos, float radius_min, float radius_max, float theta_a, float theta_b, Vec4 color) {
-	DrawPiePart(pos, radius_min, radius_min, radius_max, radius_max, theta_a, theta_b, color);
+void kDrawPiePart(kVec2 pos, float radius_min, float radius_max, float theta_a, float theta_b, kVec4 color) {
+	kDrawEllipticPiePartGradient(pos, radius_min, radius_min, radius_max, radius_max, theta_a, theta_b, color, color, color, color);
 }
 
-void DrawPiePart(Vec2 pos, float radius_min, float radius_max, float theta_a, float theta_b, Vec4 color) {
-	DrawPiePart(Vec3(pos, 0), radius_min, radius_min, radius_max, radius_max, theta_a, theta_b, color);
+void kDrawPolygon(kVec2 *vertices, u32 count, kVec4 color) {
+	kAssert(count >= 3);
+	u32 triangle_count = count - 2;
+	for (u32 ti = 0; ti < triangle_count; ++ti) {
+		kDrawTriangle(vertices[0], vertices[ti + 1], vertices[ti + 2], color);
+	}
 }
 
-void DrawLine(Vec3 a, Vec3 b, Vec4 color) {
-	if (IsNull(b - a))
+void kDrawPolygonGradient(kVec2 *vertices, kVec4 *colors, u32 count) {
+	kAssert(count >= 3);
+	u32 triangle_count = count - 2;
+	for (u32 ti = 0; ti < triangle_count; ++ti) {
+		kDrawTriangleGradient(vertices[0], vertices[ti + 1], vertices[ti + 2], colors[0], colors[ti + 1], colors[ti + 2]);
+	}
+}
+
+void kDrawPolygonUvGradient(kVec2 *vertices, const kVec2 *uvs, kVec4 *colors, u32 count) {
+	kAssert(count >= 3);
+	u32 triangle_count = count - 2;
+	for (u32 ti = 0; ti < triangle_count; ++ti) {
+		kDrawTriangleUvGradient(vertices[0], vertices[ti + 1], vertices[ti + 2],
+			uvs[0], uvs[ti + 1], uvs[ti + 2], colors[0], colors[ti + 1], colors[ti + 2]);
+	}
+}
+
+void kDrawTriangleList(kVertex2D *vertices, u32 count) {
+	kReservePrimitive(count, count);
+
+	kRenderContext2D *ctx = kGetRenderContext2D();
+	memcpy(ctx->vertex.data + ctx->vertex.count, vertices, count * sizeof(kVertex2D));
+
+	u32 next = ctx->state.next;
+	u32 *idx = ctx->index.data;
+
+	for (u32 i = 0; i < count; ++i) {
+		idx[i] = next + i;
+	}
+
+	kCommitPrimitive(count, count);
+}
+
+void kDrawLine(kVec3 a, kVec3 b, kVec4 color) {
+	if (kAlmostEqual(b.x - a.x, 0.0f) &&
+		kAlmostEqual(b.y - a.y, 0.0f))
 		return;
 
-	float thickness = Render.Thickness * 0.5f;
+	kRenderContext2D *ctx = kGetRenderContext2D();
+
+	float thickness = ctx->state.thickness * 0.5f;
 	float dx = b.x - a.x;
 	float dy = b.y - a.y;
-	float ilen = 1.0f / SquareRoot(dx * dx + dy * dy);
+	float ilen = 1.0f / kSquareRoot(dx * dx + dy * dy);
 	dx *= (thickness * ilen);
 	dy *= (thickness * ilen);
 
-	Vec3 c0 = Vec3(a.x - dy, a.y + dx, a.z);
-	Vec3 c1 = Vec3(b.x - dy, b.y + dx, b.z);
-	Vec3 c2 = Vec3(b.x + dy, b.y - dx, b.z);
-	Vec3 c3 = Vec3(a.x + dy, a.y - dx, a.z);
+	kVec2 c0 = { a.x - dy, a.y + dx };
+	kVec2 c1 = { b.x - dy, b.y + dx };
+	kVec2 c2 = { b.x + dy, b.y - dx };
+	kVec2 c3 = { a.x + dy, a.y - dx };
 
-	DrawQuad(c0, c1, c2, c3, Vec2(0, 0), Vec2(0, 1), Vec2(1, 1), Vec2(1, 0), color);
+	kDrawQuad(c0, c1, c2, c3, color);
 }
 
-void DrawLine(Vec2 a, Vec2 b, Vec4 color) {
-	DrawLine(Vec3(a, 0), Vec3(b, 0), color);
-}
+void kPathTo(kVec2 a) {
+	kRenderContext2D *ctx = kGetRenderContext2D();
 
-void PathTo(Vec2 a) {
-	if (Render.Path.Count) {
-		if (!IsNull(Last(Render.Path) - a)) {
-			Push(&Render.Path, a);
-		}
-		return;
+	if (ctx->builder.count) {
+		kVec2 last = ctx->builder.data[ctx->builder.count - 1];
+		if (kAlmostEqual(last.x - a.x, 0.0f) &&
+			kAlmostEqual(last.y - a.y, 0.0f))
+			return;
 	}
-	Push(&Render.Path, a);
+
+	kReserveBuilder(1);
+	ctx->builder.data[ctx->builder.count] = a;
+	kCommitBuilder(1);
 }
 
-void ArcTo(Vec2 position, float radius_a, float radius_b, float theta_a, float theta_b) {
-	theta_a = WrapTurns(theta_a);
-	theta_b = WrapTurns(theta_b);
+void kArcTo(kVec2 position, float radius_a, float radius_b, float theta_a, float theta_b) {
+	theta_a = kWrapTurns(theta_a);
+	theta_b = kWrapTurns(theta_b);
 
 	if (theta_b < theta_a) {
 		float t = theta_a;
@@ -645,493 +1003,407 @@ void ArcTo(Vec2 position, float radius_a, float radius_b, float theta_a, float t
 		theta_b = t;
 	}
 
-	float segments = Ceil(2 * PI * SquareRoot(0.5f * (radius_a * radius_a + radius_b * radius_b)) / (theta_b - theta_a));
+	float segments = kCeil(2 * K_PI * kSquareRoot(0.5f * (radius_a * radius_a + radius_b * radius_b)) / (theta_b - theta_a));
 	float dt = 1.0f / segments;
 
 	float npx, npy;
 	for (; theta_a <= theta_b; theta_a += dt) {
-		npx = CosLookup(theta_a) * radius_a;
-		npy = SinLookup(theta_a) * radius_b;
-		PathTo(position + Vec2(npx, npy));
+		npx = kCosLookup(theta_a) * radius_a;
+		npy = kSinLookup(theta_a) * radius_b;
+		kVec2 offset = { npx, npy };
+		kVec2 point  = kAdd(position, offset);
+		kPathTo(point);
 	}
 }
 
-void BezierQuadraticTo(Vec2 a, Vec2 b, Vec2 c) {
-	imem Indices = Render.Path.Count;
-	int segments = (int)Ceil(Length(a) + Length(b) + Length(c));
-	if (Resize(&Render.Path, Render.Path.Count + segments + 1))
-		BuildBezierQuadratic(a, b, c, &Render.Path[Indices], segments);
+void kBezierQuadraticTo(kVec2 a, kVec2 b, kVec2 c) {
+	kRenderContext2D *ctx = kGetRenderContext2D();
+	int segments = (int)kCeil(kLength(a) + kLength(b) + kLength(c));
+	kReserveBuilder(segments + 1);
+	kBuildBezierQuadratic(a, b, c, ctx->builder.data + ctx->builder.count, segments);
+	kCommitBuilder(segments + 1);
 }
 
-void BezierCubicTo(Vec2 a, Vec2 b, Vec2 c, Vec2 d) {
-	imem Indices = Render.Path.Count;
-	int segments = (int)Ceil(Length(a) + Length(b) + Length(c));
-	if (Resize(&Render.Path, Render.Path.Count + segments + 1))
-		BuildBezierCubic(a, b, c, d, &Render.Path[Indices], segments);
+void kBezierCubicTo(kVec2 a, kVec2 b, kVec2 c, kVec2 d) {
+	kRenderContext2D *ctx = kGetRenderContext2D();
+	int segments = (int)kCeil(kLength(a) + kLength(b) + kLength(c) + kLength(d));
+	kReserveBuilder(segments + 1);
+	kBuildBezierCubic(a, b, c, d, ctx->builder.data + ctx->builder.count, segments);
+	kCommitBuilder(segments + 1);
 }
 
-static inline Vec2 LineLineIntersect(Vec2 p1, Vec2 q1, Vec2 p2, Vec2 q2) {
-	Vec2 d1 = p1 - q1;
-	Vec2 d2 = p2 - q2;
+static inline kVec2 kLineLineIntersect(kVec2 p1, kVec2 q1, kVec2 p2, kVec2 q2) {
+	kVec2 d1 = kSub(p1, q1);
+	kVec2 d2 = kSub(p2, q2);
 
 	float d = d1.x * d2.y - d1.y * d2.x;
 	float n2 = -d1.x * (p1.y - p2.y) + d1.y * (p1.x - p2.x);
 
 	if (d != 0) {
-		float u = n2 / d;
-		return p2 - u * d2;
+		float u   = n2 / d;
+		kVec2 ud2 = { u * d2.x, u * d2.y };
+		p2 = kSub(p2, ud2);
+		return p2;
 	}
 
 	return p1;
 }
 
-void DrawPathStroked(Vec4 color, bool closed, float z) {
-	if (Render.Path.Count < 2) {
-		Reset(&Render.Path);
-		Reset(&Render.Normal);
+void kDrawPathStroked(kVec4 color, bool closed) {
+	kRenderContext2D *ctx = kGetRenderContext2D();
+
+	if (ctx->builder.count < 2) {
+		ctx->builder.count = 0;
 		return;
 	}
 
-	if (Render.Path.Count == 2 && closed) {
-		Reset(&Render.Path);
-		Reset(&Render.Normal);
+	if (ctx->builder.count == 2 && closed) {
+		ctx->builder.count = 0;
 		return;
 	}
 
 	if (closed) {
-		PathTo(Render.Path[0]);
+		kPathTo(ctx->builder.data[0]);
 	}
 
-	if (!Resize(&Render.Normal, Render.Path.Count - 1)) {
-		Reset(&Render.Path);
-		Reset(&Render.Normal);
-		return;
+	u32 path_count   = ctx->builder.count;
+	u32 normal_count = path_count - 1;
+
+	kReserveBuilder(normal_count);
+
+	kVec2 *paths   = ctx->builder.data;
+	kVec2 *normals = ctx->builder.data + ctx->builder.count;
+
+	for (u32 i = 0; i < normal_count; ++i) {
+		kVec2 diff = kSub(paths[i + 1], paths[i]);
+		kVec2 v    = kNormalize(diff);
+		normals[i] = v;
 	}
 
-	for (imem index = 0; index < Render.Normal.Count; ++index) {
-		Vec2 v = Normalize(Render.Path[index + 1] - Render.Path[index]);
-		Render.Normal[index] = v;
-	}
+	kVec2 thickness = kVec2Factor(0.5f * ctx->state.thickness);
 
-	float thickness = 0.5f * Render.Thickness;
-
-	Vec2 p, q;
-	Vec2 start_p, start_q;
-	Vec2 prev_p, prev_q;
-	Vec2 a, b, c;
-	Vec2 v1, v2, n1;
-	Vec2 n2, t1, t2;
-	Vec2 p1, q1, p2, q2;
+	kVec2 p, q;
+	kVec2 start_p, start_q;
+	kVec2 prev_p, prev_q;
+	kVec2 a, b, c;
+	kVec2 v1, v2, n1;
+	kVec2 n2, t1, t2;
+	kVec2 p1, q1, p2, q2;
 
 	if (closed) {
-		a = Last(Render.Path);
-		b = Render.Path[0];
-		c = Render.Path[1];
+		a = paths[path_count - 1];
+		b = paths[0];
+		c = paths[1];
 
-		v1 = Last(Render.Normal);
-		v2 = Render.Normal[0];
+		v1 = normals[normal_count - 1];
+		v2 = normals[0];
 
-		n1 = Vec2(-v1.y, v1.x);
-		n2 = Vec2(-v2.y, v2.x);
+		n1 = (kVec2){ -v1.y, v1.x };
+		n2 = (kVec2){ -v2.y, v2.x };
 
-		t1 = n1 * thickness;
-		t2 = n2 * thickness;
+		t1 = kMul(n1, thickness);
+		t2 = kMul(n2, thickness);
 
-		p1 = b + t1;
-		q1 = p1 + v1;
-		p2 = b + t2;
-		q2 = p2 + v2;
-		start_p = prev_p = LineLineIntersect(p1, q1, p2, q2);
+		p1 = kAdd(b, t1);
+		q1 = kAdd(p1, v1);
+		p2 = kAdd(b, t2);
+		q2 = kAdd(p2, v2);
+		start_p = prev_p = kLineLineIntersect(p1, q1, p2, q2);
 
-		p1 = b - t1;
-		q1 = p1 + v1;
-		p2 = b - t2;
-		q2 = p2 + v2;
-		start_q = prev_q = LineLineIntersect(p1, q1, p2, q2);
+		p1 = kSub(b, t1);
+		q1 = kAdd(p1, v1);
+		p2 = kSub(b, t2);
+		q2 = kAdd(p2, v2);
+		start_q = prev_q = kLineLineIntersect(p1, q1, p2, q2);
 	} else {
-		Vec2 v, t, n;
+		kVec2 v, t, n;
 
-		v = Render.Normal[0];
-		n = Vec2(-v.y, v.x);
-		t = thickness * n;
-		prev_p = Render.Path[0] + t;
-		prev_q = Render.Path[0] - t;
+		v = normals[0];
+		n = (kVec2){ -v.y, v.x };
+		t = kMul(thickness, n);
+		prev_p = kAdd(paths[0], t);
+		prev_q = kSub(paths[0], t);
 
-		v = Last(Render.Normal);
-		n = Vec2(-v.y, v.x);
-		t = thickness * n;
-		start_p = Last(Render.Path) + t;
-		start_q = Last(Render.Path) - t;
+		v = normals[normal_count - 1];
+		n = (kVec2){ -v.y, v.x };
+		t = kMul(thickness, n);
+		start_p = kAdd(paths[path_count - 1], t);
+		start_q = kSub(paths[path_count - 1], t);
 	}
 
-	for (imem index = 0; index + 1 < Render.Normal.Count; ++index) {
-		a = Render.Path[index + 0];
-		b = Render.Path[index + 1];
-		c = Render.Path[index + 2];
+	for (u32 i = 0; i + 1 < normal_count; ++i) {
+		a = paths[i + 0];
+		b = paths[i + 1];
+		c = paths[i + 2];
 
-		v1 = Render.Normal[index + 0];
-		v2 = Render.Normal[index + 1];
+		v1 = normals[i + 0];
+		v2 = normals[i + 1];
 
-		n1 = Vec2(-v1.y, v1.x);
-		n2 = Vec2(-v2.y, v2.x);
+		n1 = (kVec2){ -v1.y, v1.x };
+		n2 = (kVec2){ -v2.y, v2.x };
 
-		t1 = n1 * thickness;
-		t2 = n2 * thickness;
+		t1 = kMul(n1, thickness);
+		t2 = kMul(n2, thickness);
 
 		{
-			p1 = b + t1;
-			q1 = p1 + v1;
-			p2 = b + t2;
-			q2 = p2 + v2;
-			p = LineLineIntersect(p1, q1, p2, q2);
+			p1 = kAdd(b, t1);
+			q1 = kAdd(p1, v1);
+			p2 = kAdd(b, t2);
+			q2 = kAdd(p2, v2);
+			p = kLineLineIntersect(p1, q1, p2, q2);
 		}
 
 		{
-			p1 = b - t1;
-			q1 = p1 + v1;
-			p2 = b - t2;
-			q2 = p2 + v2;
-			q = LineLineIntersect(p1, q1, p2, q2);
+			p1 = kSub(b, t1);
+			q1 = kAdd(p1, v1);
+			p2 = kSub(b, t2);
+			q2 = kAdd(p2, v2);
+			q = kLineLineIntersect(p1, q1, p2, q2);
 		}
 
-		DrawQuad(prev_q, prev_p, p, q, color);
+		kDrawQuad(prev_q, prev_p, p, q, color);
 
 		prev_p = p;
 		prev_q = q;
 	}
 
-	DrawQuad(prev_q, prev_p, start_p, start_q, color);
+	kDrawQuad(prev_q, prev_p, start_p, start_q, color);
 
-	Reset(&Render.Path);
-	Reset(&Render.Normal);
+	ctx->builder.count = 0;
 }
 
-void DrawPathFilled(Vec4 color, float z) {
-	if (Render.Path.Count < 3) {
-		Reset(&Render.Path);
+void kDrawPathFilled(kVec4 color) {
+	kRenderContext2D *ctx = kGetRenderContext2D();
+
+	if (ctx->builder.count < 3) {
+		ctx->builder.count = 0;
 		return;
 	}
 
-	Vec2 *path = Render.Path.Data;
-	int triangle_count = (int)Render.Path.Count - 2;
-	for (int ti = 0; ti < triangle_count; ++ti) {
-		DrawTriangle(Vec3(path[0], z), Vec3(path[ti + 1], z), Vec3(path[ti + 2], z), color);
+	kVec2 *paths = ctx->builder.data;
+	u32 triangle_count = ctx->builder.count - 2;
+	for (u32 ti = 0; ti < triangle_count; ++ti) {
+		kDrawTriangle(paths[0], paths[ti + 1], paths[ti + 2], color);
 	}
 
-	Reset(&Render.Path);
+	ctx->builder.count = 0;
 }
 
-void DrawBezierQuadratic(Vec2 a, Vec2 b, Vec2 c, Vec4 color, float z) {
-	BezierQuadraticTo(a, b, c);
-	DrawPathStroked(color, false, z);
+void kDrawBezierQuadratic(kVec2 a, kVec2 b, kVec2 c, kVec4 color) {
+	kBezierQuadraticTo(a, b, c);
+	kDrawPathStroked(color, false);
 }
 
-void DrawBezierCubic(Vec2 a, Vec2 b, Vec2 c, Vec2 d, Vec4 color, float z) {
-	BezierCubicTo(a, b, c, d);
-	DrawPathStroked(color, false, z);
+void kDrawBezierCubic(kVec2 a, kVec2 b, kVec2 c, kVec2 d, kVec4 color) {
+	kBezierCubicTo(a, b, c, d);
+	kDrawPathStroked(color, false);
 }
 
-void DrawPolygon(const Vec2 *vertices, u32 count, float z, Vec4 color) {
-	Assert(count >= 3);
-	u32 triangle_count = count - 2;
-	for (u32 triangle_index = 0; triangle_index < triangle_count; ++triangle_index) {
-		DrawTriangle(Vec3(vertices[0], z), Vec3(vertices[triangle_index + 1], z), Vec3(vertices[triangle_index + 2], z), color);
-	}
+void kDrawTriangleOutline(kVec2 a, kVec2 b, kVec2 c, kVec4 color) {
+	kPathTo(a);
+	kPathTo(b);
+	kPathTo(c);
+	kDrawPathStroked(color, true);
 }
 
-void DrawPolygon(const Vec2 *vertices, u32 count, Vec4 color) {
-	DrawPolygon(vertices, count, 0, color);
+void kDrawQuadOutline(kVec2 a, kVec2 b, kVec2 c, kVec2 d, kVec4 color) {
+	kPathTo(a);
+	kPathTo(b);
+	kPathTo(c);
+	kPathTo(d);
+	kDrawPathStroked(color, true);
 }
 
-void DrawTriangleOutline(Vec3 a, Vec3 b, Vec3 c, Vec4 color) {
-	PathTo(a._0.xy);
-	PathTo(b._0.xy);
-	PathTo(c._0.xy);
-	DrawPathStroked(color, true, a.z);
+void kDrawRectOutline(kVec2 pos, kVec2 dim, kVec4 color) {
+	kVec2 a = pos;
+	kVec2 b = { pos.x, pos.y + dim.y };
+	kVec2 c = kAdd(pos, dim);
+	kVec2 d = { pos.x + dim.x, pos.y };
+	kDrawQuadOutline(a, b, c, d, color);
 }
 
-void DrawTriangleOutline(Vec2 a, Vec2 b, Vec2 c, Vec4 color) {
-	PathTo(a);
-	PathTo(b);
-	PathTo(c);
-	DrawPathStroked(color, true, 0.0f);
+void kDrawRectCenteredOutline(kVec2 pos, kVec2 dim, kVec4 color) {
+	kVec2 half_dim = { 0.5f * dim.x, 0.5f * dim.y };
+
+	kVec2 a = kSub(pos, half_dim);
+	kVec2 b = { pos.x - half_dim.x, pos.y + half_dim.y };
+	kVec2 c = kAdd(pos, half_dim);
+	kVec2 d = { pos.x + half_dim.x, pos.y - half_dim.y };
+
+	kDrawQuadOutline(a, b, c, d, color);
 }
 
-void DrawQuadOutline(Vec3 a, Vec3 b, Vec3 c, Vec3 d, Vec4 color) {
-	PathTo(a._0.xy);
-	PathTo(b._0.xy);
-	PathTo(c._0.xy);
-	PathTo(d._0.xy);
-	DrawPathStroked(color, true, a.z);
-}
-
-void DrawQuadOutline(Vec2 a, Vec2 b, Vec2 c, Vec2 d, Vec4 color) {
-	PathTo(a);
-	PathTo(b);
-	PathTo(c);
-	PathTo(d);
-	DrawPathStroked(color, true, 0.0f);
-}
-
-void DrawRectOutline(Vec3 pos, Vec2 dim, Vec4 color) {
-	Vec3 a = pos;
-	Vec3 b = pos + Vec3(0, dim.y, 0);
-	Vec3 c = pos + Vec3(dim, 0);
-	Vec3 d = pos + Vec3(dim.x, 0, 0);
-	DrawQuadOutline(a, b, c, d, color);
-}
-
-void DrawRectOutline(Vec2 pos, Vec2 dim, Vec4 color) {
-	DrawRectOutline(Vec3(pos, 0), dim, color);
-}
-
-void DrawRectCenteredOutline(Vec3 pos, Vec2 dim, Vec4 color) {
-	Vec2 half_dim = 0.5f * dim;
-
-	Vec3 a, b, c, d;
-	a._0.xy = pos._0.xy - half_dim;
-	b._0.xy = Vec2(pos.x - half_dim.x, pos.y + half_dim.y);
-	c._0.xy = pos._0.xy + half_dim;
-	d._0.xy = Vec2(pos.x + half_dim.x, pos.y - half_dim.y);
-
-	a.z = pos.z;
-	b.z = pos.z;
-	c.z = pos.z;
-	d.z = pos.z;
-	DrawQuadOutline(a, b, c, d, color);
-}
-
-void DrawRectCenteredOutline(Vec2 pos, Vec2 dim, Vec4 color) {
-	DrawRectCenteredOutline(Vec3(pos, 0), dim, color);
-}
-
-void DrawEllipseOutline(Vec3 pos, float radius_a, float radius_b, Vec4 color) {
-	int length = (int)Ceil(2 * PI * SquareRoot(0.5f * (radius_a * radius_a + radius_b * radius_b)));
-	int segments = Max(MIN_CIRCLE_SEGMENTS, (int)length);
+void kDrawEllipseOutline(kVec2 pos, float radius_a, float radius_b, kVec4 color) {
+	int segments = (int)kCeil(2 * K_PI * kSquareRoot(0.5f * (radius_a * radius_a + radius_b * radius_b)));
 	float npx, npy;
 	for (int index = 0; index <= segments; ++index) {
-		npx = CosLookup(index, segments) * radius_a;
-		npy = SinLookup(index, segments) * radius_b;
-		PathTo(pos._0.xy + Vec2(npx, npy));
+		npx = kCosLookupEx(index, segments) * radius_a;
+		npy = kSinLookupEx(index, segments) * radius_b;
+		kVec2 npos = { pos.x + npx, pos.y + npy };
+		kPathTo(npos);
 	}
-	DrawPathStroked(color, true, pos.z);
+	kDrawPathStroked(color, true);
 }
 
-void DrawEllipseOutline(Vec2 pos, float radius_a, float radius_b, Vec4 color) {
-	DrawEllipseOutline(Vec3(pos, 0), radius_a, radius_b, color);
+void kDrawCircleOutline(kVec2 pos, float radius, kVec4 color) {
+	kDrawEllipseOutline(pos, radius, radius, color);
 }
 
-void DrawCircleOutline(Vec3 pos, float radius, Vec4 color) {
-	DrawEllipseOutline(pos, radius, radius, color);
-}
-
-void DrawCircleOutline(Vec2 pos, float radius, Vec4 color) {
-	DrawEllipseOutline(Vec3(pos, 0), radius, radius, color);
-}
-
-void DrawArcOutline(Vec3 pos, float radius_a, float radius_b, float theta_a, float theta_b, Vec4 color, bool closed) {
-	ArcTo(pos._0.xy, radius_a, radius_b, theta_a, theta_b);
+void kDrawEllipticArcOutline(kVec2 pos, float radius_a, float radius_b, float theta_a, float theta_b, kVec4 color, bool closed) {
+	kArcTo(pos, radius_a, radius_b, theta_a, theta_b);
 	if (closed) {
-		PathTo(pos._0.xy);
+		kPathTo(pos);
 	}
-	DrawPathStroked(color, closed, pos.z);
+	kDrawPathStroked(color, closed);
 }
 
-void DrawArcOutline(Vec2 pos, float radius_a, float radius_b, float theta_a, float theta_b, Vec4 color, bool closed) {
-	DrawArcOutline(Vec3(pos, 0), radius_a, radius_b, theta_a, theta_b, color, closed);
+void kDrawArcOutline(kVec2 pos, float radius, float theta_a, float theta_b, kVec4 color, bool closed) {
+	kDrawEllipticArcOutline(pos, radius, radius, theta_a, theta_b, color, closed);
 }
 
-void DrawArcOutline(Vec3 pos, float radius, float theta_a, float theta_b, Vec4 color, bool closed) {
-	DrawArcOutline(pos, radius, radius, theta_a, theta_b, color, closed);
-}
-
-void DrawArcOutline(Vec2 pos, float radius, float theta_a, float theta_b, Vec4 color, bool closed) {
-	DrawArcOutline(Vec3(pos, 0), radius, radius, theta_a, theta_b, color, closed);
-}
-
-void DrawPolygonOutline(const Vec2 *vertices, u32 count, float z, Vec4 color) {
-	for (u32 Indices = 0; Indices < count; ++Indices) {
-		PathTo(vertices[Indices]);
+void kDrawPolygonOutline(const kVec2 *vertices, u32 count, kVec4 color) {
+	for (u32 index = 0; index < count; ++index) {
+		kPathTo(vertices[index]);
 	}
-	DrawPathStroked(color, true, z);
+	kDrawPathStroked(color, true);
 }
 
-void DrawPolygonOutline(const Vec2 *vertices, u32 count, Vec4 color) {
-	DrawPolygonOutline(vertices, count, 0, color);
-}
-
-void DrawTexture(PL_Texture *texture, Vec3 pos, Vec2 dim, Vec4 color) {
-	PushTexture(texture);
-	DrawRect(pos, dim, color);
-	PopTexture();
-}
-
-void DrawTexture(PL_Texture *texture, Vec2 pos, Vec2 dim, Vec4 color) {
-	PushTexture(texture);
-	DrawRect(pos, dim, color);
-	PopTexture();
-}
-
-void DrawTextureCentered(PL_Texture *texture, Vec3 pos, Vec2 dim, Vec4 color) {
-	PushTexture(texture);
-	DrawRectCentered(pos, dim, color);
-	PopTexture();
-}
-
-void DrawTextureCentered(PL_Texture *texture, Vec2 pos, Vec2 dim, Vec4 color) {
-	PushTexture(texture);
-	DrawRectCentered(pos, dim, color);
-	PopTexture();
-}
-
-void DrawTexture(PL_Texture *texture, Vec3 pos, Vec2 dim, Region  rect, Vec4 color) {
-	PushTexture(texture);
-	DrawRect(pos, dim, rect, color);
-	PopTexture();
-}
-
-void DrawTexture(PL_Texture *texture, Vec2 pos, Vec2 dim, Region rect, Vec4 color) {
-	PushTexture(texture);
-	DrawRect(pos, dim, rect, color);
-	PopTexture();
-}
-
-void DrawTextureCentered(PL_Texture *texture, Vec3 pos, Vec2 dim, Region rect, Vec4 color) {
-	PushTexture(texture);
-	DrawRectCentered(pos, dim, rect, color);
-	PopTexture();
-}
-
-void DrawTextureCentered(PL_Texture *texture, Vec2 pos, Vec2 dim, Region rect, Vec4 color) {
-	PushTexture(texture);
-	DrawRectCentered(pos, dim, rect, color);
-	PopTexture();
-}
-
-void DrawRoundedRect(Vec3 pos, Vec2 dim, Vec4 color, float radius) {
+void kDrawRoundedRectOutline(kVec2 pos, kVec2 dim, kVec4 color, float radius) {
 	if (radius) {
-		float rad_x = Min(radius, 0.5f * dim.x);
-		float rad_y = Min(radius, 0.5f * dim.y);
+		float rad_x = kMin(radius, 0.5f * dim.x);
+		float rad_y = kMin(radius, 0.5f * dim.y);
 
-		Vec2 pos2d = pos._0.xy;
+		kVec2 p0 = { pos.x + rad_x, pos.y + rad_y };
+		kVec2 p1 = { pos.x + dim.x - rad_x, pos.y + rad_y };
+		kVec2 p2 = { pos.x + dim.x - rad_x, pos.y + dim.y - rad_y };
+		kVec2 p3 = { pos.x + rad_x, pos.y + dim.y - rad_y };
 
-		Vec2 p0, p1, p2, p3;
+		kArcTo(p0, rad_x, rad_y, 2.0f / 4.0f, 3.0f / 4.0f);
+		kArcTo(p1, rad_x, rad_y, 3.0f / 4.0f, 4.0f / 4.0f);
+		kArcTo(p2, rad_x, rad_y, 0.0f / 4.0f, 1.0f / 4.0f);
+		kArcTo(p3, rad_x, rad_y, 1.0f / 4.0f, 2.0f / 4.0f);
 
-		p0 = pos2d + Vec2(rad_x, rad_y);
-		p1 = pos2d + Vec2(dim.x - rad_x, rad_y);
-		p2 = pos2d + dim - Vec2(rad_x, rad_y);
-		p3 = pos2d + Vec2(rad_x, dim.y - rad_y);
-
-		ArcTo(p0, rad_x, rad_y, 2.0f / 4.0f, 3.0f / 4.0f);
-		ArcTo(p1, rad_x, rad_y, 3.0f / 4.0f, 4.0f / 4.0f);
-		ArcTo(p2, rad_x, rad_y, 0.0f / 4.0f, 1.0f / 4.0f);
-		ArcTo(p3, rad_x, rad_y, 1.0f / 4.0f, 2.0f / 4.0f);
-
-		DrawPathFilled(color, pos.z);
+		kDrawPathStroked(color, true);
 	} else {
-		DrawRect(pos, dim, color);
+		kDrawRect(pos, dim, color);
 	}
 }
 
-void DrawRoundedRect(Vec2 pos, Vec2 dim, Vec4 color, float radius) {
-	DrawRoundedRect(Vec3(pos, 0), dim, color, radius);
-}
 
-void DrawRoundedRectOutline(Vec3 pos, Vec2 dim, Vec4 color, float radius) {
-	if (radius) {
-		float rad_x = Min(radius, 0.5f * dim.x);
-		float rad_y = Min(radius, 0.5f * dim.y);
-
-		Vec2 pos2d = pos._0.xy;
-
-		Vec2 p0, p1, p2, p3;
-
-		p0 = pos2d + Vec2(rad_x, rad_y);
-		p1 = pos2d + Vec2(dim.x - rad_x, rad_y);
-		p2 = pos2d + dim - Vec2(rad_x, rad_y);
-		p3 = pos2d + Vec2(rad_x, dim.y - rad_y);
-
-		ArcTo(p0, rad_x, rad_y, 2.0f / 4.0f, 3.0f / 4.0f);
-		ArcTo(p1, rad_x, rad_y, 3.0f / 4.0f, 4.0f / 4.0f);
-		ArcTo(p2, rad_x, rad_y, 0.0f / 4.0f, 1.0f / 4.0f);
-		ArcTo(p3, rad_x, rad_y, 1.0f / 4.0f, 2.0f / 4.0f);
-
-		DrawPathStroked(color, true, pos.z);
-	} else {
-		DrawRect(pos, dim, color);
-	}
-}
-
-void DrawRoundedRectOutline(Vec2 pos, Vec2 dim, Vec4 color, float radius) {
-	DrawRoundedRectOutline(Vec3(pos, 0), dim, color, radius);
-}
-
-static const GlyphInfo *FindGlyphInfo(Font *font, u32 codepoint) {
-	if (codepoint < font->Index.Count) {
-		u16 index = font->Index[codepoint];
-		return &font->Glyphs[index];
-	}
-	return font->Fallback;
-}
-
-float CalculateText(String text, Font *font, float height) {
-	float dist = 0;
-
-	u32 codepoint;
-	u8 *ptr = text.begin();
-	u8 *end = text.end();
-
-	while (ptr < end) {
-		int len = UTF8ToCodepoint(ptr, end, &codepoint);
-		ptr += len;
-
-		auto info = FindGlyphInfo(font, codepoint);
-		dist += height * info->Advance;
-	}
-
-	return dist;
-}
-
-float CalculateText(String text, float height) {
-	Font *font = &Render.BuiltinFont;
-	return CalculateText(text, font, height);
-}
-
-void DrawText(String text, Vec3 pos, Font *font, Vec4 color, float height) {
-	PushShader(Render.BuiltinShaders[PL_EmbeddedShader_Font]);
-	PushTexture(font->Texture);
-
-	u32 codepoint;
-	u8 *ptr = text.begin();
-	u8 *end = text.end();
-
-	while (ptr < end) {
-		int len = UTF8ToCodepoint(ptr, end, &codepoint);
-		ptr += len;
-
-		auto info = FindGlyphInfo(font, codepoint);
-
-		Vec3 draw_pos = pos;
-		draw_pos._0.xy += height * Vec2(info->Bearing.x, info->Bearing.y);
-		DrawRect(draw_pos, height * info->Size, info->Rect, color);
-		pos.x += height * info->Advance;
-	}
-
-	PopTexture();
-	PopShader();
-}
-
-void DrawText(String text, Vec2 pos, Font *font, Vec4 color, float height) {
-	DrawText(text, Vec3(pos, 0), font, color, height);
-}
-
-void DrawText(String text, Vec3 pos, Vec4 color, float height) {
-	Font *font = &Render.BuiltinFont;
-	DrawText(text, pos, font, color, height);
-}
-
-void DrawText(String text, Vec2 pos, Vec4 color, float height) {
-	Font *font = &Render.BuiltinFont;
-	DrawText(text, pos, font, color, height);
-}
-
+//void kDrawTexture(PL_Texture *texture, kVec3 pos, kVec2 dim, kVec4 color) {
+//	PushTexture(texture);
+//	kDrawRect(pos, dim, color);
+//	PopTexture();
+//}
+//
+//void kDrawTexture(PL_Texture *texture, kVec2 pos, kVec2 dim, kVec4 color) {
+//	PushTexture(texture);
+//	kDrawRect(pos, dim, color);
+//	PopTexture();
+//}
+//
+//void kDrawTextureCentered(PL_Texture *texture, kVec3 pos, kVec2 dim, kVec4 color) {
+//	PushTexture(texture);
+//	kDrawRectCentered(pos, dim, color);
+//	PopTexture();
+//}
+//
+//void kDrawTextureCentered(PL_Texture *texture, kVec2 pos, kVec2 dim, kVec4 color) {
+//	PushTexture(texture);
+//	kDrawRectCentered(pos, dim, color);
+//	PopTexture();
+//}
+//
+//void kDrawTexture(PL_Texture *texture, kVec3 pos, kVec2 dim, Region  rect, kVec4 color) {
+//	PushTexture(texture);
+//	kDrawRect(pos, dim, rect, color);
+//	PopTexture();
+//}
+//
+//void kDrawTexture(PL_Texture *texture, kVec2 pos, kVec2 dim, Region rect, kVec4 color) {
+//	PushTexture(texture);
+//	kDrawRect(pos, dim, rect, color);
+//	PopTexture();
+//}
+//
+//void kDrawTextureCentered(PL_Texture *texture, kVec3 pos, kVec2 dim, Region rect, kVec4 color) {
+//	PushTexture(texture);
+//	kDrawRectCentered(pos, dim, rect, color);
+//	PopTexture();
+//}
+//
+//void kDrawTextureCentered(PL_Texture *texture, kVec2 pos, kVec2 dim, Region rect, kVec4 color) {
+//	PushTexture(texture);
+//	kDrawRectCentered(pos, dim, rect, color);
+//	PopTexture();
+//}
+//
+//static const GlyphInfo *FindGlyphInfo(Font *font, u32 codepoint) {
+//	if (codepoint < font->Index.Count) {
+//		u16 index = font->Index[codepoint];
+//		return &font->Glyphs[index];
+//	}
+//	return font->Fallback;
+//}
+//
+//float CalculateText(String text, Font *font, float height) {
+//	float dist = 0;
+//
+//	u32 codepoint;
+//	u8 *ptr = text.begin();
+//	u8 *end = text.end();
+//
+//	while (ptr < end) {
+//		int len = UTF8ToCodepoint(ptr, end, &codepoint);
+//		ptr += len;
+//
+//		auto info = FindGlyphInfo(font, codepoint);
+//		dist += height * info->Advance;
+//	}
+//
+//	return dist;
+//}
+//
+//float CalculateText(String text, float height) {
+//	Font *font = &Render.BuiltinFont;
+//	return CalculateText(text, font, height);
+//}
+//
+//void kDrawText(String text, kVec3 pos, Font *font, kVec4 color, float height) {
+//	PushShader(Render.BuiltinShaders[PL_EmbeddedShader_Font]);
+//	PushTexture(font->Texture);
+//
+//	u32 codepoint;
+//	u8 *ptr = text.begin();
+//	u8 *end = text.end();
+//
+//	while (ptr < end) {
+//		int len = UTF8ToCodepoint(ptr, end, &codepoint);
+//		ptr += len;
+//
+//		auto info = FindGlyphInfo(font, codepoint);
+//
+//		kVec3 kDraw_pos = pos;
+//		draw_pos._0.xy += height * kVec2(info->Bearing.x, info->Bearing.y);
+//		kDrawRect(draw_pos, height * info->Size, info->Rect, color);
+//		pos.x += height * info->Advance;
+//	}
+//
+//	PopTexture();
+//	PopShader();
+//}
+//
+//void kDrawText(String text, kVec2 pos, Font *font, kVec4 color, float height) {
+//	kDrawText(text, kVec3(pos, 0), font, color, height);
+//}
+//
+//void kDrawText(String text, kVec3 pos, kVec4 color, float height) {
+//	Font *font = &Render.BuiltinFont;
+//	kDrawText(text, pos, font, color, height);
+//}
+//
+//void kDrawText(String text, kVec2 pos, kVec4 color, float height) {
+//	Font *font = &Render.BuiltinFont;
+//	kDrawText(text, pos, font, color, height);
+//}
+//

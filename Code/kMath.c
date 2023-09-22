@@ -59,15 +59,24 @@ kVec2 kVec2Sub(kVec2 a, kVec2 b)     { kVec2 r = kVec2BinaryOp(a, b, -); return 
 kVec2 kVec2Mul(kVec2 a, kVec2 b)     { kVec2 r = kVec2BinaryOp(a, b, *); return r; }
 kVec2 kVec2Div(kVec2 a, kVec2 b)     { kVec2 r = kVec2BinaryOp(a, b, /); return r; }
 
+kVec2 kVec2AddScaled(kVec2 a, float f, kVec2 b) { kVec2 s = { f * b.x, f * b.y }; return kVec2Add(a, s); }
+kVec2 kVec2SubScaled(kVec2 a, float f, kVec2 b) { kVec2 s = { f * b.x, f * b.y }; return kVec2Sub(a, s); }
+
 kVec3 kVec3Add(kVec3 a, kVec3 b)     { kVec3 r = kVec3BinaryOp(a, b, +); return r; }
 kVec3 kVec3Sub(kVec3 a, kVec3 b)     { kVec3 r = kVec3BinaryOp(a, b, -); return r; }
 kVec3 kVec3Mul(kVec3 a, kVec3 b)     { kVec3 r = kVec3BinaryOp(a, b, *); return r; }
 kVec3 kVec3Div(kVec3 a, kVec3 b)     { kVec3 r = kVec3BinaryOp(a, b, /); return r; }
 
+kVec3 kVec3AddScaled(kVec3 a, float f, kVec3 b) { kVec3 s = { f * b.x, f * b.y, f * b.z }; return kVec3Add(a, s); }
+kVec3 kVec3SubScaled(kVec3 a, float f, kVec3 b) { kVec3 s = { f * b.x, f * b.y, f * b.z }; return kVec3Sub(a, s); }
+
 kVec4 kVec4Add(kVec4 a, kVec4 b)     { kVec4 r = kVec4BinaryOp(a, b, +); return r; }
 kVec4 kVec4Sub(kVec4 a, kVec4 b)     { kVec4 r = kVec4BinaryOp(a, b, -); return r; }
 kVec4 kVec4Mul(kVec4 a, kVec4 b)     { kVec4 r = kVec4BinaryOp(a, b, *); return r; }
 kVec4 kVec4Div(kVec4 a, kVec4 b)     { kVec4 r = kVec4BinaryOp(a, b, /); return r; }
+
+kVec4 kVec4AddScaled(kVec4 a, float f, kVec4 b) { kVec4 s = { f * b.x, f * b.y, f * b.z, f * b.w }; return kVec4Add(a, s); }
+kVec4 kVec4SubScaled(kVec4 a, float f, kVec4 b) { kVec4 s = { f * b.x, f * b.y, f * b.z, f * b.w }; return kVec4Sub(a, s); }
 
 kVec2i kVec2iNeg(kVec2i a)           { kVec2i r = kVec2UnaryOp(a, -); return r; }
 kVec3i kVec3iNeg(kVec3i a)           { kVec3i r = kVec3UnaryOp(a, -); return r; }
@@ -78,15 +87,24 @@ kVec2i kVec2iSub(kVec2i a, kVec2i b) { kVec2i r = kVec2BinaryOp(a, b, -); return
 kVec2i kVec2iMul(kVec2i a, kVec2i b) { kVec2i r = kVec2BinaryOp(a, b, *); return r; }
 kVec2i kVec2iDiv(kVec2i a, kVec2i b) { kVec2i r = kVec2BinaryOp(a, b, /); return r; }
 
+kVec2i kVec2iAddScaled(kVec2i a, int f, kVec2i b) { kVec2i s = { f * b.x, f * b.y }; return kVec2iAdd(a, s); }
+kVec2i kVec2iSubScaled(kVec2i a, int f, kVec2i b) { kVec2i s = { f * b.x, f * b.y }; return kVec2iSub(a, s); }
+
 kVec3i kVec3iAdd(kVec3i a, kVec3i b) { kVec3i r = kVec3BinaryOp(a, b, +); return r; }
 kVec3i kVec3iSub(kVec3i a, kVec3i b) { kVec3i r = kVec3BinaryOp(a, b, -); return r; }
 kVec3i kVec3iMul(kVec3i a, kVec3i b) { kVec3i r = kVec3BinaryOp(a, b, *); return r; }
 kVec3i kVec3iDiv(kVec3i a, kVec3i b) { kVec3i r = kVec3BinaryOp(a, b, /); return r; }
 
+kVec3i kVec3iAddScaled(kVec3i a, int f, kVec3i b) { kVec3i s = { f * b.x, f * b.y, f * b.z }; return kVec3iAdd(a, s); }
+kVec3i kVec3iSubScaled(kVec3i a, int f, kVec3i b) { kVec3i s = { f * b.x, f * b.y, f * b.z }; return kVec3iSub(a, s); }
+
 kVec4i kVec4iAdd(kVec4i a, kVec4i b) { kVec4i r = kVec4BinaryOp(a, b, +); return r; }
 kVec4i kVec4iSub(kVec4i a, kVec4i b) { kVec4i r = kVec4BinaryOp(a, b, -); return r; }
 kVec4i kVec4iMul(kVec4i a, kVec4i b) { kVec4i r = kVec4BinaryOp(a, b, *); return r; }
 kVec4i kVec4iDiv(kVec4i a, kVec4i b) { kVec4i r = kVec4BinaryOp(a, b, /); return r; }
+
+kVec4i kVec4iAddScaled(kVec4i a, int f, kVec4i b) { kVec4i s = { f * b.x, f * b.y, f * b.z, f * b.w }; return kVec4iAdd(a, s); }
+kVec4i kVec4iSubScaled(kVec4i a, int f, kVec4i b) { kVec4i s = { f * b.x, f * b.y, f * b.z, f * b.w }; return kVec4iSub(a, s); }
 
 kVec2 kComplexProduct(kVec2 a, kVec2 b)  { kVec2 r = { .x = a.x * b.x - a.y * b.y, .y = a.x * b.y + a.y * b.x }; return r; }
 kVec2 kComplexConjugate(kVec2 a)         { kVec2 r = { .x = a.x, .y = -a.y }; return r; }

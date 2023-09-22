@@ -27,6 +27,10 @@
     <ClInclude Include="Code\kContext.h" />
     <ClCompile Include="Code\kCommon.c" />
     <ClCompile Include="Code\kMath.c" />
+    <ClCompile Include="Code\kRender.c">
+      <FileType>CppCode</FileType>
+    </ClCompile>
+    <ClInclude Include="Code\kRender.h" />
     <ClInclude Include="Code\kWindowsCommon.h" />
     <ClInclude Include="Code\kResource.h" />
   </ItemGroup>
