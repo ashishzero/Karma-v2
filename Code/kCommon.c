@@ -298,8 +298,7 @@ int kCodepointToUTF8(u32 codepoint, u8 buffer[4]) {
 	return bytes;
 }
 
-int kUTF8ToCodepoint(const u8 *start, imem count, u32 *codepoint) {
-	const u8 *end = start + count; 
+int kUTF8ToCodepoint(const u8 *start, u8 *end, u32 *codepoint) {
 	u32 first     = *start;
 
 	if (first <= 0x7f) {

@@ -19,8 +19,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Code\kArray.c" />
     <ClCompile Include="Code\kContext.c" />
     <ClCompile Include="Code\Main.c" />
+    <ClInclude Include="Code\kArray.h" />
     <ClInclude Include="Code\kMedia.h" />
     <ClInclude Include="Code\kCommon.h" />
     <ClInclude Include="Code\kMath.h" />

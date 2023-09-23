@@ -308,29 +308,29 @@ kVec3 kRGBToHSV(kVec3 c);
                            kQuat:  kQuatSub   \
                            ) (A, B)
 
-#define kMul(A, B)        _Generic((A),       \
-                           kVec2:  kVec2Mul,  \
-                           kVec3:  kVec3Mul,  \
-                           kVec4:  kVec4Mul,  \
-                           kVec2i: kVec2iMul, \
-                           kVec3i: kVec3iMul, \
-                           kVec4i: kVec4iMul, \
-                           kMat2:  kMat2Mul,  \
-                           kMat3:  kMat3Mul,  \
-                           kMat4:  kMat4Mul,  \
+#define kMul(A, B)        _Generic((A),         \
+                           kVec2:    kVec2Mul,  \
+                           kVec3:    kVec3Mul,  \
+                           kVec4:    kVec4Mul,  \
+                           kVec2i:   kVec2iMul, \
+                           kVec3i:   kVec3iMul, \
+                           kVec4i:   kVec4iMul, \
+                           kMat2 *:  kMat2Mul,  \
+                           kMat3 *:  kMat3Mul,  \
+                           kMat4 *:  kMat4Mul,  \
                            kQuat:  kQuatMul   \
                            ) (A, B)
 
-#define kMatVecMul(A, B)  _Generic((A),          \
-                           kMat2:  kMatVec2Mul,  \
-                           kMat3:  kMatVec3Mul,  \
-                           kMat4:  kMatVec4Mul   \
+#define kMatVecMul(A, B)  _Generic((A),            \
+                           kMat2 *:  kMatVec2Mul,  \
+                           kMat3 *:  kMatVec3Mul,  \
+                           kMat4 *:  kMatVec4Mul   \
                            ) (A, B)
 
-#define kVecMatMul(A, B)  _Generic((B),          \
-                           kMat2:  kVecMat2Mul,  \
-                           kMat3:  kVecMat3Mul,  \
-                           kMat4:  kVecMat4Mul   \
+#define kVecMatMul(A, B)  _Generic((B),            \
+                           kMat2:  kVecMat2Mul,    \
+                           kMat3 *:  kVecMat3Mul,  \
+                           kMat4 *:  kVecMat4Mul   \
                            ) (A, B)
 
 #define kDiv(A, B)        _Generic((A),       \

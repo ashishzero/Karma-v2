@@ -481,9 +481,9 @@ void kTerminate(uint code) {
 //
 //
 
-kFile kOpenFile(const char *mb_filepath, kFileAccess paccess, kFileShareMode pshare, kFileMethod method) {
-	wchar_t filepath[MAX_PATH];
-	kWinUTF8ToWide(filepath, MAX_PATH, mb_filepath);
+kFile kOpenFile(const char *mb_path, kFileAccess paccess, kFileShareMode pshare, kFileMethod method) {
+	wchar_t path[MAX_PATH];
+	kWinUTF8ToWide(path, MAX_PATH, mb_path);
 
 	DWORD access = 0;
 	if (paccess == kFileAccess_Read)           access = GENERIC_READ;
@@ -501,9 +501,9 @@ kFile kOpenFile(const char *mb_filepath, kFileAccess paccess, kFileShareMode psh
 	else if (method == kFileMethod_OpenAlways)   disposition = OPEN_ALWAYS;
 	else if (method == kFileMethod_OpenExisting) disposition = OPEN_EXISTING;
 
-	HANDLE file = CreateFileW(filepath, access, share_mode, NULL, disposition, FILE_ATTRIBUTE_NORMAL, NULL);
+	HANDLE file = CreateFileW(path, access, share_mode, NULL, disposition, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (file == INVALID_HANDLE_VALUE) {
-		kWinLogError(GetLastError(), "Failed to open file: \"%s\"", mb_filepath);
+		kWinLogError(GetLastError(), "Failed to open file: \"%s\"", mb_path);
 		return (kFile) { .ptr = 0 };
 	}
 
@@ -576,22 +576,22 @@ umem kGetFileSize(kFile handle) {
 	return size.QuadPart;
 }
 
-u8 *kReadEntireFile(const char *filepath, umem *file_size) {
-	*file_size    = 0;
-	kFile handle  = kOpenFile(filepath, kFileAccess_Read, kFileShareMode_Read, kFileMethod_OpenExisting);
+u8 *kReadEntireFile(const char *path, umem *out_size) {
+	*out_size     = 0;
+	kFile handle  = kOpenFile(path, kFileAccess_Read, kFileShareMode_Read, kFileMethod_OpenExisting);
 	if (handle.ptr) {
 		umem size = kGetFileSize(handle);
 		u8 *buff  = (u8 *)kAlloc(size);
 		if (buff)
-			*file_size = kReadFile(handle, buff, size);
+			*out_size = kReadFile(handle, buff, size);
 		kCloseFile(handle);
 		return buff;
 	}
 	return 0;
 }
 
-bool kWriteEntireFile(const char *filepath, u8 *buffer, umem size) {
-	kFile handle = kOpenFile(filepath, kFileAccess_Write, kFileShareMode_Read, kFileMethod_CreateAlways);
+bool kWriteEntireFile(const char *path, u8 *buffer, umem size) {
+	kFile handle = kOpenFile(path, kFileAccess_Write, kFileShareMode_Read, kFileMethod_CreateAlways);
 	if (handle.ptr) {
 		umem written = kWriteFile(handle, buffer, size);
 		kCloseFile(handle);
@@ -600,11 +600,11 @@ bool kWriteEntireFile(const char *filepath, u8 *buffer, umem size) {
 	return false;
 }
 
-uint kGetFileAttributes(const char *mb_filepath) {
-	wchar_t filepath[MAX_PATH];
-	kWinUTF8ToWide(filepath, MAX_PATH, mb_filepath);
+uint kGetFileAttributes(const char *mb_path) {
+	wchar_t path[MAX_PATH];
+	kWinUTF8ToWide(path, MAX_PATH, mb_path);
 
-	DWORD attrs = GetFileAttributesW(filepath);
+	DWORD attrs = GetFileAttributesW(path);
 	uint translated_attrs = 0;
 	if (attrs != INVALID_FILE_ATTRIBUTES) {
 		if (attrs & FILE_ATTRIBUTE_ARCHIVE)    translated_attrs |= kFileAttribute_Archive;
@@ -1282,7 +1282,7 @@ static LRESULT kWinHandleEvents(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam
 		case WM_KEYUP:
 		case WM_KEYDOWN:
 		{
-			if (wparam < kArrayCount(VirtualKeyMap)) {
+			if (wparam < kFixedCount(VirtualKeyMap)) {
 				kKey key    = VirtualKeyMap[wparam];
 				bool repeat = HIWORD(lparam) & KF_REPEAT;
 				bool down   = (msg == WM_KEYDOWN);
@@ -1382,7 +1382,7 @@ static void kWinCreateWindow(const char *mb_title, uint w, uint h, uint flags) {
 	wchar_t title[2048] = L"KrWindow | Windows";
 
 	if (mb_title) {
-		MultiByteToWideChar(CP_UTF8, 0, (char *)mb_title, -1, title, kArrayCount(title));
+		MultiByteToWideChar(CP_UTF8, 0, (char *)mb_title, -1, title, kFixedCount(title));
 	}
 
 	int width      = CW_USEDEFAULT;

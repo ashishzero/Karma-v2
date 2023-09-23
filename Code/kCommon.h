@@ -225,7 +225,7 @@ typedef ptrdiff_t             imem;
 #define K_PI_INVERSE          (1.0f / K_PI)
 #define K_TAU                 (K_PI / 2)
 
-#define kArrayCount(a)         (sizeof(a) / sizeof((a)[0]))
+#define kFixedCount(a)         (sizeof(a) / sizeof((a)[0]))
 
 #define kMin(a, b)             ((a) < (b) ? (a) : (b))
 #define kMax(a, b)             ((a) > (b) ? (a) : (b))
@@ -521,7 +521,7 @@ void       kRandomSourceSeedEx(kRandomSource *random, u64 state, u64 seq);
 //
 
 int        kCodepointToUTF8(u32 codepoint, u8 buffer[4]);
-int        kUTF8ToCodepoint(const u8 *start, imem count, u32 *codepoint);
+int        kUTF8ToCodepoint(const u8 *start, u8 *end, u32 *codepoint);
 
 kString    kCopyString(kString string, kAllocator *allocator);
 char *     kStringToCstr(kString string, kAllocator *allocator);

@@ -1,7 +1,6 @@
 #pragma once
-#include "kMath.h"
+#include "kArray.h"
 #include "kRender.h"
-#include "kContext.h"
 
 #include <string.h>
 
@@ -9,40 +8,47 @@
 //
 //
 
-typedef struct kVertexList2D {
-	kVertex2D *data;
-	u32        count;
-	u32        allocated;
-} kVertexList2D;
+typedef struct kRenderParamState2D {
+	i32 vertex;
+	u32 index;
+	u32 count;
+	u32 next;
+} kRenderParamState2D;
 
-typedef struct kIndexList2D {
-	kIndex2D *data;
-	u32       count;
-	u32       allocated;
-} kIndexList2D;
+typedef struct kRenderCommandState2D {
+	u32 params;
+	u32 count;
+} kRenderCommandState2D;
 
 typedef struct kRenderState2D {
-	u32       count;
-	u32       next;
-	float     thickness;
+	kRenderParamState2D   param;
+	kRenderCommandState2D command;
 } kRenderState2D;
 
-typedef struct kVectorList2D {
-	kVec2 *data;
-	u32    count;
-	u32    allocated;
-} kVectorList2D;
-
 typedef struct kRenderContext2D {
-	kVertexList2D  vertex;
-	kIndexList2D   index;
-	kRenderState2D state;
+	kRenderState2D     state;
 
-	kVectorList2D  builder;
+	kVertex2D      *   vertices;
+	kIndex2D       *   indices;
+	kRenderParam2D *   params;
+	kRenderCommand2D * commands;
+
+	float              thickness;
+
+	kRect         *    rects;
+	kMat4         *    transforms;
+	kTexture      *    textures[K_MAX_TEXTURE_SLOTS];
+
+	kVec2         *    builder;
 } kRenderContext2D;
 
+typedef struct kRenderContextBuiltin {
+	kFont font;
+} kRenderContextBuiltin;
+
 typedef struct kRenderContext {
-	kRenderContext2D context2d;
+	kRenderContext2D      context2d;
+	kRenderContextBuiltin builtin;
 } kRenderContext;
 
 static kRenderContext render;
@@ -156,184 +162,144 @@ static float kCosLookup(float turns) {
 //	SetShader(Render.Shader[Render.Shader.Count - 2]);
 //	Render.Shader.Count -= 1;
 //}
-//
-//void SetTexture(PL_Texture *texture, uint idx) {
-//	Assert(idx <= PL_MAX_SHADER_BINDING);
-//	PL_Texture *prev = Last(Render.Texture[idx]);
-//	if (prev != texture) {
-//		OnTextureTransition(idx);
-//	}
-//	Last(Render.Texture[idx]) = texture;
-//}
-//
-//void PushTexture(PL_Texture *texture, uint idx) {
-//	Assert(idx <= PL_MAX_SHADER_BINDING);
-//	Push(&Render.Texture[idx], Last(Render.Texture[idx]));
-//	SetTexture(texture, idx);
-//}
-//
-//void PopTexture(uint idx) {
-//	Assert(Render.Texture[idx].Count > 1);
-//	SetTexture(Render.Texture[idx][Render.Texture[idx].Count - 2], idx);
-//	Render.Texture[idx].Count -= 1;
-//}
-//
-//void SetRect(PL_Rect rect) {
-//	PL_Rect prev = Last(Render.Rect);
-//	if (memcmp(&prev, &rect, sizeof(rect)) != 0) {
-//		OnRectTransition();
-//	}
-//	Last(Render.Rect) = rect;
-//}
-//
-//void SetRect(float x, float y, float w, float h) {
-//	PL_Rect rect;
-//	rect.MinX = x;
-//	rect.MinY = y;
-//	rect.MaxX = x + w;
-//	rect.MaxY = y + h;
-//	SetRect(rect);
-//}
-//
-//void PushRect(PL_Rect rect) {
-//	Push(&Render.Rect, Last(Render.Rect));
-//	SetRect(rect);
-//}
-//
-//void PushRect(float x, float y, float w, float h) {
-//	PL_Rect rect;
-//	rect.MinX = x;
-//	rect.MinY = y;
-//	rect.MaxX = x + w;
-//	rect.MaxY = y + h;
-//	PushRect(rect);
-//}
-//
-//void PopRect() {
-//	Assert(Render.Rect.Count > 1);
-//	SetRect(Render.Rect[Render.Rect.Count - 2]);
-//	Render.Rect.Count -= 1;
-//}
-//
-//void SetTransform(const Mat4 &transform) {
-//	const Mat4 prev = Last(Render.Transform);
-//	if (memcmp(&prev, &transform, sizeof(transform)) != 0) {
-//		OnTransformTransition();
-//	}
-//	Last(Render.Transform) = transform;
-//}
-//
-//void PushTransform(const Mat4 &transform) {
-//	Push(&Render.Transform, Last(Render.Transform));
-//	Mat4 t = Last(Render.Transform) * transform;
-//	SetTransform(t);
-//}
-//
-//void PushTransform(const Mat3 &transform) {
-//	Mat4 m4;
-//	m4.rows[0] = kVec4(transform.rows[0]._0.xy, 0.0f, transform.rows[0].z);
-//	m4.rows[1] = kVec4(transform.rows[1]._0.xy, 0.0f, transform.rows[1].z);
-//	m4.rows[2] = kVec4(transform.rows[2]._0.xy, 0.0f, 0.0f);
-//	m4.rows[3] = kVec4(0.0f, 0.0f, 0.0f, 1.0f);
-//	PushTransform(m4);
-//}
-//
-//void PushTransform(const Mat2 &transform) {
-//	Mat4 m4;
-//	m4.rows[0] = kVec4(transform.rows[0], 0.0f, 0.0f);
-//	m4.rows[1] = kVec4(transform.rows[1], 0.0f, 0.0f);
-//	m4.rows[2] = kVec4(0.0f, 0.0f, 1.0f, 0.0f);
-//	m4.rows[3] = kVec4(0.0f, 0.0f, 0.0f, 1.0f);
-//	PushTransform(m4);
-//}
-//
-//void PushTransform(kVec2 pos, float angle) {
-//	kVec2 arm = Arm(angle);
-//
-//	Mat4 mat;
-//	mat.rows[0] = kVec4(arm.x, -arm.y, 0.0f, pos.x);
-//	mat.rows[1] = kVec4(arm.y, arm.x, 0.0f, pos.y);
-//	mat.rows[2] = kVec4(0.0f, 0.0f, 1.0f, 0.0f);
-//	mat.rows[2] = kVec4(0.0f, 0.0f, 0.0f, 1.0f);
-//	PushTransform(mat);
-//}
-//
-//void PopTransform() {
-//	Assert(Render.Transform.Count > 1);
-//	SetTransform(Render.Transform[Render.Transform.Count - 2]);
-//	Render.Transform.Count -= 1;
-//}
 
-//
-//
-//
-
-static u32 kNextVertexListCap(u32 count) {
+void kFlushRenderData(void) {
 	kRenderContext2D *ctx = kGetRenderContext2D();
-	u32 next = ctx->vertex.allocated ? ctx->vertex.allocated << 1 : K_INITIAL_VERTEX_ALLOC;
-	return kMax(next, ctx->vertex.count + count);
-}
 
-static u32 kNextIndexListCap(u32 count) {
-	kRenderContext2D *ctx = kGetRenderContext2D();
-	u32 next = ctx->index.allocated ? ctx->index.allocated << 1 : K_INITIAL_INDEX_ALLOC;
-	return kMax(next, ctx->index.count + count);
-}
-
-static void kReserveVertex(u32 count) {
-	kRenderContext2D *ctx = kGetRenderContext2D();
-	if (ctx->vertex.count + count < ctx->vertex.allocated)
+	if (ctx->state.param.count)
 		return;
-	u32 allocate          = kNextVertexListCap(count);
-	ctx->vertex.data      = (kVertex2D *)kRealloc(ctx->vertex.data, ctx->vertex.allocated * sizeof(kVertex2D), allocate * sizeof(kVertex2D));
-	ctx->vertex.allocated = allocate;
+
+	kRenderParam2D *param   = kArrayAddEx(&ctx->params);
+
+	for (u32 i = 0; i < K_MAX_TEXTURE_SLOTS; ++i)
+		param->textures[i]  = kArrayLast(&ctx->textures[i]);
+
+	param->transform        = kArrayLast(&ctx->transforms);
+	param->rect             = kArrayLast(&ctx->rects);
+	param->vertex           = ctx->state.param.vertex;
+	param->index            = ctx->state.param.index;
+	param->count            = ctx->state.param.count;
+
+	ctx->state.param.vertex = (i32)kArrayCount(&ctx->vertices);
+	ctx->state.param.index  = (u32)kArrayCount(&ctx->indices);
+	ctx->state.param.count  = 0;
+
+	ctx->state.command.count += 1;
 }
 
-static void kReserveIndex(u32 count) {
+void kSetTexture(kTexture texture, uint idx) {
+	kAssert(idx < K_MAX_TEXTURE_SLOTS);
 	kRenderContext2D *ctx = kGetRenderContext2D();
-	if (ctx->index.count + count < ctx->index.allocated)
-		return;
-	u32 allocate         = kNextIndexListCap(count);
-	ctx->index.data      = (kIndex2D *)kRealloc(ctx->index.data, ctx->index.allocated * sizeof(kIndex2D), allocate * sizeof(kIndex2D));
-	ctx->index.allocated = allocate;
+	kTexture *prev = &kArrayLast(&ctx->textures[idx]);
+	if (prev->ptr != texture.ptr) {
+		kFlushRenderData();
+	}
+	*prev = texture;
 }
 
-static void kReservePrimitive(u32 vertex, u32 index) {
-	kReserveVertex(vertex);
-	kReserveIndex(index);
+void kPushTexture(kTexture texture, uint idx) {
+	kAssert(idx < K_MAX_TEXTURE_SLOTS);
+	kRenderContext2D *ctx = kGetRenderContext2D();
+	kTexture last = kArrayLast(&ctx->textures[idx]);
+	kArrayAdd(&ctx->textures[idx], last);
+	kSetTexture(texture, idx);
 }
+
+void kPopTexture(uint idx) {
+	kAssert(idx < K_MAX_TEXTURE_SLOTS);
+	kRenderContext2D *ctx = kGetRenderContext2D();
+	imem count = kArrayCount(&ctx->textures[idx]);
+	kAssert(count > 1);
+	kSetTexture(ctx->textures[idx][count - 2], idx);
+	kArrayPop(&ctx->textures[idx]);
+}
+
+void kSetRect(kRect rect) {
+	kRenderContext2D *ctx = kGetRenderContext2D();
+	kRect *prev = &kArrayLast(&ctx->rects);
+	if (memcmp(prev, &rect, sizeof(rect)) != 0) {
+		kFlushRenderData();
+	}
+	*prev = rect;
+}
+
+void kSetRectEx(float x, float y, float w, float h) {
+	kRect rect;
+	rect.min.x = x;
+	rect.min.y = y;
+	rect.max.x = x + w;
+	rect.max.y = y + h;
+	kSetRect(rect);
+}
+
+void kPushRect(kRect rect) {
+	kRenderContext2D *ctx = kGetRenderContext2D();
+	kRect last = kArrayLast(&ctx->rects);
+	kArrayAdd(&ctx->rects, last);
+	kSetRect(rect);
+}
+
+void kPushRectEx(float x, float y, float w, float h) {
+	kRect rect;
+	rect.min.x = x;
+	rect.min.y = y;
+	rect.max.x = x + w;
+	rect.max.y = y + h;
+	kPushRect(rect);
+}
+
+void PopRect(void) {
+	kRenderContext2D *ctx = kGetRenderContext2D();
+	imem count = kArrayCount(&ctx->rects);
+	kAssert(count > 1);
+	kSetRect(ctx->rects[count - 2]);
+	kArrayPop(&ctx->rects);
+}
+
+void kSetTransform(const kMat4 *transform) {
+	kRenderContext2D *ctx = kGetRenderContext2D();
+	kMat4 *prev = &kArrayLast(&ctx->transforms);
+	if (memcmp(prev, transform, sizeof(kMat4)) != 0) {
+		kFlushRenderData();
+	}
+	*prev = *transform;
+}
+
+void kPushTransform(const kMat4 *transform) {
+	kRenderContext2D *ctx = kGetRenderContext2D();
+	kMat4 last = kArrayLast(&ctx->transforms);
+	kArrayAdd(&ctx->transforms, last);
+	kMat4 t = kMul(&last, transform);
+	kSetTransform(&t);
+}
+
+void kTranslateRotate(kVec2 pos, float angle) {
+	kVec2 arm = kArm(angle);
+
+	kMat4 mat;
+	mat.rows[0] = (kVec4){ arm.x, -arm.y, 0.0f, pos.x };
+	mat.rows[1] = (kVec4){ arm.y, arm.x, 0.0f, pos.y };
+	mat.rows[2] = (kVec4){ 0.0f, 0.0f, 1.0f, 0.0f };
+	mat.rows[2] = (kVec4){ 0.0f, 0.0f, 0.0f, 1.0f };
+	kPushTransform(&mat);
+}
+
+void kPopTransform(void) {
+	kRenderContext2D *ctx = kGetRenderContext2D();
+	imem count = kArrayCount(&ctx->transforms);
+	kAssert(count > 1);
+	kSetTransform(&ctx->transforms[count - 2]);
+	kArrayPop(&ctx->transforms);
+}
+
+//
+//
+//
 
 static void kCommitPrimitive(u32 vertex, u32 index) {
-	kRenderContext2D *ctx = kGetRenderContext2D();
-	kAssert(ctx->vertex.count + vertex < ctx->vertex.allocated &&
-		ctx->index.count + index < ctx->index.allocated);
-	ctx->vertex.count += vertex;
-	ctx->index.count  += index;
-	ctx->state.count  += index;
-	ctx->state.next   += vertex;
-}
-
-static u32 kNextBuilderListCap(u32 count) {
-	kRenderContext2D *ctx = kGetRenderContext2D();
-	u32 next = ctx->builder.allocated ? ctx->builder.allocated << 2 : K_INITIAL_PATH_ALLOC;
-	return kMax(next, ctx->builder.count + count);
-}
-
-static void kReserveBuilder(u32 count) {
-	kRenderContext2D *ctx = kGetRenderContext2D();
-	kVectorList2D    *vec = &ctx->builder;
-	if (vec->count + count < vec->allocated)
-		return;
-	u32 allocate   = kNextBuilderListCap(count);
-	vec->data      = (kVec2 *)kRealloc(vec->data, vec->allocated * sizeof(kVec2), allocate * sizeof(kVec2));
-	vec->allocated = allocate;
-}
-
-static void kCommitBuilder(u32 count) {
-	kRenderContext2D *ctx = kGetRenderContext2D();
-	kVectorList2D    *vec = &ctx->builder;
-	kAssert(vec->count + count < vec->allocated);
-	vec->count += count;
+	kRenderContext2D *ctx   = kGetRenderContext2D();
+	ctx->state.param.count += index;
+	ctx->state.param.next  += vertex;
 }
 
 //
@@ -346,17 +312,15 @@ void kDrawTriangleUvGradient(
 		kVec4 ca, kVec4 cb, kVec4 cc) {
 	kRenderContext2D *ctx = kGetRenderContext2D();
 
-	kReservePrimitive(3, 3);
-
-	kVertex2D *vtx = ctx->vertex.data + ctx->vertex.count;
+	kVertex2D *vtx = kArrayExtend(&ctx->vertices, 3);
 	vtx[0].pos = va; vtx[0].tex = ta; vtx[0].col = ca;
 	vtx[1].pos = vb; vtx[1].tex = tb; vtx[1].col = cb;
 	vtx[2].pos = vc; vtx[2].tex = tc; vtx[2].col = cc;
 
-	kIndex2D *idx = ctx->index.data + ctx->index.count;
-	idx[0] = ctx->state.next + 0;
-	idx[1] = ctx->state.next + 1;
-	idx[2] = ctx->state.next + 2;
+	kIndex2D *idx = kArrayExtend(&ctx->indices, 3);
+	idx[0] = ctx->state.param.next + 0;
+	idx[1] = ctx->state.param.next + 1;
+	idx[2] = ctx->state.param.next + 2;
 
 	kCommitPrimitive(3, 3);
 }
@@ -386,17 +350,15 @@ void kDrawQuadUvGradient(
 	kVec4 ca, kVec4 cb, kVec4 cc, kVec4 cd) {
 	kRenderContext2D *ctx = kGetRenderContext2D();
 
-	kReservePrimitive(4, 6);
-
-	kVertex2D *vtx = ctx->vertex.data + ctx->vertex.count;
+	kVertex2D *vtx = kArrayExtend(&ctx->vertices, 4);
 	vtx[0].pos = va; vtx[0].tex = ta; vtx[0].col = ca;
 	vtx[1].pos = vb; vtx[1].tex = tb; vtx[1].col = cb;
 	vtx[2].pos = vc; vtx[2].tex = tc; vtx[2].col = cc;
 	vtx[3].pos = vd; vtx[3].tex = td; vtx[3].col = cd;
 
-	u32 next = ctx->state.next;
+	u32 next = ctx->state.param.next;
 
-	kIndex2D *idx = ctx->index.data + ctx->index.count;
+	kIndex2D *idx = kArrayExtend(&ctx->indices, 6);
 	idx[0] = next + 0;
 	idx[1] = next + 1;
 	idx[2] = next + 2;
@@ -941,14 +903,13 @@ void kDrawPolygonUvGradient(kVec2 *vertices, const kVec2 *uvs, kVec4 *colors, u3
 }
 
 void kDrawTriangleList(kVertex2D *vertices, u32 count) {
-	kReservePrimitive(count, count);
+	kRenderContext2D * ctx = kGetRenderContext2D();
+	kVertex2D        * vtx = kArrayExtend(&ctx->vertices, count);
+	u32              * idx = kArrayExtend(&ctx->indices, count);
 
-	kRenderContext2D *ctx = kGetRenderContext2D();
-	memcpy(ctx->vertex.data + ctx->vertex.count, vertices, count * sizeof(kVertex2D));
+	memcpy(vtx, vertices, count * sizeof(kVertex2D));
 
-	u32 next = ctx->state.next;
-	u32 *idx = ctx->index.data;
-
+	u32 next = ctx->state.param.next;
 	for (u32 i = 0; i < count; ++i) {
 		idx[i] = next + i;
 	}
@@ -963,7 +924,7 @@ void kDrawLine(kVec3 a, kVec3 b, kVec4 color) {
 
 	kRenderContext2D *ctx = kGetRenderContext2D();
 
-	float thickness = ctx->state.thickness * 0.5f;
+	float thickness = ctx->thickness * 0.5f;
 	float dx = b.x - a.x;
 	float dy = b.y - a.y;
 	float ilen = 1.0f / kSquareRoot(dx * dx + dy * dy);
@@ -981,16 +942,15 @@ void kDrawLine(kVec3 a, kVec3 b, kVec4 color) {
 void kPathTo(kVec2 a) {
 	kRenderContext2D *ctx = kGetRenderContext2D();
 
-	if (ctx->builder.count) {
-		kVec2 last = ctx->builder.data[ctx->builder.count - 1];
+	imem count = kArrayCount(&ctx->builder);
+	if (count) {
+		kVec2 last = ctx->builder[count - 1];
 		if (kAlmostEqual(last.x - a.x, 0.0f) &&
 			kAlmostEqual(last.y - a.y, 0.0f))
 			return;
 	}
 
-	kReserveBuilder(1);
-	ctx->builder.data[ctx->builder.count] = a;
-	kCommitBuilder(1);
+	kArrayAdd(&ctx->builder, a);
 }
 
 void kArcTo(kVec2 position, float radius_a, float radius_b, float theta_a, float theta_b) {
@@ -1019,17 +979,15 @@ void kArcTo(kVec2 position, float radius_a, float radius_b, float theta_a, float
 void kBezierQuadraticTo(kVec2 a, kVec2 b, kVec2 c) {
 	kRenderContext2D *ctx = kGetRenderContext2D();
 	int segments = (int)kCeil(kLength(a) + kLength(b) + kLength(c));
-	kReserveBuilder(segments + 1);
-	kBuildBezierQuadratic(a, b, c, ctx->builder.data + ctx->builder.count, segments);
-	kCommitBuilder(segments + 1);
+	kVec2 *paths = kArrayExtend(&ctx->builder, segments + 1);
+	kBuildBezierQuadratic(a, b, c, paths, segments);
 }
 
 void kBezierCubicTo(kVec2 a, kVec2 b, kVec2 c, kVec2 d) {
 	kRenderContext2D *ctx = kGetRenderContext2D();
 	int segments = (int)kCeil(kLength(a) + kLength(b) + kLength(c) + kLength(d));
-	kReserveBuilder(segments + 1);
-	kBuildBezierCubic(a, b, c, d, ctx->builder.data + ctx->builder.count, segments);
-	kCommitBuilder(segments + 1);
+	kVec2 *paths = kArrayExtend(&ctx->builder, segments + 1);
+	kBuildBezierCubic(a, b, c, d, paths, segments);
 }
 
 static inline kVec2 kLineLineIntersect(kVec2 p1, kVec2 q1, kVec2 p2, kVec2 q2) {
@@ -1052,27 +1010,28 @@ static inline kVec2 kLineLineIntersect(kVec2 p1, kVec2 q1, kVec2 p2, kVec2 q2) {
 void kDrawPathStroked(kVec4 color, bool closed) {
 	kRenderContext2D *ctx = kGetRenderContext2D();
 
-	if (ctx->builder.count < 2) {
-		ctx->builder.count = 0;
+	imem path_count = kArrayCount(&ctx->builder);
+
+	if (path_count < 2) {
+		kArrayReset(&ctx->builder);
 		return;
 	}
 
-	if (ctx->builder.count == 2 && closed) {
-		ctx->builder.count = 0;
+	if (path_count == 2 && closed) {
+		kArrayReset(&ctx->builder);
 		return;
 	}
 
 	if (closed) {
-		kPathTo(ctx->builder.data[0]);
+		kPathTo(ctx->builder[0]);
 	}
 
-	u32 path_count   = ctx->builder.count;
-	u32 normal_count = path_count - 1;
+	imem normal_count = path_count - 1;
 
-	kReserveBuilder(normal_count);
+	kArrayExtend(&ctx->builder, normal_count);
 
-	kVec2 *paths   = ctx->builder.data;
-	kVec2 *normals = ctx->builder.data + ctx->builder.count;
+	kVec2 *paths   = ctx->builder;
+	kVec2 *normals = ctx->builder + path_count;
 
 	for (u32 i = 0; i < normal_count; ++i) {
 		kVec2 diff = kSub(paths[i + 1], paths[i]);
@@ -1080,7 +1039,7 @@ void kDrawPathStroked(kVec4 color, bool closed) {
 		normals[i] = v;
 	}
 
-	kVec2 thickness = kVec2Factor(0.5f * ctx->state.thickness);
+	kVec2 thickness = kVec2Factor(0.5f * ctx->thickness);
 
 	kVec2 p, q;
 	kVec2 start_p, start_q;
@@ -1169,24 +1128,26 @@ void kDrawPathStroked(kVec4 color, bool closed) {
 
 	kDrawQuad(prev_q, prev_p, start_p, start_q, color);
 
-	ctx->builder.count = 0;
+	kArrayReset(&ctx->builder);
 }
 
 void kDrawPathFilled(kVec4 color) {
 	kRenderContext2D *ctx = kGetRenderContext2D();
 
-	if (ctx->builder.count < 3) {
-		ctx->builder.count = 0;
+	imem count = kArrayCount(&ctx->builder);
+
+	if (count < 3) {
+		kArrayReset(&ctx->builder);
 		return;
 	}
 
-	kVec2 *paths = ctx->builder.data;
-	u32 triangle_count = ctx->builder.count - 2;
+	kVec2 *paths = ctx->builder;
+	imem triangle_count = count - 2;
 	for (u32 ti = 0; ti < triangle_count; ++ti) {
 		kDrawTriangle(paths[0], paths[ti + 1], paths[ti + 2], color);
 	}
 
-	ctx->builder.count = 0;
+	kArrayReset(&ctx->builder);
 }
 
 void kDrawBezierQuadratic(kVec2 a, kVec2 b, kVec2 c, kVec4 color) {
@@ -1289,121 +1250,101 @@ void kDrawRoundedRectOutline(kVec2 pos, kVec2 dim, kVec4 color, float radius) {
 	}
 }
 
+void kDrawTexture(kTexture texture, kVec2 pos, kVec2 dim, kVec4 color) {
+	kPushTexture(texture, 0);
+	kDrawRect(pos, dim, color);
+	kPopTexture(0);
+}
 
-//void kDrawTexture(PL_Texture *texture, kVec3 pos, kVec2 dim, kVec4 color) {
-//	PushTexture(texture);
-//	kDrawRect(pos, dim, color);
-//	PopTexture();
-//}
-//
-//void kDrawTexture(PL_Texture *texture, kVec2 pos, kVec2 dim, kVec4 color) {
-//	PushTexture(texture);
-//	kDrawRect(pos, dim, color);
-//	PopTexture();
-//}
-//
-//void kDrawTextureCentered(PL_Texture *texture, kVec3 pos, kVec2 dim, kVec4 color) {
-//	PushTexture(texture);
-//	kDrawRectCentered(pos, dim, color);
-//	PopTexture();
-//}
-//
-//void kDrawTextureCentered(PL_Texture *texture, kVec2 pos, kVec2 dim, kVec4 color) {
-//	PushTexture(texture);
-//	kDrawRectCentered(pos, dim, color);
-//	PopTexture();
-//}
-//
-//void kDrawTexture(PL_Texture *texture, kVec3 pos, kVec2 dim, Region  rect, kVec4 color) {
-//	PushTexture(texture);
-//	kDrawRect(pos, dim, rect, color);
-//	PopTexture();
-//}
-//
-//void kDrawTexture(PL_Texture *texture, kVec2 pos, kVec2 dim, Region rect, kVec4 color) {
-//	PushTexture(texture);
-//	kDrawRect(pos, dim, rect, color);
-//	PopTexture();
-//}
-//
-//void kDrawTextureCentered(PL_Texture *texture, kVec3 pos, kVec2 dim, Region rect, kVec4 color) {
-//	PushTexture(texture);
-//	kDrawRectCentered(pos, dim, rect, color);
-//	PopTexture();
-//}
-//
-//void kDrawTextureCentered(PL_Texture *texture, kVec2 pos, kVec2 dim, Region rect, kVec4 color) {
-//	PushTexture(texture);
-//	kDrawRectCentered(pos, dim, rect, color);
-//	PopTexture();
-//}
-//
-//static const GlyphInfo *FindGlyphInfo(Font *font, u32 codepoint) {
-//	if (codepoint < font->Index.Count) {
-//		u16 index = font->Index[codepoint];
-//		return &font->Glyphs[index];
-//	}
-//	return font->Fallback;
-//}
-//
-//float CalculateText(String text, Font *font, float height) {
-//	float dist = 0;
-//
-//	u32 codepoint;
-//	u8 *ptr = text.begin();
-//	u8 *end = text.end();
-//
-//	while (ptr < end) {
-//		int len = UTF8ToCodepoint(ptr, end, &codepoint);
-//		ptr += len;
-//
-//		auto info = FindGlyphInfo(font, codepoint);
-//		dist += height * info->Advance;
-//	}
-//
-//	return dist;
-//}
-//
-//float CalculateText(String text, float height) {
-//	Font *font = &Render.BuiltinFont;
-//	return CalculateText(text, font, height);
-//}
-//
-//void kDrawText(String text, kVec3 pos, Font *font, kVec4 color, float height) {
-//	PushShader(Render.BuiltinShaders[PL_EmbeddedShader_Font]);
-//	PushTexture(font->Texture);
-//
-//	u32 codepoint;
-//	u8 *ptr = text.begin();
-//	u8 *end = text.end();
-//
-//	while (ptr < end) {
-//		int len = UTF8ToCodepoint(ptr, end, &codepoint);
-//		ptr += len;
-//
-//		auto info = FindGlyphInfo(font, codepoint);
-//
-//		kVec3 kDraw_pos = pos;
-//		draw_pos._0.xy += height * kVec2(info->Bearing.x, info->Bearing.y);
-//		kDrawRect(draw_pos, height * info->Size, info->Rect, color);
-//		pos.x += height * info->Advance;
-//	}
-//
-//	PopTexture();
-//	PopShader();
-//}
-//
-//void kDrawText(String text, kVec2 pos, Font *font, kVec4 color, float height) {
-//	kDrawText(text, kVec3(pos, 0), font, color, height);
-//}
-//
-//void kDrawText(String text, kVec3 pos, kVec4 color, float height) {
-//	Font *font = &Render.BuiltinFont;
-//	kDrawText(text, pos, font, color, height);
-//}
-//
-//void kDrawText(String text, kVec2 pos, kVec4 color, float height) {
-//	Font *font = &Render.BuiltinFont;
-//	kDrawText(text, pos, font, color, height);
-//}
-//
+void kDrawTextureCentered(kTexture texture, kVec2 pos, kVec2 dim, kVec4 color) {
+	kPushTexture(texture, 0);
+	kDrawRectCentered(pos, dim, color);
+	kPopTexture(0);
+}
+
+void kDrawTextureMasked(kTexture texture, kTexture mask, kVec2 pos, kVec2 dim, kVec4 color) {
+	kPushTexture(texture, 0);
+	kPushTexture(mask, 1);
+	kDrawRect(pos, dim, color);
+	kPopTexture(1);
+	kPopTexture(0);
+}
+
+void kDrawTextureCenteredMasked(kTexture texture, kTexture mask, kVec2 pos, kVec2 dim, kVec4 color) {
+	kPushTexture(texture, 0);
+	kPushTexture(mask, 1);
+	kDrawRectCentered(pos, dim, color);
+	kPopTexture(1);
+	kPopTexture(0);
+}
+
+kGlyph *kFindFontGlyph(kFont *font, u32 codepoint) {
+	if (codepoint < font->largest) {
+		u16 pos = font->map[codepoint];
+		return &font->glyphs[pos];
+	}
+	return font->fallback;
+}
+
+float kCalculateText(kString text, kFont *font, float height) {
+	float dist = 0;
+
+	u32 codepoint;
+	u8 *ptr = text.data;
+	u8 *end = text.data + text.count;
+
+	while (ptr < end) {
+		int len = kUTF8ToCodepoint(ptr, end, &codepoint);
+		ptr += len;
+
+		kGlyph *glyph = kFindFontGlyph(font, codepoint);
+		dist += height * glyph->advance;
+	}
+
+	return dist;
+}
+
+float kCalculateBuiltinText(kString text, float height) {
+	kFont *font = &render.builtin.font;
+	return kCalculateText(text, font, height);
+}
+
+void kDrawText(kString text, kVec2 pos, kFont *font, kVec4 color, float height) {
+	kPushTexture(font->texture, 0);
+
+	u32 codepoint;
+	u8 *ptr = text.data;
+	u8 *end = text.data + text.count;
+
+	while (ptr < end) {
+		int len = kUTF8ToCodepoint(ptr, end, &codepoint);
+		ptr += len;
+
+		kGlyph *glyph = kFindFontGlyph(font, codepoint);
+
+		kVec2 draw_pos;
+		draw_pos.x = pos.x + height * glyph->bearing.x;
+		draw_pos.y = pos.y + height * glyph->bearing.y;
+
+		kVec2 draw_size;
+		draw_size.x = height * glyph->size.x;
+		draw_size.y = height * glyph->size.y;
+
+		kVec2 uv_a = { glyph->rect.min.x, glyph->rect.min.y };
+		kVec2 uv_b = { glyph->rect.min.x, glyph->rect.max.y };
+		kVec2 uv_c = { glyph->rect.max.x, glyph->rect.max.y };
+		kVec2 uv_d = { glyph->rect.max.x, glyph->rect.min.y };
+
+		kDrawRectUv(draw_pos, draw_size, uv_a, uv_b, uv_c, uv_d, color);
+
+		pos.x += height * glyph->advance;
+	}
+
+	kPopTexture(0);
+}
+
+void kDrawBuilinText(kString text, kVec2 pos, kVec4 color, float height) {
+	kFont *font = &render.builtin.font;
+	kDrawText(text, pos, font, color, height);
+}
+

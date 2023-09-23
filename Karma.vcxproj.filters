@@ -36,6 +36,9 @@
     <ClInclude Include="Code\kRender.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Code\kArray.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Code\kMedia.c">
@@ -55,6 +58,9 @@
     </ClCompile>
     <ClCompile Include="Code\kRender.c">
       <Filter>Header Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Code\kArray.c">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
