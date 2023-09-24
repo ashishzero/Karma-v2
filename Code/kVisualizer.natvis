@@ -106,7 +106,7 @@
 		</Expand>
 	</Type>
 
-	<Type Name="kEventList">
+	<Type Name="kEvent_Array">
 		<DisplayString>{{ count={count} }}</DisplayString>
 		<Expand>
 			<Item Name="[count]" ExcludeView="simple">count</Item>
@@ -129,6 +129,114 @@
 			<Item Name="[key]" ExcludeView="simple" Condition="kind==kEvent_KeyReleased || kind==kEvent_KeyPressed">key</Item>
 			<Item Name="[wheel]" ExcludeView="simple" Condition="kind==kEvent_WheelMoved">wheel</Item>
 			<Item Name="[text]" ExcludeView="simple" Condition="kind==kEvent_TextInput">text</Item>
+		</Expand>
+	</Type>
+
+	<Type Name="kVertex2D_Array">
+		<DisplayString>{{ count={count} }}</DisplayString>
+		<Expand>
+			<Item Name="[count]" ExcludeView="simple">count</Item>
+			<Item Name="[allocated]" ExcludeView="simple">allocated</Item>
+			<ArrayItems>
+				<Size>count</Size>
+				<ValuePointer>data</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+
+	<Type Name="kIndex2D_Array">
+		<DisplayString>{{ count={count} }}</DisplayString>
+		<Expand>
+			<Item Name="[count]" ExcludeView="simple">count</Item>
+			<Item Name="[allocated]" ExcludeView="simple">allocated</Item>
+			<ArrayItems>
+				<Size>count</Size>
+				<ValuePointer>data</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+
+	<Type Name="kRenderParam2D_Array">
+		<DisplayString>{{ count={count} }}</DisplayString>
+		<Expand>
+			<Item Name="[count]" ExcludeView="simple">count</Item>
+			<Item Name="[allocated]" ExcludeView="simple">allocated</Item>
+			<ArrayItems>
+				<Size>count</Size>
+				<ValuePointer>data</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+
+	<Type Name="kRenderCommand2D_Array">
+		<DisplayString>{{ count={count} }}</DisplayString>
+		<Expand>
+			<Item Name="[count]" ExcludeView="simple">count</Item>
+			<Item Name="[allocated]" ExcludeView="simple">allocated</Item>
+			<ArrayItems>
+				<Size>count</Size>
+				<ValuePointer>data</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+
+	<Type Name="kRect_Array">
+		<DisplayString>{{ count={count} }}</DisplayString>
+		<Expand>
+			<Item Name="[count]" ExcludeView="simple">count</Item>
+			<Item Name="[allocated]" ExcludeView="simple">allocated</Item>
+			<ArrayItems>
+				<Size>count</Size>
+				<ValuePointer>data</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+	
+	<Type Name="kMat4_Array">
+		<DisplayString>{{ count={count} }}</DisplayString>
+		<Expand>
+			<Item Name="[count]" ExcludeView="simple">count</Item>
+			<Item Name="[allocated]" ExcludeView="simple">allocated</Item>
+			<ArrayItems>
+				<Size>count</Size>
+				<ValuePointer>data</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+
+	<Type Name="kTexture_Array">
+		<DisplayString>{{ count={count} }}</DisplayString>
+		<Expand>
+			<Item Name="[count]" ExcludeView="simple">count</Item>
+			<Item Name="[allocated]" ExcludeView="simple">allocated</Item>
+			<ArrayItems>
+				<Size>count</Size>
+				<ValuePointer>data</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+
+	<Type Name="kShader_Array">
+		<DisplayString>{{ count={count} }}</DisplayString>
+		<Expand>
+			<Item Name="[count]" ExcludeView="simple">count</Item>
+			<Item Name="[allocated]" ExcludeView="simple">allocated</Item>
+			<ArrayItems>
+				<Size>count</Size>
+				<ValuePointer>data</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+
+	<Type Name="kVec2_Array">
+		<DisplayString>{{ count={count} }}</DisplayString>
+		<Expand>
+			<Item Name="[count]" ExcludeView="simple">count</Item>
+			<Item Name="[allocated]" ExcludeView="simple">allocated</Item>
+			<ArrayItems>
+				<Size>count</Size>
+				<ValuePointer>data</ValuePointer>
+			</ArrayItems>
 		</Expand>
 	</Type>
 

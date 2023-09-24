@@ -63,7 +63,18 @@ typedef struct kRenderCommand2D {
 //
 //
 
-void    kFlushRenderData(void);
+void    kBeginCameraRect(float left, float right, float bottom, float top);
+void    kBeginCamera(float aspect_ratio, float height);
+void    kEndCamera(void);
+
+void    kLineThickness(float thickness);
+
+void    kFlushRenderCommand(void);
+void    kSetShader(kShader shader);
+void    kPushShader(kShader shader);
+void    kPopShader(void);
+
+void    kFlushRenderParam(void);
 
 void    kSetTexture(kTexture texture, uint idx);
 void    kPushTexture(kTexture texture, uint idx);

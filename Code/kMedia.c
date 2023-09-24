@@ -1,13 +1,8 @@
 #include "kMedia.h"
 #include "kContext.h"
+#include "kArray.h"
 
 #include <string.h>
-
-typedef struct kEventList {
-	kEvent *data;
-	int     count;
-	int     allocated;
-} kEventList;
 
 typedef struct kPlatformWindow kPlatformWindow;
 
@@ -26,8 +21,10 @@ typedef struct kWindow {
 	kPlatformWindow *native;
 } kWindow;
 
+kDefineArray(kEvent);
+
 typedef struct kMedia {
-	kEventList       events;
+	kArray(kEvent)   events;
 	kKeyboardState   keyboard;
 	kMouseState      mouse;
 	kWindow          window;
@@ -70,7 +67,7 @@ void kSetUserEvents(kMediaUserEvents *user) {
 }
 
 kEvent *kGetEvents(int *count) {
-	*count = media.events.count;
+	*count = (int)media.events.count;
 	return media.events.data;
 }
 
@@ -216,7 +213,7 @@ void kSetWindowState(kWindowState *state) {
 }
 
 void kClearInput(void) {
-	media.events.count = 0;
+	kArrayReset(&media.events);
 	memset(&media.keyboard, 0, sizeof(media.keyboard));
 	memset(&media.mouse, 0, sizeof(media.mouse));
 }
@@ -242,13 +239,7 @@ void kNextFrame(void) {
 }
 
 void kAddEvent(kEvent *ev) {
-	if (media.events.count == media.events.allocated) {
-		int prev = media.events.allocated;
-		int next = kMax(prev ? prev << 1 : 64, prev + 1);
-		media.events.data = kRealloc(media.events.data, prev * sizeof(kEvent), next * sizeof(kEvent));
-		media.events.allocated = next;
-	}
-	media.events.data[media.events.count++] = *ev;
+	kArrayAdd(&media.events, *ev);
 }
 
 void kAddKeyEvent(kKey key, bool down, bool repeat) {

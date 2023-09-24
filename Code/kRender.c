@@ -25,21 +25,31 @@ typedef struct kRenderState2D {
 	kRenderCommandState2D command;
 } kRenderState2D;
 
+kDefineArray(kVertex2D);
+kDefineArray(kIndex2D);
+kDefineArray(kRenderParam2D);
+kDefineArray(kRenderCommand2D);
+kDefineArray(kRect);
+kDefineArray(kMat4);
+kDefineArray(kTexture);
+kDefineArray(kShader);
+kDefineArray(kVec2);
+
 typedef struct kRenderContext2D {
-	kRenderState2D     state;
+	kRenderState2D           state;
 
-	kVertex2D      *   vertices;
-	kIndex2D       *   indices;
-	kRenderParam2D *   params;
-	kRenderCommand2D * commands;
+	kArray(kVertex2D)        vertices;
+	kArray(kIndex2D)         indices;
+	kArray(kRenderParam2D)   params;
+	kArray(kRenderCommand2D) commands;
 
-	float              thickness;
+	float                    thickness;
+	kArray(kRect)            rects;
+	kArray(kMat4)            transforms;
+	kArray(kTexture)         textures[K_MAX_TEXTURE_SLOTS];
+	kArray(kShader)          shaders;
 
-	kRect         *    rects;
-	kMat4         *    transforms;
-	kTexture      *    textures[K_MAX_TEXTURE_SLOTS];
-
-	kVec2         *    builder;
+	kArray(kVec2)            builder;
 } kRenderContext2D;
 
 typedef struct kRenderContextBuiltin {
@@ -108,80 +118,99 @@ static float kCosLookup(float turns) {
 //
 //
 
-//void BeginCameraRegion(float left, float right, float bottom, float top) {
-//	Mat4 proj = OrthographicLH(left, right, top, bottom, -1, 1);
-//	Push(&Render.Transform, Last(Render.Transform));
-//	SetTransform(proj);
-//}
-//
-//void BeginCameraRegion(float width, float height) {
-//	float half_width  = 0.5f * width;
-//	float half_height = 0.5f * height;
-//	BeginCameraRegion(-half_width, half_width, -half_height, half_height);
-//}
-//
-//void BeginCamera(float aspect_ratio, float height) {
-//	float width = aspect_ratio * height;
-//
-//	float arx = aspect_ratio;
-//	float ary = 1;
-//
-//	if (width < height) {
-//		ary = 1.0f / arx;
-//		arx = 1.0f;
-//	}
-//
-//	float half_height = 0.5f * height;
-//
-//	BeginCameraRegion(-half_height * arx, half_height * arx, -half_height * ary, half_height * ary);
-//}
-//
-//void EndCamera() {
-//	PopTransform();
-//}
-//
-//void SetLineThickness(float thickness) {
-//	Render.Thickness = thickness;
-//}
-//
-//void SetShader(PL_Shader *shader) {
-//	PL_Shader *prev = Last(Render.Shader);
-//	if (prev != shader) {
-//		OnShaderTransition();
-//	}
-//	Last(Render.Shader) = shader;
-//}
-//
-//void PushShader(PL_Shader *shader) {
-//	Push(&Render.Shader, Last(Render.Shader));
-//	SetShader(shader);
-//}
-//
-//void PopShader() {
-//	Assert(Render.Shader.Count > 1);
-//	SetShader(Render.Shader[Render.Shader.Count - 2]);
-//	Render.Shader.Count -= 1;
-//}
+void kBeginCameraRect(float left, float right, float bottom, float top) {
+	kRenderContext2D *ctx = kGetRenderContext2D();
+	kMat4 proj = kOrthographicLH(left, right, top, bottom, -1, 1);
+	kMat4 last = kArrayLast(ctx->transforms);
+	kArrayAdd(&ctx->transforms, last);
+	kSetTransform(&proj);
+}
 
-void kFlushRenderData(void) {
+void kBeginCamera(float aspect_ratio, float height) {
+	float width = aspect_ratio * height;
+
+	float arx = aspect_ratio;
+	float ary = 1;
+
+	if (width < height) {
+		ary = 1.0f / arx;
+		arx = 1.0f;
+	}
+
+	float half_height = 0.5f * height;
+
+	kBeginCameraRect(-half_height * arx, half_height * arx, -half_height * ary, half_height * ary);
+}
+
+void kEndCamera(void) {
+	kPopTransform();
+}
+
+void kLineThickness(float thickness) {
+	kRenderContext2D *ctx = kGetRenderContext2D();
+	ctx->thickness = thickness;
+}
+
+void kFlushRenderCommand(void) {
+	kFlushRenderParam();
+
+	kRenderContext2D *ctx = kGetRenderContext2D();
+	
+	if (!ctx->state.command.count)
+		return;
+
+	kRenderCommand2D *command = kArrayAddEx(&ctx->shaders);
+	command->shader = kArrayLast(ctx->shaders);
+	command->params = ctx->state.command.params;
+	command->count  = ctx->state.command.count;
+
+	ctx->state.command.params = (u32)ctx->params.count;
+	ctx->state.command.count  = 0;
+}
+
+void kSetShader(kShader shader) {
+	kRenderContext2D *ctx = kGetRenderContext2D();
+	kShader *prev = &kArrayLast(ctx->shaders);
+	if (prev->ptr != shader.ptr) {
+		kFlushRenderCommand();
+	}
+	*prev = shader;
+}
+
+void kPushShader(kShader shader) {
+	kRenderContext2D *ctx = kGetRenderContext2D();
+	kShader last = kArrayLast(ctx->shaders);
+	kArrayAdd(&ctx->shaders, last);
+	kSetShader(last);
+}
+
+void kPopShader(void) {
+	kRenderContext2D *ctx = kGetRenderContext2D();
+	imem count = ctx->shaders.count;
+	kAssert(count > 1);
+	kSetShader(ctx->shaders.data[count - 2]);
+	kArrayPop(&ctx->shaders);
+}
+
+void kFlushRenderParam(void) {
 	kRenderContext2D *ctx = kGetRenderContext2D();
 
-	if (ctx->state.param.count)
+	if (!ctx->state.param.count)
 		return;
 
 	kRenderParam2D *param   = kArrayAddEx(&ctx->params);
 
 	for (u32 i = 0; i < K_MAX_TEXTURE_SLOTS; ++i)
-		param->textures[i]  = kArrayLast(&ctx->textures[i]);
+		param->textures[i]  = kArrayLast(ctx->textures[i]);
 
-	param->transform        = kArrayLast(&ctx->transforms);
-	param->rect             = kArrayLast(&ctx->rects);
+	param->transform        = kArrayLast(ctx->transforms);
+	param->rect             = kArrayLast(ctx->rects);
 	param->vertex           = ctx->state.param.vertex;
 	param->index            = ctx->state.param.index;
 	param->count            = ctx->state.param.count;
 
-	ctx->state.param.vertex = (i32)kArrayCount(&ctx->vertices);
-	ctx->state.param.index  = (u32)kArrayCount(&ctx->indices);
+	ctx->state.param.vertex = (i32)ctx->vertices.count;
+	ctx->state.param.index  = (u32)ctx->indices.count;
 	ctx->state.param.count  = 0;
 
 	ctx->state.command.count += 1;
@@ -190,9 +219,9 @@ void kFlushRenderData(void) {
 void kSetTexture(kTexture texture, uint idx) {
 	kAssert(idx < K_MAX_TEXTURE_SLOTS);
 	kRenderContext2D *ctx = kGetRenderContext2D();
-	kTexture *prev = &kArrayLast(&ctx->textures[idx]);
+	kTexture *prev = &kArrayLast(ctx->textures[idx]);
 	if (prev->ptr != texture.ptr) {
-		kFlushRenderData();
+		kFlushRenderParam();
 	}
 	*prev = texture;
 }
@@ -200,7 +229,7 @@ void kSetTexture(kTexture texture, uint idx) {
 void kPushTexture(kTexture texture, uint idx) {
 	kAssert(idx < K_MAX_TEXTURE_SLOTS);
 	kRenderContext2D *ctx = kGetRenderContext2D();
-	kTexture last = kArrayLast(&ctx->textures[idx]);
+	kTexture last = kArrayLast(ctx->textures[idx]);
 	kArrayAdd(&ctx->textures[idx], last);
 	kSetTexture(texture, idx);
 }
@@ -208,17 +237,17 @@ void kPushTexture(kTexture texture, uint idx) {
 void kPopTexture(uint idx) {
 	kAssert(idx < K_MAX_TEXTURE_SLOTS);
 	kRenderContext2D *ctx = kGetRenderContext2D();
-	imem count = kArrayCount(&ctx->textures[idx]);
+	imem count = ctx->textures[idx].count;
 	kAssert(count > 1);
-	kSetTexture(ctx->textures[idx][count - 2], idx);
+	kSetTexture(ctx->textures[idx].data[count - 2], idx);
 	kArrayPop(&ctx->textures[idx]);
 }
 
 void kSetRect(kRect rect) {
 	kRenderContext2D *ctx = kGetRenderContext2D();
-	kRect *prev = &kArrayLast(&ctx->rects);
+	kRect *prev = &kArrayLast(ctx->rects);
 	if (memcmp(prev, &rect, sizeof(rect)) != 0) {
-		kFlushRenderData();
+		kFlushRenderParam();
 	}
 	*prev = rect;
 }
@@ -234,7 +263,7 @@ void kSetRectEx(float x, float y, float w, float h) {
 
 void kPushRect(kRect rect) {
 	kRenderContext2D *ctx = kGetRenderContext2D();
-	kRect last = kArrayLast(&ctx->rects);
+	kRect last = kArrayLast(ctx->rects);
 	kArrayAdd(&ctx->rects, last);
 	kSetRect(rect);
 }
@@ -250,24 +279,24 @@ void kPushRectEx(float x, float y, float w, float h) {
 
 void PopRect(void) {
 	kRenderContext2D *ctx = kGetRenderContext2D();
-	imem count = kArrayCount(&ctx->rects);
+	imem count = ctx->rects.count;
 	kAssert(count > 1);
-	kSetRect(ctx->rects[count - 2]);
+	kSetRect(ctx->rects.data[count - 2]);
 	kArrayPop(&ctx->rects);
 }
 
 void kSetTransform(const kMat4 *transform) {
 	kRenderContext2D *ctx = kGetRenderContext2D();
-	kMat4 *prev = &kArrayLast(&ctx->transforms);
+	kMat4 *prev = &kArrayLast(ctx->transforms);
 	if (memcmp(prev, transform, sizeof(kMat4)) != 0) {
-		kFlushRenderData();
+		kFlushRenderParam();
 	}
 	*prev = *transform;
 }
 
 void kPushTransform(const kMat4 *transform) {
 	kRenderContext2D *ctx = kGetRenderContext2D();
-	kMat4 last = kArrayLast(&ctx->transforms);
+	kMat4 last = kArrayLast(ctx->transforms);
 	kArrayAdd(&ctx->transforms, last);
 	kMat4 t = kMul(&last, transform);
 	kSetTransform(&t);
@@ -286,9 +315,9 @@ void kTranslateRotate(kVec2 pos, float angle) {
 
 void kPopTransform(void) {
 	kRenderContext2D *ctx = kGetRenderContext2D();
-	imem count = kArrayCount(&ctx->transforms);
+	imem count = ctx->transforms.count;
 	kAssert(count > 1);
-	kSetTransform(&ctx->transforms[count - 2]);
+	kSetTransform(&ctx->transforms.data[count - 2]);
 	kArrayPop(&ctx->transforms);
 }
 
@@ -942,9 +971,9 @@ void kDrawLine(kVec3 a, kVec3 b, kVec4 color) {
 void kPathTo(kVec2 a) {
 	kRenderContext2D *ctx = kGetRenderContext2D();
 
-	imem count = kArrayCount(&ctx->builder);
+	imem count = ctx->builder.count;
 	if (count) {
-		kVec2 last = ctx->builder[count - 1];
+		kVec2 last = ctx->builder.data[count - 1];
 		if (kAlmostEqual(last.x - a.x, 0.0f) &&
 			kAlmostEqual(last.y - a.y, 0.0f))
 			return;
@@ -1010,7 +1039,7 @@ static inline kVec2 kLineLineIntersect(kVec2 p1, kVec2 q1, kVec2 p2, kVec2 q2) {
 void kDrawPathStroked(kVec4 color, bool closed) {
 	kRenderContext2D *ctx = kGetRenderContext2D();
 
-	imem path_count = kArrayCount(&ctx->builder);
+	imem path_count = ctx->builder.count;
 
 	if (path_count < 2) {
 		kArrayReset(&ctx->builder);
@@ -1023,15 +1052,15 @@ void kDrawPathStroked(kVec4 color, bool closed) {
 	}
 
 	if (closed) {
-		kPathTo(ctx->builder[0]);
+		kPathTo(ctx->builder.data[0]);
 	}
 
 	imem normal_count = path_count - 1;
 
 	kArrayExtend(&ctx->builder, normal_count);
 
-	kVec2 *paths   = ctx->builder;
-	kVec2 *normals = ctx->builder + path_count;
+	kVec2 *paths   = ctx->builder.data;
+	kVec2 *normals = ctx->builder.data + path_count;
 
 	for (u32 i = 0; i < normal_count; ++i) {
 		kVec2 diff = kSub(paths[i + 1], paths[i]);
@@ -1134,14 +1163,14 @@ void kDrawPathStroked(kVec4 color, bool closed) {
 void kDrawPathFilled(kVec4 color) {
 	kRenderContext2D *ctx = kGetRenderContext2D();
 
-	imem count = kArrayCount(&ctx->builder);
+	imem count = ctx->builder.count;
 
 	if (count < 3) {
 		kArrayReset(&ctx->builder);
 		return;
 	}
 
-	kVec2 *paths = ctx->builder;
+	kVec2 *paths = ctx->builder.data;
 	imem triangle_count = count - 2;
 	for (u32 ti = 0; ti < triangle_count; ++ti) {
 		kDrawTriangle(paths[0], paths[ti + 1], paths[ti + 2], color);
