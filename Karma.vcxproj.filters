@@ -39,6 +39,9 @@
     <ClInclude Include="Code\kArray.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Code\kRenderApi.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Code\kMedia.c">

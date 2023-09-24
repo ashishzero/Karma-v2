@@ -1,15 +1,9 @@
 #pragma once
 #include "kMath.h"
+#include "kRenderApi.h"
 
 #define K_MAX_CIRCLE_SEGMENTS  512
 #define K_MAX_TEXTURE_SLOTS    2
-
-//
-//
-//
-
-typedef struct kShader  { void *ptr; } kShader;
-typedef struct kTexture { void *ptr; } kTexture;
 
 //
 //
@@ -81,6 +75,9 @@ typedef struct kRenderPassList2D {
 //
 //
 //
+
+void    kCreateRenderContext(void);
+void    kDestroyRenderContext(void);
 
 void    kFlushFrame(void);
 void    kGetRenderPassList2D(kRenderPassList2D *passes);

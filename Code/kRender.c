@@ -70,6 +70,7 @@ typedef struct kRenderTarget {
 
 typedef struct kRenderContextBuiltin {
 	kRenderTarget target;
+	kTexture      texture;
 	kFont         font;
 } kRenderContextBuiltin;
 
@@ -134,6 +135,112 @@ static float kCosLookup(float turns) {
 //
 //
 //
+
+void kCreateRenderContext(void) {
+	for (u32 i = 0; i < K_MAX_CIRCLE_SEGMENTS; ++i) {
+		float theta = ((float)i / (float)(K_MAX_CIRCLE_SEGMENTS - 1));
+		cosines[i] = kCos(theta);
+		sines[i]   = kSin(theta);
+	}
+
+	cosines[K_MAX_CIRCLE_SEGMENTS - 1] = 1;
+	sines[K_MAX_CIRCLE_SEGMENTS - 1]   = 0;
+	
+	{
+		u8 pixels[] = { 0xff, 0xff, 0xff, 0xff };
+
+		kTextureSpec spec = {
+			.width        = 1;
+			.height       = 1;
+			.num_samples  = 1;
+			.pitch        = 1 * sizeof(u32);
+			.format       = PL_Format_RGBA8_UNORM;
+			.bind_flags   = PL_Bind_ShaderResource;
+			.usage        = PL_Usage_Default;
+			.pixels       = pixels;
+		};
+
+		render.builtin.texture = kCreateTexture(spec);
+	}
+
+	if (!kLoadDefaultFont(&render.builtin.font)) {
+		static const kGlyph FallbackGlyph = {
+			Region(0, 0, 0, 0),
+			Vec2(0.0f),
+			Vec2(BUILTIN_FONT_WIDTH, BUILTIN_FONT_HEIGHT),
+			BUILTIN_FONT_WIDTH + 2.0f,
+		};
+
+		render.builtin.font.texture   = render.builtin.texture;
+		render.builtin.font.ascender  = 0;
+		render.builtin.font.descender = 0;
+		render.builtin.font.glyphs    = Slice<GlyphRange>(nullptr, 0);
+		render.builtin.font.fallback  = &FallbackGlyph;
+	}
+
+	Reserve(&render.transform, arena, MAX_STACK_COUNT);
+	Reserve(&render.shader, arena, MAX_STACK_COUNT);
+
+	for (uint index = 0; index < PL_MAX_SHADER_BINDING; ++index)
+		Reserve(&render.texture[index], arena, MAX_STACK_COUNT);
+
+	Reserve(&render.rect, arena, MAX_STACK_COUNT);
+	Reserve(&render.path, arena, MAX_PATH_COUNT);
+	Reserve(&render.normal, arena, MAX_PATH_COUNT);
+
+	u32 flags     = MemAllocator_Clear | MemAllocator_Synchronize;
+	auto hdr_buff = PushArray(arena, MemPoolStorage<HdrBloomTexture>, MAX_HDR_TEXTURE_COUNT);
+	InitMemPool(&render.hdr_bloom_pool, flags, nullptr, MAX_HDR_TEXTURE_COUNT, hdr_buff);
+
+	render.cmd.arena = PL_AllocateRenderArena((u32)spec.cmd);
+	render.cmd.list  = PL_CreateRenderCommandList();
+
+	{
+		PL_BufferSpec buff_spec;
+		buff_spec.size       = spec.vtx * sizeof(Vertex2d);
+		buff_spec.usage      = PL_Usage_Dynamic;
+		buff_spec.cpu_access = PL_CpuAccess_Write;
+		buff_spec.bind_flags = PL_Bind_VertexBuffer;
+		render.gfx.vtx  = PL_CreateBuffer(buff_spec, nullptr);
+	}
+
+	{
+		PL_BufferSpec buff_spec;
+		buff_spec.size        = spec.idx * sizeof(Index2d);
+		buff_spec.usage       = PL_Usage_Dynamic;
+		buff_spec.cpu_access  = PL_CpuAccess_Write;
+		buff_spec.bind_flags  = PL_Bind_IndexBuffer;
+		render.gfx.idx        = PL_CreateBuffer(buff_spec, nullptr);
+	}
+
+	render.vertex.allocated = spec.vtx;
+	render.index.allocated  = spec.idx;
+
+	render.vertex.data = (Vertex2d *)PL_MapBuffer(render.gfx.vtx, PL_Map_WriteDiscard);
+	render.index.data  = (Index2d *)PL_MapBuffer(render.gfx.idx, PL_Map_WriteDiscard);
+
+	render.thickness       = 1.0f;
+
+	render.transform.count = 1;
+	render.transform[0]    = OrthographicLH(-1, 1, -1, 1, -1, 1);
+
+	render.shader.count    = 1;
+	render.shader[0]       = render.builtin_shaders[PL_EmbeddedShader_Quad];
+
+	for (uint index = 0; index < PL_MAX_SHADER_BINDING; ++index) {
+		render.texture[index].count = 1;
+		render.texture[index][0]    = render.builtin_texture;
+	}
+
+	render.rect.count      = 1;
+	render.rect[0]         = PL_Rect{ 0, 0, 0, 0};
+
+	ResetCommandArena();
+	NextDrawPrimitive();
+}
+
+void kDestroyRenderContext(void) {
+}
 
 void kFlushFrame(void) {
 	render.context2d.state.command.count  = 0;

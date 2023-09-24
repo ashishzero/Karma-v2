@@ -33,6 +33,7 @@
       <FileType>CppCode</FileType>
     </ClCompile>
     <ClInclude Include="Code\kRender.h" />
+    <ClInclude Include="Code\kRenderApi.h" />
     <ClInclude Include="Code\kWindowsCommon.h" />
     <ClInclude Include="Code\kResource.h" />
   </ItemGroup>
