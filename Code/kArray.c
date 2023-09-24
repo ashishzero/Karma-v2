@@ -88,20 +88,21 @@ void *kPrivate_ArrayExtend(kArrayHeader *arr, imem count, imem elemsz) {
 	return 0;
 }
 
-void *kPrivate_ArrayAddEx(kArrayHeader *arr, imem elemsz) {
+imem kPrivate_ArrayAddIdx(kArrayHeader *arr, imem elemsz) {
 	if (arr->count == arr->allocated) {
 		imem cap = kPrivate_ArrayNextCapacity(arr->allocated, arr->allocated + 1);
 		if (!kPrivate_ArrayReserve(arr, cap, elemsz))
-			return 0;
+			return -1;
 	}
-	return (u8 *)arr->data + (arr->count - 1) * elemsz;
+	arr->count += 1;
+	return arr->count - 1;
 }
 
-void kPrivate_ArrayAdd(kArrayHeader *arr, void *src, imem elemsz) {
-	void *dst = kPrivate_ArrayAddEx(arr, elemsz);
-	if (dst) {
-		memcpy(dst, src, elemsz);
-	}
+void *kPrivate_ArrayAddPtr(kArrayHeader *arr, imem elemsz) {
+	imem index = kPrivate_ArrayAddIdx(arr, elemsz);
+	if (index >= 0)
+		return (u8 *)arr->data + index * elemsz;
+	return 0;
 }
 
 bool kPrivate_ArrayCopyBuffer(kArrayHeader *dst, void *src, imem count, imem elemsz) {
@@ -126,7 +127,7 @@ bool kPrivate_ArrayCopyArray(kArrayHeader *dst, kArrayHeader *src, imem elemsz) 
 bool kPrivate_ArrayInsert(kArrayHeader *arr, imem index, void *src, imem elemsz) {
 	kAssert(index < arr->count);
 
-	if (kPrivate_ArrayAddEx(arr, elemsz)) {
+	if (kPrivate_ArrayAddPtr(arr, elemsz)) {
 		memmove((u8 *)arr->data + (index + 1) * elemsz, (u8 *)arr->data + index * elemsz, (arr->count - index) * elemsz);
 		memcpy((u8 *)arr->data + index * elemsz, src, elemsz);
 		return true;

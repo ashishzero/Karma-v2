@@ -132,6 +132,30 @@
 		</Expand>
 	</Type>
 
+	<Type Name="float_Array">
+		<DisplayString>{{ count={count} }}</DisplayString>
+		<Expand>
+			<Item Name="[count]" ExcludeView="simple">count</Item>
+			<Item Name="[allocated]" ExcludeView="simple">allocated</Item>
+			<ArrayItems>
+				<Size>count</Size>
+				<ValuePointer>data</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+
+	<Type Name="int_Array">
+		<DisplayString>{{ count={count} }}</DisplayString>
+		<Expand>
+			<Item Name="[count]" ExcludeView="simple">count</Item>
+			<Item Name="[allocated]" ExcludeView="simple">allocated</Item>
+			<ArrayItems>
+				<Size>count</Size>
+				<ValuePointer>data</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+
 	<Type Name="kVertex2D_Array">
 		<DisplayString>{{ count={count} }}</DisplayString>
 		<Expand>
@@ -229,6 +253,42 @@
 	</Type>
 
 	<Type Name="kVec2_Array">
+		<DisplayString>{{ count={count} }}</DisplayString>
+		<Expand>
+			<Item Name="[count]" ExcludeView="simple">count</Item>
+			<Item Name="[allocated]" ExcludeView="simple">allocated</Item>
+			<ArrayItems>
+				<Size>count</Size>
+				<ValuePointer>data</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+
+	<Type Name="kVec3_Array">
+		<DisplayString>{{ count={count} }}</DisplayString>
+		<Expand>
+			<Item Name="[count]" ExcludeView="simple">count</Item>
+			<Item Name="[allocated]" ExcludeView="simple">allocated</Item>
+			<ArrayItems>
+				<Size>count</Size>
+				<ValuePointer>data</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+
+	<Type Name="kVec4_Array">
+		<DisplayString>{{ count={count} }}</DisplayString>
+		<Expand>
+			<Item Name="[count]" ExcludeView="simple">count</Item>
+			<Item Name="[allocated]" ExcludeView="simple">allocated</Item>
+			<ArrayItems>
+				<Size>count</Size>
+				<ValuePointer>data</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+
+	<Type Name="kQuat_Array">
 		<DisplayString>{{ count={count} }}</DisplayString>
 		<Expand>
 			<Item Name="[count]" ExcludeView="simple">count</Item>

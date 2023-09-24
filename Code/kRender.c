@@ -20,15 +20,26 @@ typedef struct kRenderCommandState2D {
 	u32 count;
 } kRenderCommandState2D;
 
+typedef struct kRenderPassState2D {
+	kTexture target;
+	u32      commands;
+	u32      count;
+	u32      flags;
+	kVec4    color;
+} kRenderPassState2D;
+
 typedef struct kRenderState2D {
 	kRenderParamState2D   param;
 	kRenderCommandState2D command;
+	kRenderPassState2D    pass;
 } kRenderState2D;
 
 kDefineArray(kVertex2D);
 kDefineArray(kIndex2D);
 kDefineArray(kRenderParam2D);
 kDefineArray(kRenderCommand2D);
+kDefineArray(kRenderPass2D);
+
 kDefineArray(kRect);
 kDefineArray(kMat4);
 kDefineArray(kTexture);
@@ -42,6 +53,7 @@ typedef struct kRenderContext2D {
 	kArray(kIndex2D)         indices;
 	kArray(kRenderParam2D)   params;
 	kArray(kRenderCommand2D) commands;
+	kArray(kRenderPass2D)    passes;
 
 	float                    thickness;
 	kArray(kRect)            rects;
@@ -52,8 +64,13 @@ typedef struct kRenderContext2D {
 	kArray(kVec2)            builder;
 } kRenderContext2D;
 
+typedef struct kRenderTarget {
+	kTexture texture;
+} kRenderTarget;
+
 typedef struct kRenderContextBuiltin {
-	kFont font;
+	kRenderTarget target;
+	kFont         font;
 } kRenderContextBuiltin;
 
 typedef struct kRenderContext {
@@ -118,6 +135,64 @@ static float kCosLookup(float turns) {
 //
 //
 
+void kFlushFrame(void) {
+	render.context2d.state.command.count  = 0;
+	render.context2d.state.command.params = 0;
+	render.context2d.state.param.vertex   = 0;
+	render.context2d.state.param.index    = 0;
+	render.context2d.state.param.next     = 0;
+	render.context2d.state.param.count    = 0;
+
+	render.context2d.vertices.count       = 0;
+	render.context2d.indices.count        = 0;
+	render.context2d.params.count         = 0;
+	render.context2d.commands.count       = 0;
+	render.context2d.passes.count         = 0;
+	render.context2d.rects.count          = 1;
+	render.context2d.transforms.count     = 1;
+	render.context2d.shaders.count        = 1;
+
+	for (u32 i = 0; i < K_MAX_TEXTURE_SLOTS; ++i)
+		render.context2d.textures[i].count = 1;
+}
+
+void kGetRenderPassList2D(kRenderPassList2D *passes) {
+	passes->count    = (u32)render.context2d.passes.count;
+	passes->passes   = render.context2d.passes.data;
+	passes->commands = render.context2d.commands.data;
+	passes->params   = render.context2d.params.data;
+}
+
+void kBeginRenderPass(kTexture texture, kVec4 *color) {
+	kRenderContext2D *ctx = kGetRenderContext2D();
+	kAssert(ctx->state.pass.target.ptr == 0);
+
+	if (color) {
+		ctx->state.pass.flags |= kRenderPass_ClearTarget;
+		ctx->state.pass.color  = *color;
+	}
+}
+
+void kBeginDefaultRenderPass(kVec4 *color) {
+	kBeginRenderPass(render.builtin.target.texture, color);
+}
+
+void kEndRenderPass(void) {
+	kFlushRenderCommand();
+
+	kRenderContext2D *ctx = kGetRenderContext2D();
+	
+	if (!ctx->state.param.count)
+		return;
+
+	kRenderPass2D *pass = kArrayAddPtr(&ctx->passes);
+	pass->target        = ctx->state.pass.target;
+	pass->commands      = ctx->state.pass.commands;
+	pass->count         = ctx->state.pass.count;
+
+	memset(&ctx->state.pass, 0, sizeof(ctx->state.pass));
+}
+
 void kBeginCameraRect(float left, float right, float bottom, float top) {
 	kRenderContext2D *ctx = kGetRenderContext2D();
 	kMat4 proj = kOrthographicLH(left, right, top, bottom, -1, 1);
@@ -159,13 +234,15 @@ void kFlushRenderCommand(void) {
 	if (!ctx->state.command.count)
 		return;
 
-	kRenderCommand2D *command = kArrayAddEx(&ctx->shaders);
+	kRenderCommand2D *command = kArrayAddPtr(&ctx->shaders);
 	command->shader = kArrayLast(ctx->shaders);
 	command->params = ctx->state.command.params;
 	command->count  = ctx->state.command.count;
 
 	ctx->state.command.params = (u32)ctx->params.count;
 	ctx->state.command.count  = 0;
+
+	ctx->state.pass.count += 1;
 }
 
 void kSetShader(kShader shader) {
@@ -198,7 +275,7 @@ void kFlushRenderParam(void) {
 	if (!ctx->state.param.count)
 		return;
 
-	kRenderParam2D *param   = kArrayAddEx(&ctx->params);
+	kRenderParam2D *param   = kArrayAddPtr(&ctx->params);
 
 	for (u32 i = 0; i < K_MAX_TEXTURE_SLOTS; ++i)
 		param->textures[i]  = kArrayLast(ctx->textures[i]);

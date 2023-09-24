@@ -1,4 +1,5 @@
 #include "kMedia.h"
+#include "kArray.h"
 
 void Update(float dt) {
 	uint count;

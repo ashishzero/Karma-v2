@@ -59,9 +59,35 @@ typedef struct kRenderCommand2D {
 	u32     count;
 } kRenderCommand2D;
 
+enum kRenderPassFlags {
+	kRenderPass_ClearTarget = 0x1
+};
+
+typedef struct kRenderPass2D {
+	kTexture target;
+	u32      commands;
+	u32      count;
+	u32      flags;
+	kVec4    color;
+} kRenderPass2D;
+
+typedef struct kRenderPassList2D {
+	u32                count;
+	kRenderPass2D    * passes;
+	kRenderCommand2D * commands;
+	kRenderParam2D   * params;
+} kRenderPassList2D;
+
 //
 //
 //
+
+void    kFlushFrame(void);
+void    kGetRenderPassList2D(kRenderPassList2D *passes);
+
+void    kBeginRenderPass(kTexture texture, kVec4 *color);
+void    kBeginDefaultRenderPass(kVec4 *color);
+void    kEndRenderPass(void);
 
 void    kBeginCameraRect(float left, float right, float bottom, float top);
 void    kBeginCamera(float aspect_ratio, float height);
