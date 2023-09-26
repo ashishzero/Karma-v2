@@ -58,8 +58,8 @@ typedef enum kEventKind {
 } kEventKind;
 
 typedef struct kResizedEvent {
-	int width;
-	int height;
+	u32 width;
+	u32 height;
 } kResizedEvent;
 
 typedef struct kDpiChangedEvent {
@@ -150,7 +150,8 @@ typedef struct kMediaUserEvents {
 //
 //
 
-typedef struct kFile { void *ptr; } kFile;
+struct kPlatformFile;
+using kFile = kHandle<kPlatformFile>;
 
 typedef enum kFileAccess {
 	kFileAccess_Read,
@@ -209,7 +210,8 @@ typedef struct kCondVar {
 #endif
 } kCondVar;
 
-typedef struct kThread { void *ptr; } kThread;
+struct kPlatformThread;
+using kThread = kHandle<kPlatformThread>;
 typedef int(*kThreadProc)(void *arg);
 
 //
@@ -224,12 +226,12 @@ void       kFallbackUserUpdateProc(float dt);
 //
 //
 
+kSlice<kEvent> kGetEvents(void);
+
 void     * kGetUserEventData(void);
 void       kSetUserEventData(void *);
 void       kGetUserEvents(kMediaUserEvents *user);
 void       kSetUserEvents(kMediaUserEvents *user);
-
-kEvent   * kGetEvents(int *count);
 
 bool       kIsKeyDown(kKey key);
 bool       kKeyPressed(kKey key);
@@ -277,7 +279,7 @@ void       kSetWindowState(kWindowState *state);
 void       kClearInput(void);
 void       kNextFrame(void);
 
-void       kAddEvent(kEvent *ev);
+void       kAddEvent(const kEvent &ev);
 void       kAddKeyEvent(kKey key, bool down, bool repeat);
 void       kAddButtonEvent(kButton button, bool down);
 void       kAddTextInputEvent(u32 codepoint, u32 mods);

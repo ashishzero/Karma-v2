@@ -2,8 +2,7 @@
 #include "kArray.h"
 
 void Update(float dt) {
-	uint count;
-	kEvent *events = kGetEvents(&count);
+	kSlice<kEvent> events = kGetEvents();
 
 	if (kKeyPressed(kKey_Escape)) {
 		kBreakLoop(0);

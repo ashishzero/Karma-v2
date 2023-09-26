@@ -1,69 +1,217 @@
-#include "kCommon.h"
+#include "kContext.h"
+#include <string.h>
 
-typedef struct kArrayHeader {
+template <typename T>
+struct kArray {
 	imem  count;
 	imem  allocated;
-	void *data;
-} kArrayHeader;
+	T    *data;
 
-typedef bool(*kArrayFindFn)(void *, imem, void *);
+	kArray(): count(0), data(nullptr), allocated(0) {}
+	operator kSlice<T>()             { return kSlice<T>(data, count); }
+	operator const kSlice<T>()       const { return kSlice<T>(data, count); }
+	T &operator[](ptrdiff_t i)       { kAssert(i >= 0 && i < count); return data[i]; }
+	const T &operator[](ptrdiff_t i) const { kAssert(i >= 0 && i < count); return data[i]; }
+	T *      begin()                 { return data; }
+	T *      end()                   { return data + count; }
+	const T *begin() const           { return data; }
+	const T *end() const             { return data + count; }
 
-#define      kDefineArray(type) typedef union type##_Array {    \
-									struct {                    \
-										imem  count;            \
-										imem  allocated;        \
-										type *data;             \
-									};                          \
-									kArrayHeader header;        \
-								} type##_Array
+	imem NextCapacity(imem count) {
+		imem new_cap = allocated ? (allocated << 1) : 8;
+		return new_cap > count ? new_cap : count;
+	}
 
-#define      kArray(type)       type##_Array 
+	T *TryGet(imem index) {
+		if (index < count) {
+			return &data[index];
+		}
+		return 0;
+	}
 
-void *       kPrivate_ArrayGet(kArrayHeader *arr, imem index, imem elemsz);
-void         kPrivate_ArrayPop(kArrayHeader *arr);
-void         kPrivate_kArrayReset(kArrayHeader *arr);
-void         kPrivate_kArrayRemove(kArrayHeader *arr, imem index, imem elemsz);
-void         kPrivate_kArrayRemoveUnordered(kArrayHeader *arr, imem index, imem elemsz);
-bool         kPrivate_ArrayReserve(kArrayHeader *arr, imem req_cap, imem elemsz);
-bool         kPrivate_ArrayResize(kArrayHeader *arr, imem count, imem elemsz);
-bool         kPrivate_ArrayResizeValue(kArrayHeader *arr, imem count, void *src, imem elemsz);
-void *       kPrivate_ArrayExtend(kArrayHeader *arr, imem count, imem elemsz);
-imem         kPrivate_ArrayAddIdx(kArrayHeader *arr, imem elemsz);
-void *       kPrivate_ArrayAddPtr(kArrayHeader *arr, imem elemsz);
-bool         kPrivate_ArrayCopyBuffer(kArrayHeader *dst, void *src, imem count, imem elemsz);
-bool         kPrivate_ArrayCopyArray(kArrayHeader *dst, kArrayHeader *src, imem elemsz);
-bool         kPrivate_ArrayInsert(kArrayHeader *arr, imem index, void *src, imem elemsz);
-void         kPrivate_ArrayPack(kArrayHeader *arr, imem elemsz);
-kArrayHeader kPrivate_ArrayClone(kArrayHeader *src, imem elemsz);
-void         kPrivate_ArrayFree(kArrayHeader *arr, imem elemsz);
+	T &First(void) {
+		kAssert(count != 0);
+		return data[0];
+	}
 
-imem         kPrivate_ArrayFindEx(void *arr, imem count, kArrayFindFn fn, void *arg, imem elemsz);
-imem         kPrivate_ArrayFind(void *arr, imem count, void *src, imem elemsz);
+	T &Last(void) {
+		kAssert(count != 0);
+		return data[count - 1];
+	}
+
+	const T &First(void) const {
+		kAssert(count != 0);
+		return data[0];
+	}
+
+	const T &Last(void) const {
+		kAssert(count != 0);
+		return data[count - 1];
+	}
+
+	void Pop(void) {
+		kAssert(count > 0);
+		count -= 1;
+	}
+
+	void Reset(void) {
+		count = 0;
+	}
+
+	void Remove(imem index) {
+		kAssert(index < count);
+		memmove(data + index, data + (index + 1), (count - index - 1) * sizeof(T));
+		count -= 1;
+	}
+
+	void RemoveUnordered(imem index) {
+		kAssert(index < count);
+		data[index] = data[count - 1];
+		count -= 1;
+	}
+
+	bool Reserve(imem req_cap) {
+		if (req_cap <= allocated)
+			return true;
+
+		void *mem = kRealloc(data, allocated * sizeof(T), req_cap * sizeof(T));
+		if (mem) {
+			data      = (T *)mem;
+			allocated = req_cap;
+			return true;
+		}
+
+		return false;
+	}
+
+	bool Resize(imem n) {
+		if (Reserve(n)) {
+			count = n;
+			return true;
+		}
+		return false;
+	}
+
+	bool Resize(imem n, const T &src) {
+		if (Reserve(n)) {
+			for (imem idx = count; idx < n; ++idx) {
+				data[idx] = src;
+			}
+			count = n;
+			return true;
+		}
+		return false;
+	}
+
+	T *Extend(imem n) {
+		imem req_count = count + n;
+		imem cur_count = count;
+
+		if (req_count < allocated) {
+			count = req_count;
+			return &data[cur_count];
+		}
+
+		imem new_cap = NextCapacity(req_count);
+
+		if (Reserve(new_cap)) {
+			count = req_count;
+			return &data[cur_count];
+		}
+
+		return 0;
+	}
+
+	T *Add(void) {
+		return Extend(1);
+	}
+
+	void Add(const T &src) {
+		T *dst = Add();
+		if (dst)
+			*dst = src;
+	}
+
+	bool CopyBuffer(T *src, imem src_count) {
+		if (count + src_count > allocated) {
+			imem new_cap = NextCapacity(allocated + src_count);
+			if (!Reserve(new_cap))
+				return false;
+		}
+
+		memcpy(data + count, src, src_count * sizeof(T));
+		count += src_count;
+
+		return true;
+	}
+
+	bool CopyArray(kSlice<T> src) {
+		if (src.count) {
+			return CopyBuffer(src.data, src.count);
+		}
+		return false;
+	}
+
+	bool Insert(imem index, const T &src) {
+		kAssert(index < count);
+
+		if (Add()) {
+			memmove(data + (index + 1), data + index, (count - index));
+			data[index] = src;
+			return true;
+		}
+
+		return false;
+	}
+
+	void Pack(void) {
+		if (count != allocated) {
+			void *mem = kRealloc(data, allocated * sizeof(T), count * sizeof(T));
+			if (mem) {
+				data      = (T *)mem;
+				allocated = count;
+			}
+		}
+	}
+
+	kArray<T> Clone(void) {
+		kArray<T> dst = {};
+		dst.CopyBuffer(data, count);
+		return dst;
+	}
+};
+
+template <typename T>
+void kFree(kArray<T> *arr) {
+	kFree(arr->data, arr->allocated * sizeof(T));
+}
+
+template <typename T>
+void kFree(kSlice<T> *arr) {
+	kFree(arr->data, arr->count * sizeof(T));
+}
 
 //
 //
 //
 
-#define kArrayGet(arr, index)                    kPrivate_ArrayGet(arr, index, sizeof(((arr)->data)[0]))
-#define kArrayFirst(arr)                         ((arr).data)[0]
-#define kArrayLast(arr)                          ((arr).data)[(arr).count - 1]
+template <typename T, typename SearchFunc, typename... Args>
+imem Find(kSlice<T> arr, SearchFunc func, const Args &...args) {
+	for (imem index = 0; index < arr.count; ++index) {
+		if (func(arr[index], args...)) {
+			return index;
+		}
+	}
+	return -1;
+}
 
-#define kArrayPop(arr)                           kPrivate_ArrayPop(&((arr)->header))
-#define kArrayReset(arr)                         kPrivate_kArrayReset(&((arr)->header))
-#define kArrayRemove(arr, index)                 kPrivate_kArrayRemove(&((arr)->header), index, sizeof(((arr)->data)[0]))
-#define kArrayRemoveUnordered(arr, index)        kPrivate_kArrayRemoveUnordered(&((arr)->header), index, sizeof(((arr)->data)[0]))
-#define ArrayReserve(arr, req_cap)               kPrivate_ArrayReserve(&((arr)->header), req_cap, sizeof(((arr)->data)[0]))
-#define kArrayResize(arr, count)                 kPrivate_ArrayResize(&((arr)->header), count, sizeof(((arr)->data)[0]))
-#define kArrayResizeValue(arr, count, src)       kPrivate_ArrayResizeValue(&((arr)->header), count, src, sizeof(((arr)->data)[0]))
-#define kArrayExtend(arr, count)                 kPrivate_ArrayExtend(&((arr)->header), count, sizeof(((arr)->data)[0]))
-#define kArrayAddIdx(arr)                        kPrivate_ArrayAddIdx(&((arr)->header), sizeof(((arr)->data)[0]))
-#define kArrayAddPtr(arr)                        kPrivate_ArrayAddPtr(&((arr)->header), sizeof(((arr)->data)[0]))
-#define kArrayAdd(arr, src)                      do { if (kArrayAddIdx(arr) >= 0) ((arr)->data)[(arr)->count - 1] = src; } while (0)
-#define kArrayCopyBuffer(dst, src, count)        kPrivate_ArrayCopyBuffer(&(dst)->header, src, count, sizeof(((arr)->data)[0]))
-#define kArrayCopyArray(dst, src)                kPrivate_ArrayCopyArray(&(dst)->header, &(src)->header, sizeof(((arr)->data)[0]))
-#define kArrayInsert(arr, index, src)            kPrivate_ArrayInsert(&((arr)->header), index, src, sizeof(((arr)->data)[0]))
-#define kArrayPack(arr)                          kPrivate_ArrayPack(&((arr)->header), sizeof(((arr)->data)[0]))
-#define kArrayClone(arr)                         kPrivate_ArrayClone(&((arr)->header), sizeof(((arr)->data)[0]))
-#define kArrayFree(arr)                          kPrivate_ArrayFree(&((arr)->header), sizeof(((arr)->data)[0]))
-#define krrayFindEx(arr, count, fn, arg)         kPrivate_ArrayFindEx(&((arr)->header), count, fn, arg, sizeof(((arr)->data)[0]))
-#define krrayFind(arr, count, src)               kPrivate_ArrayFind(&((arr)->header), count, src, sizeof(((arr)->data)[0]))
+template <typename T>
+imem Find(kSlice<T> arr, const T &v) {
+	for (imem index = 0; index < arr.count; ++index) {
+		auto elem = arr.data + index;
+		if (*elem == v) {
+			return index;
+		}
+	}
+	return -1;
+}

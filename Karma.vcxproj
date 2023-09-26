@@ -19,26 +19,23 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Code\kArray.c" />
-    <ClCompile Include="Code\kContext.c" />
-    <ClCompile Include="Code\Main.c" />
+    <ClCompile Include="Code\kContext.cpp" />
+    <ClCompile Include="Code\kRender.cpp" />
+    <ClCompile Include="Code\Main.cpp" />
     <ClInclude Include="Code\kArray.h" />
     <ClInclude Include="Code\kMedia.h" />
     <ClInclude Include="Code\kCommon.h" />
     <ClInclude Include="Code\kMath.h" />
     <ClInclude Include="Code\kContext.h" />
-    <ClCompile Include="Code\kCommon.c" />
-    <ClCompile Include="Code\kMath.c" />
-    <ClCompile Include="Code\kRender.c">
-      <FileType>CppCode</FileType>
-    </ClCompile>
+    <ClCompile Include="Code\kCommon.cpp" />
+    <ClCompile Include="Code\kMath.cpp" />
     <ClInclude Include="Code\kRender.h" />
     <ClInclude Include="Code\kRenderApi.h" />
     <ClInclude Include="Code\kWindowsCommon.h" />
     <ClInclude Include="Code\kResource.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Code\kMedia.c" />
+    <ClCompile Include="Code\kMedia.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="Code\kVisualizer.natvis" />

@@ -1,490 +1,493 @@
 #pragma once
 #include "kCommon.h"
 
-#define kFormatVec2(v)  "{%f, %f}"
-#define kFormatVec3(v)  "{%f, %f, %f}"
-#define kFormatVec4(v)  "{%f, %f, %f, %f}"
+#include <math.h>
 
-#define kFormatVec2i(v) "{%d, %d}"
-#define kFormatVec3i(v) "{%d, %d, %d}"
-#define kFormatVec4i(v) "{%d, %d, %d, %d}"
+#define kVec2Arg(v) (v).x, (v).y
+#define kVec3Arg(v) (v).x, (v).y, (v).z
+#define kVec4Arg(v) (v).x, (v).y, (v).z, (v).w
+#define kQuatArg(q) (q).x, (q).y, (q).z, (q).w
 
-#define kExpandVec2(v)  (v).x, (v).y
-#define kExpandVec3(v)  (v).x, (v).y, (v).z
-#define kExpandVec4(v)  (v).x, (v).y, (v).z, (v).w
+#define kMat2Arg(m) kVec2Arg((m).rows[0]), kVec2Arg((m).rows[1])
+#define kMat3Arg(m) kVec3Arg((m).rows[0]), kVec3Arg((m).rows[1]), kVec3Arg((m).rows[2])
+#define kMat4Arg(m) kVec4Arg((m).rows[0]), kVec4Arg((m).rows[1]), kVec4Arg((m).rows[2]), kVec4Arg((m).rows[3])
 
-#define kVec2Factor(a)  (kVec2){ .x = a, .y = a }
-#define kVec3Factor(a)  (kVec3){ .x = a, .y = a, .z = a }
-#define kVec4Factor(a)  (kVec4){ .x = a, .y = a, .z = a, .w = a }
+inproc float  kSgn(float val) { return (float)((float(0) < val) - (val < float(0))); }
+inproc kVec2  kSgn(kVec2 v)    { return kVec2(kSgn(v.x), kSgn(v.y)); }
+inproc kVec3  kSgn(kVec3 v)    { return kVec3(kSgn(v.x), kSgn(v.y), kSgn(v.z)); }
+inproc kVec4  kSgn(kVec4 v)    { return kVec4(kSgn(v.x), kSgn(v.y), kSgn(v.z), kSgn(v.w)); }
 
-#define kVec2iFactor(a) (kVec2i){ .x = a, .y = a }
-#define kVec3iFactor(a) (kVec3i){ .x = a, .y = a, .z = a }
-#define kVec4iFactor(a) (kVec4i){ .x = a, .y = a, .z = a, .w = a }
+inproc float kAbsolute(float x)          { return fabsf(x); }
+inproc float kSin(float x)               { return sinf(kTurnToRad * (x)); }
+inproc float kCos(float x)               { return cosf(kTurnToRad * (x)); }
+inproc float kTan(float x)               { return tanf(kTurnToRad * (x)); }
+inproc float kArcSin(float x)            { return kRadToTurn * (asinf(x)); }
+inproc float kArcCos(float x)            { return kRadToTurn * (acosf(x)); }
+inproc float kArcTan2(float y, float x)  { return kRadToTurn * (atan2f(y, x)); }
+inproc float kSquareRoot(float x)        { return sqrtf(x); }
+inproc float kPow(float x, float y)      { return powf(x, y); }
+inproc float kCopySign(float x, float y) { return copysignf(x, y); }
+inproc float kMod(float x, float y)      { return fmodf(x, y); }
+inproc float kSquare(float x)            { return (x * x); }
+inproc float kFloor(float x)             { return floorf(x); }
+inproc float kRound(float x)             { return roundf(x); }
+inproc float kCeil(float x)              { return ceilf(x); }
 
-float kSgn(float val);
-float kAbsolute(float x);
-float kSin(float x);
-float kCos(float x);
-float kTan(float x);
-float kArcSin(float x);
-float kArcCos(float x);
-float kArcTan2(float y, float x);
-float kSquareRoot(float x);
-float kPow(float x, float y);
-float kCopySign(float x, float y);
-float kMod(float x, float y);
-float kSquare(float x);
-float kFloor(float x);
-float kRound(float x);
-float kCeil(float x);
+//
+//
+//
 
-float kWrap(float min, float a, float max);
-kVec2 kArm(float angle);
-kVec2 kArmInverse(float angle);
-bool  kAlmostEqual(float a, float b);
+float  kWrap(float min, float a, float max);
+kVec2  kArm(float angle);
+kVec2  kArmInverse(float angle);
 
-kVec2 kVec2Neg(kVec2 a);
-kVec3 kVec3Neg(kVec3 a);
-kVec4 kVec4Neg(kVec4 a);
+bool   kAlmostEqual(float a, float b, float delta = REAL_EPSILON);
+bool   kAlmostEqual(kVec2 a, kVec2 b, float delta = REAL_EPSILON);
+bool   kAlmostEqual(kVec3 a, kVec3 b, float delta = REAL_EPSILON);
+bool   kAlmostEqual(kVec4 a, kVec4 b, float delta = REAL_EPSILON);
 
-kVec2 kVec2Add(kVec2 a, kVec2 b);
-kVec2 kVec2Sub(kVec2 a, kVec2 b);
-kVec2 kVec2Mul(kVec2 a, kVec2 b);
-kVec2 kVec2Div(kVec2 a, kVec2 b);
-kVec2 kVec2AddScaled(kVec2 a, float f, kVec2 b);
-kVec2 kVec2SubScaled(kVec2 a, float f, kVec2 b);
+bool   kIsNull(float a);
+bool   kIsNull(kVec2 a);
+bool   kIsNull(kVec3 a);
+bool   kIsNull(kVec4 a);
+bool   kIsNull(int32_t a);
+bool   kIsNull(kVec2i a);
+bool   kIsNull(kVec3i a);
+bool   kIsNull(kVec4i a);
 
-kVec3 kVec3Add(kVec3 a, kVec3 b);
-kVec3 kVec3Sub(kVec3 a, kVec3 b);
-kVec3 kVec3Mul(kVec3 a, kVec3 b);
-kVec3 kVec3Div(kVec3 a, kVec3 b);
-kVec3 kVec3AddScaled(kVec3 a, float f, kVec3 b);
-kVec3 kVec3SubScaled(kVec3 a, float f, kVec3 b);
+template <typename Item> bool operator==(kVec2T<Item> a, kVec2T<Item> b) { return a.x == b.x && a.y == b.y; }
+template <typename Item> bool operator!=(kVec2T<Item> a, kVec2T<Item> b) { return a.x != b.x || a.y != b.y; }
+template <typename Item> bool operator==(kVec3T<Item> a, kVec3T<Item> b) { return a.x == b.x && a.y == b.y && a.z == b.z; }
+template <typename Item> bool operator!=(kVec3T<Item> a, kVec3T<Item> b) { return a.x != b.x || a.y != b.y || a.z != b.z; }
+template <typename Item> bool operator==(kVec4T<Item> a, kVec4T<Item> b) { return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w; }
+template <typename Item> bool operator!=(kVec4T<Item> a, kVec4T<Item> b) { return a.x != b.x || a.y != b.y && a.z != b.z || a.w != b.w; }
 
-kVec4 kVec4Add(kVec4 a, kVec4 b);
-kVec4 kVec4Sub(kVec4 a, kVec4 b);
-kVec4 kVec4Mul(kVec4 a, kVec4 b);
-kVec4 kVec4Div(kVec4 a, kVec4 b);
-kVec4 kVec4AddScaled(kVec4 a, float f, kVec4 b);
-kVec4 kVec4SubScaled(kVec4 a, float f, kVec4 b);
+inproc kVec2 kRound(kVec2 v) { return kVec2(kRound(v.x), kRound(v.y)); }
+inproc kVec3 kRound(kVec3 v) { return kVec3(kRound(v.x), kRound(v.y), kRound(v.z)); }
+inproc kVec4 kRound(kVec4 v) { return kVec4(kRound(v.x), kRound(v.y), kRound(v.z), kRound(v.w)); }
 
-kVec2i kVec2iNeg(kVec2i a);
-kVec3i kVec3iNeg(kVec3i a);
-kVec4i kVec4iNeg(kVec4i a);
+template <typename Item> kVec2T<Item> kMin(kVec2T<Item> a, kVec2T<Item> b) { return kVec2T<Item>{ kMin(a.x, b.x), kMin(a.y, b.y) }; }
+template <typename Item> kVec2T<Item> kMax(kVec2T<Item> a, kVec2T<Item> b) { return kVec2T<Item>{ kMax(a.x, b.x), kMax(a.y, b.y) }; }
+template <typename Item> kVec3T<Item> kMin(kVec3T<Item> a, kVec3T<Item> b) { return kVec3T<Item>{ kMin(a.x, b.x), kMin(a.y, b.y), kMin(a.z, b.z) }; }
+template <typename Item> kVec3T<Item> kMax(kVec3T<Item> a, kVec3T<Item> b) { return kVec3T<Item>{ kMax(a.x, b.x), kMax(a.y, b.y), kMax(a.z, b.z) }; }
+template <typename Item> kVec4T<Item> kMin(kVec4T<Item> a, kVec4T<Item> b) { return kVec4T<Item>{ kMin(a.x, b.x), kMin(a.y, b.y), kMin(a.z, b.z), kMin(a.w, b.w) }; }
+template <typename Item> kVec4T<Item> kMax(kVec4T<Item> a, kVec4T<Item> b) { return kVec4T<Item>{ kMax(a.x, b.x), kMax(a.y, b.y), kMax(a.z, b.z), kMax(a.w, b.w) }; }
 
-kVec2i kVec2iAdd(kVec2i a, kVec2i b);
-kVec2i kVec2iSub(kVec2i a, kVec2i b);
-kVec2i kVec2iMul(kVec2i a, kVec2i b);
-kVec2i kVec2iDiv(kVec2i a, kVec2i b);
-kVec2i kVec2iAddScaled(kVec2i a, int f, kVec2i b);
-kVec2i kVec2iSubScaled(kVec2i a, int f, kVec2i b);
+template <typename Item> bool     kIsInRange(kVec2T<Item> a, kVec2T<Item> b, kVec2T<Item> v) { return kIsInRange(a.x, b.x, v.x) && kIsInRange(a.y, b.y, v.y); }
+template <typename Item> bool     kIsInRange(kVec3T<Item> a, kVec3T<Item> b, kVec3T<Item> v) { return kIsInRange(a.x, b.x, v.x) && kIsInRange(a.y, b.y, v.y) && kIsInRange(a.z, b.z, v.z); }
+template <typename Item> bool     kIsInRange(kVec4T<Item> a, kVec4T<Item> b, kVec4T<Item> v) { return kIsInRange(a.x, b.x, v.x) && kIsInRange(a.y, b.y, v.y) && kIsInRange(a.z, b.z, v.z) && kIsInRange(a.w, b.w, v.w); }
 
-kVec3i kVec3iAdd(kVec3i a, kVec3i b);
-kVec3i kVec3iSub(kVec3i a, kVec3i b);
-kVec3i kVec3iMul(kVec3i a, kVec3i b);
-kVec3i kVec3iDiv(kVec3i a, kVec3i b);
-kVec3i kVec3iAddScaled(kVec3i a, int f, kVec3i b);
-kVec3i kVec3iSubScaled(kVec3i a, int f, kVec3i b);
+template <typename Item> kVec2T<Item> operator+(kVec2T<Item> a, kVec2T<Item> b)  { return kVec2T<Item>(a.x + b.x, a.y + b.y); }
+template <typename Item> kVec3T<Item> operator+(kVec3T<Item> a, kVec3T<Item> b)  { return kVec3T<Item>(a.x + b.x, a.y + b.y, a.z + b.z); }
+template <typename Item> kVec4T<Item> operator+(kVec4T<Item> a, kVec4T<Item> b)  { return kVec4T<Item>(a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w); }
+template <typename Item> kVec2T<Item> operator-(kVec2T<Item> a, kVec2T<Item> b)  { return kVec2T<Item>(a.x - b.x, a.y - b.y); }
+template <typename Item> kVec3T<Item> operator-(kVec3T<Item> a, kVec3T<Item> b)  { return kVec3T<Item>(a.x - b.x, a.y - b.y, a.z - b.z); }
+template <typename Item> kVec4T<Item> operator-(kVec4T<Item> a, kVec4T<Item> b)  { return kVec4T<Item>(a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w); }
+template <typename Item> kVec2T<Item> operator*(Item s, kVec2T<Item> v)         { return kVec2T<Item>(s * v.x, s * v.y); }
+template <typename Item> kVec2T<Item> operator*(kVec2T<Item> v, Item s)         { return s * v; }
+template <typename Item> kVec3T<Item> operator*(Item s, kVec3T<Item> v)         { return kVec3T<Item>(s * v.x, s * v.y, s * v.z); }
+template <typename Item> kVec3T<Item> operator*(kVec3T<Item> v, Item s)         { return s * v; }
+template <typename Item> kVec4T<Item> operator*(Item s, kVec4T<Item> v)         { return kVec4T<Item>(s * v.x, s * v.y, s * v.z, s * v.w); }
+template <typename Item> kVec4T<Item> operator*(kVec4T<Item> v, Item s)         { return s * v; }
+template <typename Item> kVec2T<Item> operator/(kVec2T<Item> v, Item s)         { return kVec2T<Item>(v.x / s, v.y / s); }
+template <typename Item> kVec3T<Item> operator/(kVec3T<Item> v, Item s)         { return kVec3T<Item>(v.x / s, v.y / s, v.z / s); }
+template <typename Item> kVec4T<Item> operator/(kVec4T<Item> v, Item s)         { return kVec4T<Item>(v.x / s, v.y / s, v.z / s, v.w / s); }
+template <typename Item> kVec2T<Item> operator*(kVec2T<Item> l, kVec2T<Item> r)  { return kVec2T<Item>(l.x * r.x, l.y * r.y); }
+template <typename Item> kVec3T<Item> operator*(kVec3T<Item> l, kVec3T<Item> r)  { return kVec3T<Item>(l.x * r.x, l.y * r.y, l.z * r.z); }
+template <typename Item> kVec4T<Item> operator*(kVec4T<Item> l, kVec4T<Item> r)  { return kVec4T<Item>(l.x * r.x, l.y * r.y, l.z * r.z, l.w * r.w); }
+template <typename Item> kVec2T<Item> operator/(kVec2T<Item> l, kVec2T<Item> r)  { return kVec2T<Item>(l.x / r.x, l.y / r.y); }
+template <typename Item> kVec3T<Item> operator/(kVec3T<Item> l, kVec3T<Item> r)  { return kVec3T<Item>(l.x / r.x, l.y / r.y, l.z / r.z); }
+template <typename Item> kVec4T<Item> operator/(kVec4T<Item> l, kVec4T<Item> r)  { return kVec4T<Item>(l.x / r.x, l.y / r.y, l.z / r.z, l.w / r.w); }
+template <typename Item> kVec2T<Item> operator-(const kVec2T<Item> &v)       { return kVec2T<Item>(-v.x, -v.y); }
+template <typename Item> kVec3T<Item> operator-(const kVec3T<Item> &v)       { return kVec3T<Item>(-v.x, -v.y, -v.z); }
+template <typename Item> kVec4T<Item> operator-(const kVec4T<Item> &v)       { return kVec4T<Item>(-v.x, -v.y, -v.z, -v.w); }
 
-kVec4i kVec4iAdd(kVec4i a, kVec4i b);
-kVec4i kVec4iSub(kVec4i a, kVec4i b);
-kVec4i kVec4iMul(kVec4i a, kVec4i b);
-kVec4i kVec4iDiv(kVec4i a, kVec4i b);
-kVec4i kVec4iAddScaled(kVec4i a, int f, kVec4i b);
-kVec4i kVec4iSubScaled(kVec4i a, int f, kVec4i b);
+template <typename Item> kVec2T<Item> &operator+=(kVec2T<Item> &a, kVec2T<Item> b)  { a = a + b; return a; }
+template <typename Item> kVec3T<Item> &operator+=(kVec3T<Item> &a, kVec3T<Item> b)  { a = a + b; return a; }
+template <typename Item> kVec4T<Item> &operator+=(kVec4T<Item> &a, kVec4T<Item> b)  { a = a + b; return a; }
+template <typename Item> kVec2T<Item> &operator-=(kVec2T<Item> &a, kVec2T<Item> b)  { a = a - b; return a; }
+template <typename Item> kVec3T<Item> &operator-=(kVec3T<Item> &a, kVec3T<Item> b)  { a = a - b; return a; }
+template <typename Item> kVec4T<Item> &operator-=(kVec4T<Item> &a, kVec4T<Item> b)  { a = a - b; return a; }
+template <typename Item> kVec2T<Item> &operator*=(kVec2T<Item> &t, Item s)         { t = t * s; return t; }
+template <typename Item> kVec3T<Item> &operator*=(kVec3T<Item> &t, Item s)         { t = t * s; return t; }
+template <typename Item> kVec4T<Item> &operator*=(kVec4T<Item> &t, Item s)         { t = t * s; return t; }
+template <typename Item> kVec2T<Item> &operator/=(kVec2T<Item> &t, Item s)         { t = t / s; return t; }
+template <typename Item> kVec3T<Item> &operator/=(kVec3T<Item> &t, Item s)         { t = t / s; return t; }
+template <typename Item> kVec4T<Item> &operator/=(kVec4T<Item> &t, Item s)         { t = t / s; return t; }
+template <typename Item> kVec2T<Item> &operator*=(kVec2T<Item> &t, kVec2T<Item> s)  { t = t * s; return t; }
+template <typename Item> kVec3T<Item> &operator*=(kVec3T<Item> &t, kVec3T<Item> s)  { t = t * s; return t; }
+template <typename Item> kVec4T<Item> &operator*=(kVec4T<Item> &t, kVec4T<Item> s)  { t = t * s; return t; }
+template <typename Item> kVec2T<Item> &operator/=(kVec2T<Item> &t, kVec2T<Item> s)  { t = t / s; return t; }
+template <typename Item> kVec3T<Item> &operator/=(kVec3T<Item> &t, kVec3T<Item> s)  { t = t / s; return t; }
+template <typename Item> kVec4T<Item> &operator/=(kVec4T<Item> &t, kVec4T<Item> s)  { t = t / s; return t; }
 
-kVec2 kComplexProduct(kVec2 a, kVec2 b);
-kVec2 kComplexConjugate(kVec2 a);
+template <typename Item> kVec2T<Item> kComplexProduct(kVec2T<Item> a, kVec2T<Item> b) { return kVec2T<Item>(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x); }
+template <typename Item> kVec2T<Item> kComplexConjugate(kVec2T<Item> a) { return kVec2T<Item>(a.x, -a.y); }
 
-float kVec2DotProduct(kVec2 a, kVec2 b);
-float kVec3DotProduct(kVec3 a, kVec3 b);
-float kVec4DotProduct(kVec4 a, kVec4 b);
+template <typename Item> Item kDotProduct(kVec2T<Item> a, kVec2T<Item> b)  { return a.x * b.x + a.y * b.y; }
+template <typename Item> Item kDotProduct(kVec3T<Item> a, kVec3T<Item> b)  { return a.x * b.x + a.y * b.y + a.z * b.z; }
+template <typename Item> Item kDotProduct(kVec4T<Item> a, kVec4T<Item> b)  { return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w; }
+template <typename Item> Item kDeterminant(kVec2T<Item> a, kVec2T<Item> b) { return (a.x * b.y) - (a.y * b.x); }
 
-float kVec2LengthSq(kVec2 v);
-float kVec3LengthSq(kVec3 v);
-float kVec4LengthSq(kVec4 v);
+template <typename Item>
+float kCrossProduct(kVec2T<Item> a, kVec2T<Item> b) {
+	Item z = (a.x * b.y) - (a.y * b.x);
+	return z;
+}
 
-float kVec2Length(kVec2 v);
-float kVec3Length(kVec3 v);
-float kVec4Length(kVec4 v);
+template <typename Item>
+kVec3T<Item> kCrossProduct(kVec3T<Item> a, kVec3T<Item> b) {
+	kVec3T<Item> res;
+	res.x = (a.y * b.z) - (a.z * b.y);
+	res.y = (a.z * b.x) - (a.x * b.z);
+	res.z = (a.x * b.y) - (a.y * b.x);
+	return res;
+}
 
-float kVec1Distance(float a, float b);
-float kVec2Distance(kVec2 a, kVec2 b);
-float kVec3Distance(kVec3 a, kVec3 b);
-float kVec4Distance(kVec4 a, kVec4 b);
+template <typename Item>
+kVec2T<Item> kTripleProduct(kVec2T<Item> a, kVec2T<Item> b, kVec2T<Item> c) {
+	Item det = kDeterminant(a, b);
+	kVec2T<Item>  res;
+	res.x = -c.y * det;
+	res.y = c.x * det;
+	return res;
+}
 
-kVec2 kVec2NormalizeZ(kVec2 v);
-kVec3 kVec3NormalizeZ(kVec3 v);
-kVec4 kVec4NormalizeZ(kVec4 v);
-kVec2 kVec2Normalize(kVec2 v);
-kVec3 kVec3Normalize(kVec3 v);
-kVec4 kVec4Normalize(kVec4 v);
+template <typename Item>
+kVec3T<Item> kTripleProduct(kVec3T<Item> a, kVec3T<Item> b, kVec3T<Item> c) {
+	return kCrossProduct(kCrossProduct(a, b), c);
+}
 
-kVec3 kCrossProduct(kVec3 a, kVec3 b);
-kVec3 kTripleProduct(kVec3 a, kVec3 b, kVec3 c);
+template <typename Item>
+kVec3T<Item> kOrthoNormalBasisRH(kVec3T<Item> *a, kVec3T<Item> *b) {
+	*a = kNormalizeZ(*a);
+	kVec3T<Item> c = kCrossProduct(*a, *b);
+	if (kLengthSq(c) == 0.0f) return;
+	c = kNormalizeZ(c);
+	*b = kCrossProduct(c, *a);
+	return c;
+}
 
-kVec3 kOrthoNormalBasisRH(kVec3 *a, kVec3 *b);
-kVec3 kOrthoNormalBasisLH(kVec3 *a, kVec3 *b);
+template <typename Item>
+kVec3T<Item> kOrthoNormalBasisLH(kVec3T<Item> *a, kVec3T<Item> *b) {
+	*a = kNormalizeZ(*a);
+	kVec3T<Item> c = kCrossProduct(*b, *a);
+	if (kLengthSq(c) == 0.0f) return;
+	c = kNormalizeZ(c);
+	*b = kCrossProduct(*a, c);
+	return c;
+}
 
-float kVec2AngleBetween(kVec2 a, kVec2 b);
-float kVec3AngleBetween(kVec3 a, kVec3 b);
-float kVec2AngleBetweenNormalized(kVec2 a, kVec2 b);
-float kVec3AngleBetweenNormalized(kVec3 a, kVec3 b);
+template <typename Item> Item kLengthSq(kVec2T<Item> v)                   { return kDotProduct(v, v); }
+template <typename Item> Item kLengthSq(kVec3T<Item> v)                   { return kDotProduct(v, v); }
+template <typename Item> Item kLengthSq(kVec4T<Item> v)                   { return kDotProduct(v, v); }
+template <typename Item> Item kLength(kVec2T<Item> v)                     { return kSquareRoot(kDotProduct(v, v)); }
+template <typename Item> Item kLength(kVec3T<Item> v)                     { return kSquareRoot(kDotProduct(v, v)); }
+template <typename Item> Item kLength(kVec4T<Item> v)                     { return kSquareRoot(kDotProduct(v, v)); }
+template <typename Item> Item kDistance(Item a, Item b)                   { return b - a; }
+template <typename Item> Item kDistance(kVec2T<Item> a, kVec2T<Item> b)   { return kLength(b - a); }
+template <typename Item> Item kDistance(kVec3T<Item> a, kVec3T<Item> b)   { return kLength(b - a); }
+template <typename Item> Item kDistance(kVec4T<Item> a, kVec4T<Item> b)   { return kLength(b - a); }
 
-float kMat2Determinant(const kMat2 mat);
-kMat2 kMat2Inverse(const kMat2 *mat);
-kMat2 kMat2Transpose(const kMat2 *m);
-float kMat3Determinant(const kMat3 *mat);
-kMat3 kMat3Inverse(const kMat3 *mat);
-kMat3 kMat3Transpose(const kMat3 *m);
-float kMat4Determinant(const kMat4 *mat);
-kMat4 kMat4Inverse(const kMat4 *mat);
-kMat4 kMat4Transpose(const kMat4 *m);
+kVec2  kNormalizeZ(kVec2 v);
+kVec3  kNormalizeZ(kVec3 v);
+kVec4  kNormalizeZ(kVec4 v);
+kVec2  kNormalize(kVec2 v);
+kVec3  kNormalize(kVec3 v);
+kVec4  kNormalize(kVec4 v);
+kVec2  kPerpendicularVector(kVec2 a, kVec2 b);
 
-kMat2 kMat2Mul(const kMat2 *left, const kMat2 *right);
-kVec2 kMatVec2Mul(const kMat2 *mat, kVec2 vec);
-kVec2 kVecMat2Mul(kVec2 vec, const kMat2 *mat);
-kMat3 kMat3Mul(const kMat3 *left, const kMat3 *right);
-kVec3 kMatVec3Mul(const kMat3 *mat, kVec3 vec);
-kVec3 kVecMat3Mul(kVec3 vec, const kMat3 *mat);
-kMat4 kMat4Mul(const kMat4 *left, const kMat4 *right);
-kVec4 kMatVec4Mul(const kMat4 *mat, kVec4 vec);
-kVec4 kVecMat4Mul(kVec4 vec, const kMat4 *mat);
+float kAngleBetween(kVec2 a, kVec2 b);
+float kAngleBetween(kVec3 a, kVec3 b);
+float kAngleBetweenNormalized(kVec2 a, kVec2 b);
+float kAngleBetweenNormalized(kVec3 a, kVec3 b);
 
-kQuat kQuatNeg(kQuat a);
-kQuat kQuatAdd(kQuat a, kQuat b);
-kQuat kQuatSub(kQuat a, kQuat b);
+float kSignedAngleBetween(kVec2 a, kVec2 b);
+float kSignedAngleBetween(kVec3 a, kVec3 b, kVec3 n);
+float kSignedAngleBetweenNormalized(kVec2 a, kVec2 b);
+float kSignedAngleBetweenNormalized(kVec3 a, kVec3 b, kVec3 n);
 
-float kQuatDotProduct(kQuat q1, kQuat q2);
-float kQuatLengthSq(kQuat q);
-float kQuatLength(kQuat q);
-kQuat kQuatNormalize(kQuat q);
-kQuat kQuatConjugate(kQuat q);
-kQuat kQuatMul(kQuat q1, kQuat q2);
-kVec3 kQuatRotate(kQuat q, kVec3 v);
+float  kDeterminant(const kMat2 &mat);
+kMat2  kInverse(const kMat2 &mat);
+kMat2  kTranspose(const kMat2 &m);
+float  kDeterminant(const kMat3 &mat);
+kMat3  kInverse(const kMat3 &mat);
+kMat3  kTranspose(const kMat3 &m);
+float  kDeterminant(const kMat4 &mat);
+kMat4  kInverse(const kMat4 &mat);
+kMat4  kTranspose(const kMat4 &m);
 
-kVec3 kRightVector(kQuat q);
-kVec3 kUpVector(kQuat q);
-kVec3 kForwardVector(kQuat q);
+kMat2 operator-(const kMat2 &mat);
+kMat3 operator-(const kMat3 &mat);
+kMat4 operator-(const kMat4 &mat);
+kMat2 operator+(const kMat2 &Left, const kMat2 &Right);
+kMat2 operator-(const kMat2 &Left, const kMat2 &Right);
+kMat3 operator+(const kMat3 &Left, const kMat3 &Right);
+kMat3 operator-(const kMat3 &Left, const kMat3 &Right);
+kMat4 operator+(const kMat4 &Left, const kMat4 &Right);
+kMat4 operator-(const kMat4 &Left, const kMat4 &Right);
 
-kMat2 kMat3ToMat2(const kMat3 *mat);
-kMat3 kMat2ToMat3(const kMat2 *mat);
-kMat3 kMat4ToMat3(const kMat4 *mat);
-kMat4 kMat3ToMat4(const kMat3 *mat);
+kMat2 &operator-=(kMat2 &mat, const kMat2 &other);
+kMat3 &operator-=(kMat3 &mat, const kMat3 &other);
+kMat4 &operator-=(kMat4 &mat, const kMat4 &other);
+kMat2 &operator+=(kMat2 &mat, const kMat2 &other);
+kMat3 &operator+=(kMat3 &mat, const kMat3 &other);
+kMat4 &operator+=(kMat4 &mat, const kMat4 &other);
 
-void  kQuatToAngleAxis(kQuat q, float *angle, kVec3 *axis);
-kMat4 kQuatToMat4(kQuat q);
-kVec3 kQuatToEulerAngles(kQuat q);
-kQuat kAngleAxisToQuat(kVec3 axis, float angle);
-kQuat kAngleAxisNormalizedToQuat(kVec3 axis, float angle);
-kQuat kMat4ToQuat(const kMat4 *m);
-kQuat kEulerAnglesToQuat(float pitch, float yaw, float roll);
+kMat2  operator*(const kMat2 &Left, const kMat2 &Right);
+kVec2  operator*(const kMat2 &mat, kVec2 vec);
+kVec2  operator*(kVec2 vec, const kMat2 &mat);
+kMat3  operator*(const kMat3 &Left, const kMat3 &Right);
+kVec3  operator*(const kMat3 &mat, kVec3 vec);
+kMat4  operator*(const kMat4 &Left, const kMat4 &Right);
+kVec4  operator*(const kMat4 &mat, kVec4 vec);
+kMat2 &operator*=(kMat2 &t, kMat2 &o);
+kMat3 &operator*=(kMat3 &t, kMat3 &o);
+kMat4 &operator*=(kMat4 &t, kMat4 &o);
 
-kMat2 kMat2Identity(void);
-kMat2 kMat2Diagonal(float x, float y);
-kMat2 kMat2Rotation(kVec2 arm);
-kMat2 kMat2RotationAngle(float angle);
-kMat3 kMat3Identity(void);
-kMat3 kMat3Diagonal(float s1, float s2, float s3);
-kMat3 kMat3Scale(kVec2 scale);
-kMat3 kMat3Translation(kVec2 t);
-kMat3 kMat3Rotation(kVec2 arm);
-kMat3 kMat3RotationAngle(float angle);
-kMat3 kMat3LookAt(kVec2 from, kVec2 to, kVec2 forward);
-kMat4 kIdentity(void);
+kQuat  operator-(kQuat q);
+kQuat  operator-(kQuat r1, kQuat r2);
+kQuat  operator+(kQuat r1, kQuat r2);
+kQuat  operator*(kQuat q, float s);
+kQuat  operator*(float s, kQuat q);
+
+kQuat &operator-=(kQuat &q, kQuat other);
+kQuat &operator+=(kQuat &q, kQuat other);
+
+float  kDotProduct(kQuat q1, kQuat q2);
+float  kLength(kQuat q);
+kQuat  kNormalize(kQuat q);
+kQuat  kConjugate(kQuat q);
+kQuat  operator*(kQuat q1, kQuat q2);
+kVec3  operator*(kQuat q, kVec3 v);
+kVec3  kRotate(kQuat q, kVec3 v);
+
+//
+//
+//
+
+kVec3  kRightDirection(const kMat4 &m);
+kVec3  kUpDirection(const kMat4 &m);
+kVec3  kForwardDirection(const kMat4 &m);
+kVec3  kRightDirection(kQuat q);
+kVec3  kUpDirection(kQuat q);
+kVec3  kForwardDirection(kQuat q);
+
+//
+//
+//
+
+kMat2  kMat3ToMat2(const kMat3 &mat);
+kMat3  kMat4ToMat3(const kMat2 &mat);
+kMat3  kMat4ToMat3(const kMat4 &mat);
+kMat4  kMat3ToMat4(const kMat3 &mat);
+
+void   kQuatToAngleAxis(kQuat q, float *angle, kVec3 *axis);
+kMat4  kQuatToMat4(kQuat q);
+kVec3  kQuatToEulerAngles(kQuat q);
+
+kQuat  kAngleAxisToQuat(kVec3 axis, float angle);
+kQuat  kAngleAxisNormalizedToQuat(kVec3 axis, float angle);
+kQuat  kMat4ToQuat(const kMat4 &m);
+kQuat  kMat4NomalizedToQuat(const kMat4 &m);
+kQuat  kEulerAnglesToQuat(float pitch, float yaw, float roll);
+kQuat  kEulerAnglesToQuat(kVec3 euler);
+
+//
+//
+//
+
+kMat2 kIdentity2x2();
+kMat2 kDiagonal2x2(float x, float y);
+kMat2 kDiagonal2x2(kVec2 s);
+kMat2 kRotation2x2(kVec2 arm);
+kMat2 kRotation2x2(float angle);
+
+kMat3 kIdentity3x3();
+kMat3 kDiagonal3x3(float S_1, float S_2, float S_3);
+kMat3 kDiagonal3x3(kVec3 s);
+kMat3 kScale3x3(float x, float y);
+kMat3 kScale3x3(kVec2 s);
+kMat3 kTranslation3x3(float T_x, float T_y);
+kMat3 kTranslation3x3(kVec2 t);
+kMat3 kRotation3x3(kVec2 arm);
+kMat3 kRotation3x3(float angle);
+kMat3 kLookAt3x3(kVec2 from, kVec2 to, kVec2 forward);
+
+kMat4 kIdentity();
 kMat4 kDiagonal(float x, float y, float z, float w);
-kMat4 Scale(kVec3 s);
+
+kMat4 kScale(float S_1, float S_2, float S_3);
+kMat4 kScale(kVec3 s);
+kMat4 kTranslation(float T_x, float T_y, float T_z);
 kMat4 kTranslation(kVec3 t);
-kMat4 kRotationX(kVec2 arm);
-kMat4 kRotationAngleX(float angle);
-kMat4 kRotationY(kVec2 arm);
-kMat4 kRotationAngleY(float angle);
-kMat4 kRotationZ(kVec2 arm);
-kMat4 kRotationAngleZ(float angle);
+kMat4 kRotationX(float c, float s);
+kMat4 kRotationX(float angle);
+kMat4 kRotationY(float c, float s);
+kMat4 kRotationY(float angle);
+kMat4 kRotationZ(float c, float s);
+kMat4 kRotationZ(float angle);
+kMat4 kRotation(float x, float y, float z, kVec2 arm);
+kMat4 kRotation(float x, float y, float z, float angle);
 kMat4 kRotation(kVec3 axis, kVec2 arm);
-kMat4 kRotationAngle(kVec3 axis, float angle);
+kMat4 kRotation(kVec3 axis, float angle);
 kMat4 kLookAt(kVec3 from, kVec3 to, kVec3 world_up);
-kMat4 kLookTowards(kVec3 dir, kVec3 world_up);
+kMat4 kLookAtDirection(kVec3 dir, kVec3 world_up);
 kMat4 kOrthographicRH(float l, float r, float t, float b, float n, float f);
 kMat4 kOrthographicLH(float l, float r, float t, float b, float n, float f);
 kMat4 kPerspectiveRH(float fov, float aspect_ratio, float n, float f);
 kMat4 kPerspectiveLH(float fov, float aspect_ratio, float n, float f);
 
-kQuat kQuatIdentity(void);
-kQuat kQuatBetweenVectors(kVec3 from, kVec3 to);
+kQuat kQuatIdentity();
+kQuat kQuatBetween(kVec3 from, kVec3 to);
 kQuat kQuatBetween(kQuat a, kQuat b);
 kQuat kQuatLookAt(kVec3 from, kVec3 to, kVec3 world_forward);
 
-kVec2 kLerpWeight(float t);
-float kVec1Lerp(float from, float to, float t);
-kVec2 kVec2Lerp(kVec2 from, kVec2 to, float t);
-kVec3 kVec3Lerp(kVec3 from, kVec3 to, float t);
-kVec4 kVec4Lerp(kVec4 from, kVec4 to, float t);
-kQuat kQuatLerp(kQuat from, kQuat to, float t);
-kVec3 kBezierQuadraticWeight(float t);
-float kVec1BezierQuadratic(float a, float b, float c, float t);
-kVec2 kVec2BezierQuadratic(kVec2 a, kVec2 b, kVec2 c, float t);
-kVec3 kVec3BezierQuadratic(kVec3 a, kVec3 b, kVec3 c, float t);
-kVec4 kVec4BezierQuadratic(kVec4 a, kVec4 b, kVec4 c, float t);
-kQuat kQuatBezierQuadratic(kQuat a, kQuat b, kQuat c, float t);
-kVec4 kBezierCubicWeight(float t);
-float kVec1BezierCubic(float a, float b, float c, float d, float t);
-kVec2 kVec2BezierCubic(kVec2 a, kVec2 b, kVec2 c, kVec2 d, float t);
-kVec3 kVec3BezierCubic(kVec3 a, kVec3 b, kVec3 c, kVec3 d, float t);
-kVec4 kVec4BezierCubic(kVec4 a, kVec4 b, kVec4 c, kVec4 d, float t);
-kQuat kQuatBezierCubic(kQuat a, kQuat b, kQuat c, kQuat d, float t);
-void  kBuildVec1BezierQuadratic(float a, float b, float c, float *points, int segments);
-void  kBuildVec2BezierQuadratic(kVec2 a, kVec2 b, kVec2 c, kVec2 *points, int segments);
-void  kBuildVec3BezierQuadratic(kVec3 a, kVec3 b, kVec3 c, kVec3 *points, int segments);
-void  kBuildVec4BezierQuadratic(kVec4 a, kVec4 b, kVec4 c, kVec4 *points, int segments);
-void  kBuildQuatBezierQuadratic(kQuat a, kQuat b, kQuat c, kQuat *points, int segments);
-void  kBuildVec1BezierCubic(float a, float b, float c, float d, float *points, int segments);
-void  kBuildVec2BezierCubic(kVec2 a, kVec2 b, kVec2 c, kVec2 d, kVec2 *points, int segments);
-void  kBuildVec3BezierCubic(kVec3 a, kVec3 b, kVec3 c, kVec3 d, kVec3 *points, int segments);
-void  kBuildVec4BezierCubic(kVec4 a, kVec4 b, kVec4 c, kVec4 d, kVec4 *points, int segments);
-void  kBuildQuatBezierCubic(kQuat a, kQuat b, kQuat c, kQuat d, kQuat *points, int segments);
+//
+//
+//
 
-kQuat kSlerp(kQuat from, kQuat to, float t);
+template <typename type> type kLerp(type from, type to, float t) {
+	return (1 - t) * from + t * to;
+}
 
-float kVec1Step(float edge, float val);
-kVec2 kVec2Step(kVec2 edge, kVec2 val);
-kVec3 kVec3Step(kVec3 edge, kVec3 val);
-kVec4 kVec4Step(kVec4 edge, kVec4 val);
-kQuat kQuatStep(kQuat edge, kQuat val);
+template <typename type> type kBezierQuadratic(type a, type b, type c, float t) {
+	float mt = 1 - t;
+	float w1 = mt * mt;
+	float w2 = 2 * mt * t;
+	float w3 = t * t;
+	return w1 * a + w2 * b + w3 * c;
+}
+
+template <typename type> type kBezierCubic(type a, type b, type c, type d, float t) {
+	float mt = 1.0f - t;
+	float w1 = mt * mt * mt;
+	float w2 = 3 * mt * mt * t;
+	float w3 = 3 * mt * t * t;
+	float w4 = t * t * t;
+	return w1 * a + w2 * b + w3 * c + w4 * d;
+}
+
+template <typename type> void kBuildBezierQuadratic(type a, type b, type c, type *points, int segments) {
+	for (int seg_index = 0; seg_index <= segments; ++seg_index) {
+		float t = (float)seg_index / (float)segments;
+		auto  np = kBezierQuadratic(a, b, c, t);
+		points[seg_index] = np;
+	}
+}
+
+template <typename type> void kBuildBezierCubic(type a, type b, type c, type d, type *points, int segments) {
+	for (int seg_index = 0; seg_index <= segments; ++seg_index) {
+		float t = (float)seg_index / (float)segments;
+		auto  np = kBezierCubic(a, b, c, d, t);
+		points[seg_index] = np;
+	}
+}
+
+template <typename type> type kSlerp(type from, type to, float angle, float t) {
+	float s = kSin(angle);
+	float ts = kSin(angle * t);
+	float mts = kSin(angle * (1 - t));
+	return (mts * from + ts * to) * (1.0f / s);
+}
+
+kVec2  kSlerp(kVec2 from, kVec2 to, float t);
+kVec3  kSlerp(kVec3 from, kVec3 to, float t);
+kQuat  kSlerp(kQuat from, kQuat to, float t);
+float  kStep(float edge, float val);
+kVec2  kStep(kVec2 edge, kVec2 val);
+kVec3  kStep(kVec3 edge, kVec3 val);
+kVec4  kStep(kVec4 edge, kVec4 val);
+kQuat  kStep(kQuat edge, kQuat val);
+
+template <typename Item> float kSmoothStepZ(Item a, Item b, Item v) {
+	float div_distance = kDistance(a, b);
+	if (div_distance) {
+		auto x = kClamp(0.0f, 1.0f, kDistance(a, v) / div_distance);
+		return x * x * (3 - 2 * x);
+	}
+	return 1;
+}
+
+template <typename Item> float kSmoothStep(Item a, Item b, Item v) {
+	auto x = kClamp(0.0f, 1.0f, kDistance(a, v) / kDistance(a, b));
+	return x * x * (3 - 2 * x);
+}
 
 float kInverseSmoothStep(float x);
 
-float kVec1MoveTowards(float from, float to, float factor);
-kVec2 kVec2MoveTowards(kVec2 from, kVec2 to, float factor);
-kVec3 kVec3MoveTowards(kVec3 from, kVec3 to, float factor);
-kVec4 kVec4MoveTowards(kVec4 from, kVec4 to, float factor);
+template <typename Item> Item kMapRange(Item in_a, Item in_b, Item out_a, Item out_b, Item v) {
+	return (out_b - out_a) / (in_b - in_a) * (v - in_a) + out_a;
+}
+template <typename Item> Item kMap01(Item in_a, Item in_b, Item v) {
+	return MapRange(in_a, in_b, Item(0), Item(1), v);
+}
+
+float kMoveTowards(float from, float to, float factor);
+kVec2 kMoveTowards(kVec2 from, kVec2 to, float factor);
+kVec3 kMoveTowards(kVec3 from, kVec3 to, float factor);
+kVec4 kMoveTowards(kVec4 from, kVec4 to, float factor);
 kVec2 kRotateAround(kVec2 point, kVec2 center, float angle);
 kQuat kRotateTowards(kQuat from, kQuat to, float max_angle);
 kVec2 kReflect(kVec2 d, kVec2 n);
 
-void  kUnpackRGBA(u32 c, u8 channels[4]);
-u32   kPackRGBA(u8 r, u8 g, u8 b, u8 a);
-u32   kColor4ToUint(kVec4 v);
-u32   kColor3ToUint(kVec3 v);
-kVec4 kUintToColor4(u32 c);
-kVec3 kUintToColor3(u32 c);
-
-kVec3 kLinearToSRGB(kVec3 Col, float gamma);
-kVec3 kSRGBToLinear(kVec3 Col, float gamma);
-kVec3 kHSVToRGB(kVec3 col);
-kVec3 kRGBToHSV(kVec3 c);
-
 //
 //
 //
 
-#define kNeg(A)           _Generic((A),        \
-                            kVec2:  kVec2Neg,  \
-                            kVec3:  kVec3Neg,  \
-                            kVec4:  kVec4Neg,  \
-                            kVec2i: kVec2iNeg, \
-                            kVec3i: kVec3iNeg, \
-                            kVec4i: kVec4iNeg, \
-                            kQuat:  kQuatNeg   \
-                            ) (A)
+constexpr void kUnpackRGBA(u32 c, u8 channels[4]) {
+	channels[0] = (c >> 24) & 0xff;
+	channels[1] = (c >> 16) & 0xff;
+	channels[2] = (c >> 8) & 0xff;
+	channels[3] = (c >> 0) & 0xff;
+}
 
-#define kAdd(A, B)        _Generic((A),       \
-                           kVec2:  kVec2Add,  \
-                           kVec3:  kVec3Add,  \
-                           kVec4:  kVec4Add,  \
-                           kVec2i: kVec2iAdd, \
-                           kVec3i: kVec3iAdd, \
-                           kVec4i: kVec4iAdd, \
-                           kQuat:  kQuatAdd   \
-                           ) (A, B)
+constexpr u32 kPackRGBA(u8 r, u8 g, u8 b, u8 a) {
+	return ((u32)r << 24) | ((u32)g << 16) | ((u32)b << 8) | (u32)a;
+}
 
-#define kSub(A, B)        _Generic((A),       \
-                           kVec2:  kVec2Sub,  \
-                           kVec3:  kVec3Sub,  \
-                           kVec4:  kVec4Sub,  \
-                           kVec2i: kVec2iSub, \
-                           kVec3i: kVec3iSub, \
-                           kVec4i: kVec4iSub, \
-                           kQuat:  kQuatSub   \
-                           ) (A, B)
+constexpr u32 kColor4ToUint(kVec4 v) {
+	u8 r = static_cast<u8>(255.0f * v.x);
+	u8 g = static_cast<u8>(255.0f * v.y);
+	u8 b = static_cast<u8>(255.0f * v.z);
+	u8 a = static_cast<u8>(255.0f * v.w);
+	return kPackRGBA(r, g, b, a);
+}
 
-#define kMul(A, B)        _Generic((A),         \
-                           kVec2:    kVec2Mul,  \
-                           kVec3:    kVec3Mul,  \
-                           kVec4:    kVec4Mul,  \
-                           kVec2i:   kVec2iMul, \
-                           kVec3i:   kVec3iMul, \
-                           kVec4i:   kVec4iMul, \
-                           kMat2 *:  kMat2Mul,  \
-                           kMat3 *:  kMat3Mul,  \
-                           kMat4 *:  kMat4Mul,  \
-                           kQuat:  kQuatMul   \
-                           ) (A, B)
+constexpr u32 kColor3ToUint(kVec3 v) {
+	u8 r = static_cast<u8>(255.0f * v.x);
+	u8 g = static_cast<u8>(255.0f * v.y);
+	u8 b = static_cast<u8>(255.0f * v.z);
+	return kPackRGBA(r, g, b, 0xff);
+}
 
-#define kMatVecMul(A, B)  _Generic((A),            \
-                           kMat2 *:  kMatVec2Mul,  \
-                           kMat3 *:  kMatVec3Mul,  \
-                           kMat4 *:  kMatVec4Mul   \
-                           ) (A, B)
+constexpr kVec4 kUintToColor4(u32 c) {
+	kVec4 res;
+	res.x = (float)((c >> 24) & 0xff) / 255.0f;
+	res.y = (float)((c >> 16) & 0xff) / 255.0f;
+	res.z = (float)((c >> 8) & 0xff) / 255.0f;
+	res.w = (float)((c >> 0) & 0xff) / 255.0f;
+	return res;
+}
 
-#define kVecMatMul(A, B)  _Generic((B),            \
-                           kMat2:  kVecMat2Mul,    \
-                           kMat3 *:  kVecMat3Mul,  \
-                           kMat4 *:  kVecMat4Mul   \
-                           ) (A, B)
+constexpr kVec3 kUintToColor3(u32 c) {
+	kVec3 res;
+	res.x = (float)((c >> 24) & 0xff) / 255.0f;
+	res.y = (float)((c >> 16) & 0xff) / 255.0f;
+	res.z = (float)((c >> 8) & 0xff) / 255.0f;
+	return res;
+}
 
-#define kDiv(A, B)        _Generic((A),       \
-                           kVec2:  kVec2Div,  \
-                           kVec3:  kVec3Div,  \
-                           kVec4:  kVec4Div,  \
-                           kVec2i: kVec2iDiv, \
-                           kVec3i: kVec3iDiv, \
-                           kVec4i: kVec4iDiv  \
-                           ) (A, B)
+kVec3 kLinearToSrgb(kVec3 Col);
+kVec4 kLinearToSrgb(kVec4 Col);
+kVec3 kLinearToSrgb(kVec3 Col, float gamma);
+kVec4 kLinearToSrgb(kVec4 Col, float gamma);
+kVec3 kSrgbToLinear(kVec3 Col);
+kVec4 kSrgbToLinear(kVec4 Col);
+kVec3 kSrgbToLinear(kVec3 Col, float gamma);
+kVec4 kSrgbToLinear(kVec4 Col, float gamma);
 
-#define kAddScaled(A, f, B) _Generic((A),            \
-                            kVec2:  kVec2AddScaled,  \
-                            kVec3:  kVec3AddScaled,  \
-                            kVec4:  kVec4AddScaled,  \
-                            kVec2i: kVec2iAddScaled, \
-                            kVec3i: kVec3iAddScaled, \
-                            kVec4i: kVec4iAddScaled  \
-                            ) (A, f, B)
-
-#define kSubScaled(A, f, B) _Generic((A),            \
-                            kVec2:  kVec2SubScaled,  \
-                            kVec3:  kVec3SubScaled,  \
-                            kVec4:  kVec4SubScaled,  \
-                            kVec2i: kVec2iSubScaled, \
-                            kVec3i: kVec3iSubScaled, \
-                            kVec4i: kVec4iSubScaled  \
-                            ) (A, f, B)
-
-#define kDotProduct(A, B) _Generic((A),          \
-                           kVec2:  kVec2DotProduct, \
-                           kVec3:  kVec3DotProduct, \
-                           kVec4:  kVec4DotProduct,  \
-                           kQuat:  kQuatDotProduct  \
-                           ) (A, B)
-
-#define kLengthSq(A)     _Generic((A),            \
-                           kVec2:  kVec2LengthSq, \
-                           kVec3:  kVec3LengthSq, \
-                           kVec4:  kVec4LengthSq,  \
-                           kQuat:  kQuatLengthSq  \
-                           ) (A)
-
-#define kLength(A)       _Generic((A),          \
-                           kVec2:  kVec2Length, \
-                           kVec3:  kVec3Length, \
-                           kVec4:  kVec4Length,  \
-                           kQuat:  kQuatLength  \
-                           ) (A)
-
-#define kDistance(A, B) _Generic((A),          \
-                           float:  kVec1Distance, \
-                           kVec2:  kVec2Distance, \
-                           kVec3:  kVec3Distance, \
-                           kVec4:  kVec4Distance  \
-                           ) (A, B)
-
-#define kNormalizeZ(A) _Generic((A),                \
-                           kVec2:  kVec2NormalizeZ, \
-                           kVec3:  kVec3NormalizeZ, \
-                           kVec4:  kVec4NormalizeZ  \
-                           ) (A)
-
-#define kNormalize(A)  _Generic((A),               \
-                           kVec2:  kVec2Normalize, \
-                           kVec3:  kVec3Normalize, \
-                           kVec4:  kVec4Normalize, \
-                           kQuat:  kQuatNormalize  \
-                           ) (A)
-
-#define kAngleBetween(A, B) _Generic((A),               \
-                             kVec2:  kVec2AngleBetween, \
-                             kVec3:  kVec3AngleBetween  \
-                             ) (A, B)
-
-#define kAngleBetweenNormalized(A, B) _Generic((A),               \
-                             kVec2:  kVec2AngleBetweenNormalized, \
-                             kVec3:  kVec3AngleBetweenNormalized  \
-                             ) (A, B)
-
-#define kDeterminant(A)    _Generic((A),                       \
-                             const kMat2 *:  kMat2Determinant, \
-                             const kMat3 *:  kMat3Determinant, \
-                             const kMat4 *:  kMat4Determinant  \
-                             ) (A)
-
-#define kInverse(A)        _Generic((A),                   \
-                             const kMat2 *:  kMat2Inverse, \
-                             const kMat3 *:  kMat3Inverse, \
-                             const kMat4 *:  kMat4Inverse  \
-                             ) (A)
-
-#define kTranspose(A)      _Generic((A),                     \
-                             const kMat2 *:  kMat2Transpose, \
-                             const kMat3 *:  kMat3Transpose, \
-                             const kMat4 *:  kMat4Transpose  \
-                             ) (A)
-
-#define kConjugate(A)      _Generic((A),               \
-                             kVec2: kComplexConjugate, \
-                             kQuat: kQuatConjugate     \
-                             ) (A)
-
-#define kLerp(A, B, t) _Generic((A),          \
-                           float:  kVec1Lerp, \
-                           kVec2:  kVec2Lerp, \
-                           kVec3:  kVec3Lerp, \
-                           kVec4:  kVec4Lerp, \
-                           kQuat:  kQuatLerp  \
-                           ) (A, B, t)
-
-#define kBezierQuadratic(A, B, C, t) _Generic((A),       \
-                           float:  kVec1BezierQuadratic, \
-                           kVec2:  kVec2BezierQuadratic, \
-                           kVec3:  kVec3BezierQuadratic, \
-                           kVec4:  kVec4BezierQuadratic, \
-                           kQuat:  kQuatBezierQuadratic  \
-                           ) (A, B, C, t)
-
-#define kBezierCubic(A, B, C, D, t) _Generic((A),    \
-                           float:  kVec1BezierCubic, \
-                           kVec2:  kVec2BezierCubic, \
-                           kVec3:  kVec3BezierCubic, \
-                           kVec4:  kVec4BezierCubic, \
-                           kQuat:  kQuatBezierCubic  \
-                           ) (A, B, C, D, t)
-
-#define kBuildBezierQuadratic(A, B, C, points, segments) _Generic((A), \
-                           float:  kBuildVec1BezierQuadratic, \
-                           kVec2:  kBuildVec2BezierQuadratic, \
-                           kVec3:  kBuildVec3BezierQuadratic, \
-                           kVec4:  kBuildVec4BezierQuadratic, \
-                           kQuat:  kBuildQuatBezierQuadratic  \
-                           ) (A, B, C, points, segments)
-
-#define kBuildBezierCubic(A, B, C, D, points, segments) _Generic((A), \
-                           float:  kBuildVec1BezierCubic, \
-                           kVec2:  kBuildVec2BezierCubic, \
-                           kVec3:  kBuildVec3BezierCubic, \
-                           kVec4:  kBuildVec4BezierCubic, \
-                           kQuat:  kBuildQuatBezierCubic  \
-                           ) (A, B, C, D, points, segments)
-
-#define kStep(A, B) _Generic((A),             \
-                           float:  kVec1Step, \
-                           kVec2:  kVec2Step, \
-                           kVec3:  kVec3Step, \
-                           kVec4:  kVec4Step, \
-                           kQuat:  kQuatStep  \
-                           ) (A, B)
-
-#define kMoveTowards(A, B, factor) _Generic((A),     \
-                           float:  kVec1MoveTowards, \
-                           kVec2:  kVec2MoveTowards, \
-                           kVec3:  kVec3MoveTowards, \
-                           kVec4:  kVec4MoveTowards  \
-                           ) (A, B, factor)
+kVec3 kHsvToRgb(kVec3 c);
+kVec3 kRgbToHsv(kVec3 c);
+kVec4 kHsvToRgb(kVec4 c);
+kVec4 kRgbToHsv(kVec4 c);

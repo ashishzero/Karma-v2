@@ -28,53 +28,53 @@ kContext *kGetContext(void) {
 }
 
 void *kAlloc(umem size) {
-	return kAllocEx(&context.allocator, size);
+	return kAlloc(&context.allocator, size);
 }
 
 void *kRealloc(void *ptr, umem prev, umem size) {
-	return kReallocEx(&context.allocator, ptr, prev, size);
+	return kRealloc(&context.allocator, ptr, prev, size);
 }
 
 void kFree(void *ptr, umem size) {
-	kFreeEx(&context.allocator, ptr, size);
+	kFree(&context.allocator, ptr, size);
 }
 
 u32 kRandom(void) {
-	return kRandomEx(&context.random);
+	return kRandom(&context.random);
 }
 
 u32 kRandomBound(u32 bound) {
-	return kRandomBoundEx(&context.random, bound);
+	return kRandomBound(&context.random, bound);
 }
 
 u32 kRandomRange(u32 min, u32 max) {
-	return kRandomRangeEx(&context.random, min, max);
+	return kRandomRange(&context.random, min, max);
 }
 
 float kRandomFloat01(void) {
-	return kRandomFloat01Ex(&context.random);
+	return kRandomFloat01(&context.random);
 }
 
 float kRandomFloatBound(float bound) {
-	return kRandomFloatBoundEx(&context.random, bound);
+	return kRandomFloatBound(&context.random, bound);
 }
 
 float kRandomFloatRange(float min, float max) {
-	return kRandomFloatRangeEx(&context.random, min, max);
+	return kRandomFloatRange(&context.random, min, max);
 }
 
 float kRandomFloat(void) {
-	return kRandomFloatEx(&context.random);
+	return kRandomFloat(&context.random);
 }
 
 void kRandomSourceSeed(u64 state, u64 seq) {
-	kRandomSourceSeedEx(&context.random, state, seq);
+	kRandomSourceSeed(&context.random, state, seq);
 }
 
 void kLogPrintV(kLogLevel level, const char *fmt, va_list list) {
 	if (level >= context.logger.level) {
 		char buff[4096];
-		int len = vsnprintf(buff, kFixedCount(buff), fmt, list);
+		int len = vsnprintf(buff, kArrayCount(buff), fmt, list);
 		context.logger.proc(context.logger.data, context.logger.level, (u8 *)buff, len);
 	}
 }
@@ -155,11 +155,11 @@ void kDefaultHandleLog(void *data, kLogLevel level, const u8 *msg, imem msg_len)
 		FOREGROUND_RED | FOREGROUND_GREEN,
 		FOREGROUND_RED
 	};
-	static_assert(kFixedCount(ColorsMap) == kLogLevel_Error + 1, "");
+	static_assert(kArrayCount(ColorsMap) == kLogLevel_Error + 1, "");
 
 	wchar_t buff[4096];
 
-	int len   = MultiByteToWideChar(CP_UTF8, 0, (char *)msg, (int)msg_len, buff, kFixedCount(buff) - 1);
+	int len   = MultiByteToWideChar(CP_UTF8, 0, (char *)msg, (int)msg_len, buff, kArrayCount(buff) - 1);
 	buff[len] = 0;
 
 	kAtomicLock(&Guard);

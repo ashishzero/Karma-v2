@@ -15,7 +15,18 @@
 		</Expand>
 	</Type>
 
-	<Type Name="kVec2">
+	<Type Name="kSlice&lt;*&gt;">
+		<DisplayString>{{ count={count} }}</DisplayString>
+		<Expand>
+			<Item Name="[count]" ExcludeView="simple">count</Item>
+			<ArrayItems>
+				<Size>count</Size>
+				<ValuePointer>data</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+
+	<Type Name="kVec2T&lt;*&gt;">
 		<DisplayString>{{ {x}, {y} }}</DisplayString>
 		<Expand>
 			<Item Name="[x]" ExcludeView="simple">x</Item>
@@ -23,7 +34,7 @@
 		</Expand>
 	</Type>
 
-	<Type Name="kVec3">
+	<Type Name="kVec3T&lt;*&gt;">
 		<DisplayString>{{ {x}, {y}, {z} }}</DisplayString>
 		<Expand>
 			<Item Name="[x]" ExcludeView="simple">x</Item>
@@ -32,34 +43,7 @@
 		</Expand>
 	</Type>
 
-	<Type Name="kVec4">
-		<DisplayString>{{ {x}, {y}, {z}, {w} }}</DisplayString>
-		<Expand>
-			<Item Name="[x]" ExcludeView="simple">x</Item>
-			<Item Name="[y]" ExcludeView="simple">y</Item>
-			<Item Name="[z]" ExcludeView="simple">z</Item>
-			<Item Name="[w]" ExcludeView="simple">w</Item>
-		</Expand>
-	</Type>
-
-	<Type Name="kVec2i">
-		<DisplayString>{{ {x}, {y} }}</DisplayString>
-		<Expand>
-			<Item Name="[x]" ExcludeView="simple">x</Item>
-			<Item Name="[y]" ExcludeView="simple">y</Item>
-		</Expand>
-	</Type>
-
-	<Type Name="kVec3i">
-		<DisplayString>{{ {x}, {y}, {z} }}</DisplayString>
-		<Expand>
-			<Item Name="[x]" ExcludeView="simple">x</Item>
-			<Item Name="[y]" ExcludeView="simple">y</Item>
-			<Item Name="[z]" ExcludeView="simple">z</Item>
-		</Expand>
-	</Type>
-
-	<Type Name="kVec4i">
+	<Type Name="kVec4T&lt;*&gt;">
 		<DisplayString>{{ {x}, {y}, {z}, {w} }}</DisplayString>
 		<Expand>
 			<Item Name="[x]" ExcludeView="simple">x</Item>
@@ -106,189 +90,7 @@
 		</Expand>
 	</Type>
 
-	<Type Name="kEvent_Array">
-		<DisplayString>{{ count={count} }}</DisplayString>
-		<Expand>
-			<Item Name="[count]" ExcludeView="simple">count</Item>
-			<Item Name="[allocated]" ExcludeView="simple">allocated</Item>
-			<ArrayItems>
-				<Size>count</Size>
-				<ValuePointer>data</ValuePointer>
-			</ArrayItems>
-		</Expand>
-	</Type>
-
-	<Type Name="kEvent">
-		<DisplayString>{{ kind={kind} }}</DisplayString>
-		<Expand>
-			<Item Name="[kind]" ExcludeView="simple">kind</Item>
-			<Item Name="[resized]" ExcludeView="simple" Condition="kind==kEvent_Resized">resized</Item>
-			<Item Name="[dpi]" ExcludeView="simple" Condition="kind==kEvent_DpiChanged">dpi</Item>
-			<Item Name="[cursor]" ExcludeView="simple" Condition="kind==kEvent_CursorMoved">cursor</Item>
-			<Item Name="[button]" ExcludeView="simple" Condition="kind==kEvent_ButtonPressed || kind==kEvent_ButtonReleased || kind==kEvent_DoubleClicked">button</Item>
-			<Item Name="[key]" ExcludeView="simple" Condition="kind==kEvent_KeyReleased || kind==kEvent_KeyPressed">key</Item>
-			<Item Name="[wheel]" ExcludeView="simple" Condition="kind==kEvent_WheelMoved">wheel</Item>
-			<Item Name="[text]" ExcludeView="simple" Condition="kind==kEvent_TextInput">text</Item>
-		</Expand>
-	</Type>
-
-	<Type Name="float_Array">
-		<DisplayString>{{ count={count} }}</DisplayString>
-		<Expand>
-			<Item Name="[count]" ExcludeView="simple">count</Item>
-			<Item Name="[allocated]" ExcludeView="simple">allocated</Item>
-			<ArrayItems>
-				<Size>count</Size>
-				<ValuePointer>data</ValuePointer>
-			</ArrayItems>
-		</Expand>
-	</Type>
-
-	<Type Name="int_Array">
-		<DisplayString>{{ count={count} }}</DisplayString>
-		<Expand>
-			<Item Name="[count]" ExcludeView="simple">count</Item>
-			<Item Name="[allocated]" ExcludeView="simple">allocated</Item>
-			<ArrayItems>
-				<Size>count</Size>
-				<ValuePointer>data</ValuePointer>
-			</ArrayItems>
-		</Expand>
-	</Type>
-
-	<Type Name="kVertex2D_Array">
-		<DisplayString>{{ count={count} }}</DisplayString>
-		<Expand>
-			<Item Name="[count]" ExcludeView="simple">count</Item>
-			<Item Name="[allocated]" ExcludeView="simple">allocated</Item>
-			<ArrayItems>
-				<Size>count</Size>
-				<ValuePointer>data</ValuePointer>
-			</ArrayItems>
-		</Expand>
-	</Type>
-
-	<Type Name="kIndex2D_Array">
-		<DisplayString>{{ count={count} }}</DisplayString>
-		<Expand>
-			<Item Name="[count]" ExcludeView="simple">count</Item>
-			<Item Name="[allocated]" ExcludeView="simple">allocated</Item>
-			<ArrayItems>
-				<Size>count</Size>
-				<ValuePointer>data</ValuePointer>
-			</ArrayItems>
-		</Expand>
-	</Type>
-
-	<Type Name="kRenderParam2D_Array">
-		<DisplayString>{{ count={count} }}</DisplayString>
-		<Expand>
-			<Item Name="[count]" ExcludeView="simple">count</Item>
-			<Item Name="[allocated]" ExcludeView="simple">allocated</Item>
-			<ArrayItems>
-				<Size>count</Size>
-				<ValuePointer>data</ValuePointer>
-			</ArrayItems>
-		</Expand>
-	</Type>
-
-	<Type Name="kRenderCommand2D_Array">
-		<DisplayString>{{ count={count} }}</DisplayString>
-		<Expand>
-			<Item Name="[count]" ExcludeView="simple">count</Item>
-			<Item Name="[allocated]" ExcludeView="simple">allocated</Item>
-			<ArrayItems>
-				<Size>count</Size>
-				<ValuePointer>data</ValuePointer>
-			</ArrayItems>
-		</Expand>
-	</Type>
-
-	<Type Name="kRect_Array">
-		<DisplayString>{{ count={count} }}</DisplayString>
-		<Expand>
-			<Item Name="[count]" ExcludeView="simple">count</Item>
-			<Item Name="[allocated]" ExcludeView="simple">allocated</Item>
-			<ArrayItems>
-				<Size>count</Size>
-				<ValuePointer>data</ValuePointer>
-			</ArrayItems>
-		</Expand>
-	</Type>
-	
-	<Type Name="kMat4_Array">
-		<DisplayString>{{ count={count} }}</DisplayString>
-		<Expand>
-			<Item Name="[count]" ExcludeView="simple">count</Item>
-			<Item Name="[allocated]" ExcludeView="simple">allocated</Item>
-			<ArrayItems>
-				<Size>count</Size>
-				<ValuePointer>data</ValuePointer>
-			</ArrayItems>
-		</Expand>
-	</Type>
-
-	<Type Name="kTexture_Array">
-		<DisplayString>{{ count={count} }}</DisplayString>
-		<Expand>
-			<Item Name="[count]" ExcludeView="simple">count</Item>
-			<Item Name="[allocated]" ExcludeView="simple">allocated</Item>
-			<ArrayItems>
-				<Size>count</Size>
-				<ValuePointer>data</ValuePointer>
-			</ArrayItems>
-		</Expand>
-	</Type>
-
-	<Type Name="kShader_Array">
-		<DisplayString>{{ count={count} }}</DisplayString>
-		<Expand>
-			<Item Name="[count]" ExcludeView="simple">count</Item>
-			<Item Name="[allocated]" ExcludeView="simple">allocated</Item>
-			<ArrayItems>
-				<Size>count</Size>
-				<ValuePointer>data</ValuePointer>
-			</ArrayItems>
-		</Expand>
-	</Type>
-
-	<Type Name="kVec2_Array">
-		<DisplayString>{{ count={count} }}</DisplayString>
-		<Expand>
-			<Item Name="[count]" ExcludeView="simple">count</Item>
-			<Item Name="[allocated]" ExcludeView="simple">allocated</Item>
-			<ArrayItems>
-				<Size>count</Size>
-				<ValuePointer>data</ValuePointer>
-			</ArrayItems>
-		</Expand>
-	</Type>
-
-	<Type Name="kVec3_Array">
-		<DisplayString>{{ count={count} }}</DisplayString>
-		<Expand>
-			<Item Name="[count]" ExcludeView="simple">count</Item>
-			<Item Name="[allocated]" ExcludeView="simple">allocated</Item>
-			<ArrayItems>
-				<Size>count</Size>
-				<ValuePointer>data</ValuePointer>
-			</ArrayItems>
-		</Expand>
-	</Type>
-
-	<Type Name="kVec4_Array">
-		<DisplayString>{{ count={count} }}</DisplayString>
-		<Expand>
-			<Item Name="[count]" ExcludeView="simple">count</Item>
-			<Item Name="[allocated]" ExcludeView="simple">allocated</Item>
-			<ArrayItems>
-				<Size>count</Size>
-				<ValuePointer>data</ValuePointer>
-			</ArrayItems>
-		</Expand>
-	</Type>
-
-	<Type Name="kQuat_Array">
+	<Type Name="kArray&lt;*&gt;">
 		<DisplayString>{{ count={count} }}</DisplayString>
 		<Expand>
 			<Item Name="[count]" ExcludeView="simple">count</Item>

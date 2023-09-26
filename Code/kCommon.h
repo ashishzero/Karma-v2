@@ -3,17 +3,8 @@
 #include <stdarg.h>
 #include <stdint.h>
 #include <stddef.h>
-#include <stdbool.h>
 #include <float.h>
 #include <assert.h>
-
-#ifndef __has_include
-#define __has_include(x) 0
-#endif
-
-#if __has_include("stdnoreturn.h")
-#include <stdnoreturn.h>
-#endif
 
 #if defined(__clang__) || defined(__ibmxl__)
 #define K_COMPILER_CLANG 1
@@ -178,19 +169,40 @@
 #endif
 
 #ifdef __GNUC__
-noreturn inproc __attribute__((always_inline)) void Unreachable() { kDebugTriggerbreakpoint(); __builtin_unreachable(); }
+[[noreturn]] inproc __attribute__((always_inline)) void Unreachable() { kDebugTriggerbreakpoint(); __builtin_unreachable(); }
 #elif defined(_MSC_VER)
-#ifndef noreturn
-#define noreturn _Noreturn
-#endif
-noreturn __forceinline void kUnreachable() { kDebugTriggerbreakpoint(); __assume(false); }
+[[noreturn]] __forceinline void kUnreachable() { kDebugTriggerbreakpoint(); __assume(false); }
 #else // ???
 inproc void kUnreachable() { kTriggerBreakpoint(); }
 #endif
 
 #define kNoDefaultCase() default: kUnreachable(); break
 
-noreturn  inproc void kUnimplemented() { kTriggerBreakpoint(); kUnreachable(); }
+[[noreturn]]  inproc void kUnimplemented() { kTriggerBreakpoint(); kUnreachable(); }
+
+//
+//
+//
+
+#define kConcatRaw(x, y) x##y
+#define kConcatRaw2(x, y)   kConcatRaw(x, y)
+
+template <typename Item>
+struct kExitScope {
+	Item lambda;
+	kExitScope(Item lambda) : lambda(lambda) {
+	}
+	~kExitScope() {
+		lambda();
+	}
+};
+struct kExitScope2 {
+	template <typename Item>
+	kExitScope<Item> operator+(Item t) {
+		return t;
+	}
+};
+#define kDefer const auto &kConcatRaw2(defer__, __LINE__) = kExitScope2() + [&]()
 
 //
 //
@@ -219,54 +231,63 @@ typedef ptrdiff_t             imem;
 #define REAL64_MAX            DBL_MAX
 #define REAL_MIN              REAL32_MIN
 #define REAL_MAX              REAL32_MAX
-#define REAL_EPSILON          FLT_EPSILON;
+#define REAL_EPSILON          FLT_EPSILON
 
 #define K_PI                  (3.1415926535f)
 #define K_PI_INVERSE          (1.0f / K_PI)
 #define K_TAU                 (K_PI / 2)
 
-#define kFixedCount(a)         (sizeof(a) / sizeof((a)[0]))
+#define kArrayCount(a)         (sizeof(a) / sizeof((a)[0]))
 
-#define kMin(a, b)             ((a) < (b) ? (a) : (b))
-#define kMax(a, b)             ((a) > (b) ? (a) : (b))
-#define kClamp(a, b, v)        kMin(b, kMax(a, v))
-#define kIsInRange(a, b, v)    (((v) >= (a)) && ((v) <= (b)))
-#define kSwap(a, b, Type)      do { Type temp = b; b + a; a = temp; } while (0)
-#define kIsPower2(value)       ((value != 0) && ((value) & ((value)-1)) == 0)
-#define kAlignUp(x, p)         (((x) + (p)-1) & ~((p)-1))
-#define kAlignDown(x, p)       ((x) & ~((p)-1))
-#define kBSwap16(a)            ((((a)&0x00FF) << 8) | (((a)&0xFF00) >> 8))
-#define kBSwap32(a)            ((((a)&0x000000FF) << 24) | (((a)&0x0000FF00) << 8) | (((a)&0x00FF0000) >> 8) | (((a)&0xFF000000) >> 24))
-#define kBSwap64(a)            ((((a)&0x00000000000000FFULL) << 56) | (((a)&0x000000000000FF00ULL) << 40) | (((a)&0x0000000000FF0000ULL) << 24) | \
-                               (((a)&0x00000000FF000000ULL) << 8) | (((a)&0x000000FF00000000ULL) >> 8) | (((a)&0x0000FF0000000000ULL) >> 24) | \
-                               (((a)&0x00FF000000000000ULL) >> 40) | (((a)&0xFF00000000000000ULL) >> 56))
+template <typename Item> constexpr Item             kMin(Item a, Item b)               { return a < b ? a : b; }
+template <typename Item> constexpr Item             kMax(Item a, Item b)               { return a > b ? a : b; }
+template <typename Item> constexpr Item             kClamp(Item a, Item b, Item v)     { return kMin(b, kMax(a, v)); }
+template <typename Item> constexpr bool             kIsInRange(Item a, Item b, Item v) { return v >= a && v <= b; }
+template <typename Item> void                       kSwap(Item *a, Item *b)            { Item t = *b; *b = *a; *a = t; }
+template <typename Item> constexpr Item             kIsPower2(Item value)              { return ((value != 0) && ((value) & ((value)-1)) == 0); }
+template <typename Item, typename U> constexpr Item kAlignUp(Item x, U p)              { return (((x) + (p)-1) & ~((p)-1)); }
+template <typename Item, typename U> constexpr Item kAlignDown(Item x, U p)            { return ((x) & ~((p)-1)); }
 
-inproc imem kIPower(imem v, imem p) {
-	imem r = v;
-	for (imem i = 1; i < p; ++i)
+template <typename Item, typename U> constexpr Item kIPower(Item v, U p) {
+	Item r = v;
+	for (Item i = 1; i < p; ++i)
 		r *= v;
 	return r;
 }
 
-inproc imem kNextPower2(imem n) {
+template <typename Item> constexpr static Item kNextPowerOf2(Item n) {
 	if (kIsPower2(n))
 		return n;
-	imem count = 0;
+	Item count = 0;
 	while (n != 0) {
 		n >>= 1;
 		count += 1;
 	}
-	return 1LL << count;
+	return (Item)1 << (Item)count;
 }
 
-#define kKiloByte  (1024ULL)
-#define kMegaByte  (kKiloByte * 1024ULL)
-#define kGegaByte  (kMegaByte * 1024ULL)
+inproc u16 constexpr kBSwap16(u16 a) {
+	return ((((a)&0x00FF) << 8) | (((a)&0xFF00) >> 8));
+}
 
-#define kDegToRad  ((K_PI / 180.0f))
-#define kRadToDeg  ((180.0f / K_PI))
-#define kRadToTurn (1.0f / (2.0f * K_PI))
-#define kTurnToRad (2.0f * K_PI)
+inproc u32 constexpr kBSwap32(u32 a) {
+	return ((((a)&0x000000FF) << 24) | (((a)&0x0000FF00) << 8) | (((a)&0x00FF0000) >> 8) | (((a)&0xFF000000) >> 24));
+}
+
+inproc u64 constexpr kBSwap64(u64 a) {
+	return ((((a)&0x00000000000000FFULL) << 56) | (((a)&0x000000000000FF00ULL) << 40) | (((a)&0x0000000000FF0000ULL) << 24) |
+     (((a)&0x00000000FF000000ULL) << 8) | (((a)&0x000000FF00000000ULL) >> 8) | (((a)&0x0000FF0000000000ULL) >> 24) |
+     (((a)&0x00FF000000000000ULL) >> 40) | (((a)&0xFF00000000000000ULL) >> 56));
+}
+
+inproc constexpr umem kKiloByte   = (1024ULL);
+inproc constexpr umem kMegaByte   = (kKiloByte * 1024ULL);
+inproc constexpr umem kGegaByte   = (kMegaByte * 1024ULL);
+
+inproc constexpr float kDegToRad  = ((K_PI / 180.0f));
+inproc constexpr float kRadToDeg  = ((180.0f / K_PI));
+inproc constexpr float kRadToTurn = (1.0f / (2.0f * K_PI));
+inproc constexpr float kTurnToRad = (2.0f * K_PI);
 
 #define kAlignNative alignas(sizeof(void*))
 
@@ -297,93 +318,201 @@ void kHandleAssertion(const char *file, int line, const char *proc, const char *
 //
 //
 
-typedef struct kVec2 {
+template <typename T>
+struct kVec2T {
 	union {
-		struct { float x, y; };
-		float  m[2];
+		struct { T x, y; };
+		T m[2];
 	};
-} kVec2;
 
-typedef struct kVec2i {
-	union {
-		struct { int x, y; };
-		int    m[2];
-	};
-} kVec2i;
+	constexpr kVec2T(): x(0), y(0) {}
+	explicit constexpr kVec2T(T a): x(a), y(a) {}
+	explicit constexpr kVec2T(T a, T b) : x(a), y(b) {}
+};
 
-typedef struct kVec3 {
+template <typename T>
+struct kVec3T {
 	union {
-		struct { float x, y, z; };
-		float  m[3];
-		struct { kVec2 xy; float _end; };
-		struct { float _beg; kVec2 yz; };
+		struct { T x, y, z; };
+		T  m[3];
+		struct { kVec2T<T> xy; T _end; };
+		struct { T _beg; kVec2T<T> yz; };
 	};
-} kVec3;
 
-typedef struct kVec3i {
-	union {
-		struct { int x, y, z; };
-		int    m[3];
-		struct { kVec2i xy; int _end; };
-		struct { int _beg; kVec2i yz; };
-	};
-} kVec3i;
+	constexpr kVec3T(): x(0), y(0), z(0) {}
+	explicit constexpr kVec3T(T a): x(a), y(a), z(a) {}
+	explicit constexpr kVec3T(T a, T b, T c) : x(a), y(b), z(c) {}
+	explicit constexpr kVec3T(kVec2T<T> ab, T c) : x(ab.x), y(ab.y), z(c) {}
+	explicit constexpr kVec3T(T a, kVec2T<T> cd) : x(a), y(cd.x), z(cd.y) {}
+};
 
-typedef struct kVec4 {
+template <typename T>
+struct kVec4T {
 	union {
-		struct { float x, y, z, w; };
-		float  m[4];
-		struct { kVec2 xy; kVec2 zw; };
-		struct { kVec3 xyz; float _end; };
-		struct { kVec3 _beg; kVec3 yzw; };
+		struct { T x, y, z, w; };
+		T  m[4];
+		struct { kVec2T<T> xy; kVec2T<T> zw; };
+		struct { kVec3T<T> xyz; T _end; };
+		struct { kVec3T<T> _beg; kVec3T<T> yzw; };
 	};
-} kVec4;
 
-typedef struct kVec4i {
-	union {
-		struct { int x, y, z, w; };
-		int    m[4];
-		struct { kVec2i xy; kVec2i zw; };
-		struct { kVec3i xyz; int _end; };
-		struct { kVec3i _beg; kVec3i yzw; };
-	};
-} kVec4i;
+	constexpr kVec4T(): x(0), y(0), z(0), w(0) {}
+	explicit constexpr kVec4T(T a): x(a), y(a), z(a), w(a) {}
+	explicit constexpr kVec4T(T a, T b, T c, T d) : x(a), y(b), z(c), w(d) {}
+	explicit constexpr kVec4T(kVec2T<T> ab, kVec2T<T> cd) : x(ab.x), y(ab.y), z(cd.x), w(cd.y) {}
+	explicit constexpr kVec4T(kVec2T<T> ab, T c, T d) : x(ab.x), y(ab.y), z(c), w(d) {}
+	explicit constexpr kVec4T(kVec3T<T> abc, T d) : x(abc.x), y(abc.y), z(abc.z), w(d) {}
+	explicit constexpr kVec4T(T a, kVec3T<T> bcd) : x(a), y(bcd.x), z(bcd.y), w(bcd.z) {}
+};
+
+using kVec2  = kVec2T<float>;
+using kVec3  = kVec3T<float>;
+using kVec4  = kVec4T<float>;
+using kVec2i = kVec2T<int>;
+using kVec3i = kVec3T<int>;
+using kVec4i = kVec4T<int>;
 
 typedef union kMat2 {
 	kVec2 rows[2];
 	float m[4];
 	float m2[2][2];
+
+	inline kMat2() {}
+	explicit inline kMat2(kVec2 a, kVec2 b): rows{ a, b } {}
+	explicit inline kMat2(float a) {
+		rows[0] = kVec2(a, 0);
+		rows[1] = kVec2(0, a);
+	}
+	explicit inline kMat2(float _00, float _01, float _10, float _11) {
+		m2[0][0] = _00;
+		m2[0][1] = _01;
+		m2[1][0] = _10;
+		m2[1][1] = _11;
+	}
 } kMat2;
 
 typedef union kMat3 {
 	kVec3 rows[3];
 	float m[9];
 	float m2[3][3];
+
+	inline kMat3() {}
+	explicit inline kMat3(kVec3 a, kVec3 b, kVec3 c): rows{ a, b, c } {}
+	explicit inline kMat3(float a) {
+		rows[0] = kVec3(a, 0, 0);
+		rows[1] = kVec3(0, a, 0);
+		rows[2] = kVec3(0, 0, a);
+	}
 } kMat3;
 
 typedef union kMat4 {
 	kVec4 rows[4];
 	float m[16];
 	float m2[4][4];
+
+	inline kMat4() {}
+	explicit inline kMat4(kVec4 a, kVec4 b, kVec4 c, kVec4 d): rows{ a, b, c, d } {}
+	explicit inline kMat4(float a) {
+		rows[0] = kVec4(a, 0, 0, 0);
+		rows[1] = kVec4(0, a, 0, 0);
+		rows[2] = kVec4(0, 0, a, 0);
+		rows[3] = kVec4(0, 0, 0, a);
+	}
 } kMat4;
 
 typedef union kQuat {
 	struct { float x, y, z, w; };
 	kVec4  vector;
+
+	kQuat(): x(0), y(0), z(0), w(0) {}
+	kQuat(kVec4 v) {
+		x = v.x;
+		y = v.y;
+		z = v.z;
+		w = v.w;
+	}
+	explicit kQuat(float b, float c, float d, float a) {
+		x = b;
+		y = c;
+		z = d;
+		w = a;
+	}
 } kQuat;
 
 //
 //
 //
 
-typedef struct kString {
+template <typename Item>
+struct kSlice {
+	imem    count;
+	Item *  data;
+
+	inline kSlice() :count(0), data(nullptr) {}
+	inline kSlice(const Item *p, imem n) : count(n), data((Item *)p) {}
+	template <imem _Count> constexpr kSlice(const Item(&a)[_Count]) : count(_Count), data((Item *)a) {}
+	inline Item &operator[](imem index) const { kAssert(index < count); return data[index]; }
+	inline Item *begin() { return data; }
+	inline Item *end() { return data + count; }
+	inline const Item *begin() const { return data; }
+	inline const Item *end() const { return data + count; }
+
+	Item &First(void) { kAssert(count); return data[0]; }
+	Item &Last(void)  { kAssert(count); return data[count - 1]; }
+	const Item &First(void) const { kAssert(count); return data[0]; }
+	const Item &Last(void)  const { kAssert(count); return data[count - 1]; }
+};
+
+#define kArrFmt                  "{ %zd, %p }"
+#define kArrArg(x)               ((x).count), ((x).data)
+#define kArrSizeInBytes(arr)     ((arr).count * sizeof(*((arr).data)))
+
+//
+//
+//
+
+template <typename T>
+struct kHandle {
+	void *ptr;
+
+	kHandle(): ptr(0) {}
+
+	kHandle(void *p) {
+		ptr = p;
+	}
+
+	kHandle(nullptr_t) {
+		ptr = 0;
+	}
+
+	operator bool() {
+		return ptr != 0;
+	}
+};
+
+//
+//
+//
+
+struct kString {
 	imem count;
 	u8 * data;
-} kString;
 
-#define kFormatString      "%.*s"
-#define kExpandString(str) (int)((str).count), (str).data
-#define kStringView(cstr)  (kString) { .count = sizeof(cstr)-1, .data = cstr }
+	kString() : count(0), data(0) {}
+	kString(kSlice<u8> av): count(av.count), data(av.data) {}
+	kString(kSlice<char> av): count(av.count), data((u8 *)av.data) {}
+	template <imem _Length>
+	constexpr kString(const char(&a)[_Length]) : count(_Length - 1), data((u8 *)a) {}
+	kString(const u8 *_Data, imem _Length) : count(_Length), data((u8 *)_Data) {}
+	kString(const char *_Data, imem _Length) : count(_Length), data((u8 *)_Data) {}
+	const u8 &operator[](const imem index) const { kAssert(index < count); return data[index]; }
+	u8 &operator[](const imem index) { kAssert(index < count); return data[index]; }
+	inline u8 *begin() { return data; }
+	inline u8 *end() { return data + count; }
+	inline const u8 *begin() const { return data; }
+	inline const u8 *end() const { return data + count; }
+	operator kSlice<u8>() { return kSlice<u8>(data, count); }
+};
 
 //
 //
@@ -477,9 +606,9 @@ static const kArena       kFallbackArena     = { 0, 0, 0, 0, 0, 0 };
 
 u8   *     kAlignPointer(u8 *location, umem alignment);
 
-void *     kAllocEx(kAllocator *allocator, umem size);
-void *     kReallocEx(kAllocator *allocator, void *ptr, umem prev, umem size);
-void       kFreeEx(kAllocator *allocator, void *ptr, umem size);
+void *     kAlloc(kAllocator *allocator, umem size);
+void *     kRealloc(kAllocator *allocator, void *ptr, umem prev, umem size);
+void       kFree(kAllocator *allocator, void *ptr, umem size);
 
 void       kArenaAllocator(kArena *arena, kAllocator *allocator);
 kArena *   kAllocArena(kArenaSpec *spec, kAllocator *allocator);
@@ -507,14 +636,14 @@ void       kEndTemporaryMemory(kTempBlock *temp, uint flags);
 //
 //
 
-u32        kRandomEx(kRandomSource *random);
-u32        kRandomBoundEx(kRandomSource *random, u32 bound);
-u32        kRandomRangeEx(kRandomSource *random, u32 min, u32 max);
-float      kRandomFloat01Ex(kRandomSource *random);
-float      kRandomFloatBoundEx(kRandomSource *random, float bound);
-float      kRandomFloatRangeEx(kRandomSource *random, float min, float max);
-float      kRandomFloatEx(kRandomSource *random);
-void       kRandomSourceSeedEx(kRandomSource *random, u64 state, u64 seq);
+u32        kRandom(kRandomSource *random);
+u32        kRandomBound(kRandomSource *random, u32 bound);
+u32        kRandomRange(kRandomSource *random, u32 min, u32 max);
+float      kRandomFloat01(kRandomSource *random);
+float      kRandomFloatBound(kRandomSource *random, float bound);
+float      kRandomFloatRange(kRandomSource *random, float min, float max);
+float      kRandomFloat(kRandomSource *random);
+void       kRandomSourceSeed(kRandomSource *random, u64 state, u64 seq);
 
 //
 //
@@ -545,6 +674,10 @@ imem       kInvFindString(kString str, kString key, imem pos);
 imem       kInvFindChar(kString str, u32 key, imem pos);
 
 bool       kSplitString(kString str, kString substr, kString *left, kString *right);
+
+bool       operator==(const kString a, const kString b);
+bool       operator!=(const kString a, const kString b);
+
 
 //
 //

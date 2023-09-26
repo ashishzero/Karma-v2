@@ -47,15 +47,15 @@ u8 *kAlignPointer(u8 *location, umem alignment) {
 	return (u8 *)((umem)(location + (alignment - 1)) & ~(alignment - 1));
 }
 
-void *kAllocEx(kAllocator *allocator, umem size) {
+void *kAlloc(kAllocator *allocator, umem size) {
 	return allocator->proc(kAllocatorMode_Alloc, 0, 0, size, allocator->data);
 }
 
-void *kReallocEx(kAllocator *allocator, void *ptr, umem prev, umem size) {
+void *kRealloc(kAllocator *allocator, void *ptr, umem prev, umem size) {
 	return allocator->proc(kAllocatorMode_Realloc, ptr, prev, size, allocator->data);
 }
 
-void kFreeEx(kAllocator *allocator, void *ptr, umem size) {
+void kFree(kAllocator *allocator, void *ptr, umem size) {
 	allocator->proc(kAllocatorMode_Free, ptr, size, 0, allocator->data);
 }
 
@@ -66,7 +66,7 @@ void kArenaAllocator(kArena *arena, kAllocator *allocator) {
 
 kArena *kAllocArena(kArenaSpec *spec, kAllocator *allocator) {
 	umem max_size    = kAlignUp(spec->capacity, 4 * 1024);
-	u8 *mem          = (u8 *)kAllocEx(allocator, max_size);
+	u8 *mem          = (u8 *)kAlloc(allocator, max_size);
 
 	if (!mem) return (kArena *)&kFallbackArena;
 
@@ -91,7 +91,7 @@ kArena *kAllocArena(kArenaSpec *spec, kAllocator *allocator) {
 }
 
 void kFreeArena(kArena *arena, kAllocator *allocator) {
-	kFreeEx(allocator, arena->mem, arena->cap);
+	kFree(allocator, arena->mem, arena->cap);
 }
 
 void kResetArena(kArena *arena) {
@@ -223,7 +223,7 @@ void kEndTemporaryMemory(kTempBlock *temp, uint flags) {
  *       http://www.pcg-random.org
  */
 
-u32 kRandomEx(kRandomSource *random) {
+u32 kRandom(kRandomSource *random) {
 	u64 oldstate   = random->state;
 	random->state     = oldstate * 6364136223846793005ULL + random->inc;
 	u32 xorshifted = (u32)(((oldstate >> 18u) ^ oldstate) >> 27u);
@@ -231,41 +231,41 @@ u32 kRandomEx(kRandomSource *random) {
 	return (xorshifted >> rot) | (xorshifted << ((rot & (~rot + 1u)) & 31));
 }
 
-u32 kRandomBoundEx(kRandomSource *random, u32 bound) {
+u32 kRandomBound(kRandomSource *random, u32 bound) {
 	u32 threshold = (bound & (~bound + 1u)) % bound;
 	for (;;) {
-		u32 r = kRandomEx(random);
+		u32 r = kRandom(random);
 		if (r >= threshold)
 			return r % bound;
 	}
 }
 
-u32 kRandomRangeEx(kRandomSource *random, u32 min, u32 max) {
-	return min + kRandomBoundEx(random, max - min);
+u32 kRandomRange(kRandomSource *random, u32 min, u32 max) {
+	return min + kRandomBound(random, max - min);
 }
 
-float kRandomFloat01Ex(kRandomSource *random) {
-	return (float)ldexpf((float)kRandomEx(random), -32);
+float kRandomFloat01(kRandomSource *random) {
+	return (float)ldexpf((float)kRandom(random), -32);
 }
 
-float kRandomFloatBoundEx(kRandomSource *random, float bound) {
-	return kRandomFloat01Ex(random) * bound;
+float kRandomFloatBound(kRandomSource *random, float bound) {
+	return kRandomFloat01(random) * bound;
 }
 
-float kRandomFloatRangeEx(kRandomSource *random, float min, float max) {
-	return min + kRandomFloat01Ex(random) * (max - min);
+float kRandomFloatRange(kRandomSource *random, float min, float max) {
+	return min + kRandomFloat01(random) * (max - min);
 }
 
-float kRandomFloatEx(kRandomSource *random) {
-	return kRandomFloatRangeEx(random, -1, 1);
+float kRandomFloat(kRandomSource *random) {
+	return kRandomFloatRange(random, -1, 1);
 }
 
-void kRandomSourceSeedEx(kRandomSource *random, u64 state, u64 seq) {
+void kRandomSourceSeed(kRandomSource *random, u64 state, u64 seq) {
 	random->state = 0U;
 	random->inc   = (seq << 1u) | 1u;
-	kRandomEx(random);
+	kRandom(random);
 	random->state += state;
-	kRandomEx(random);
+	kRandom(random);
 }
 
 //
@@ -348,15 +348,15 @@ int kUTF8ToCodepoint(const u8 *start, u8 *end, u32 *codepoint) {
 }
 
 kString kCopyString(kString string, kAllocator *allocator) {
-	u8 *data = kAllocEx(allocator, string.count + 1);
+	u8 *data = (u8 *)kAlloc(allocator, string.count + 1);
 	memmove(data, string.data, string.count);
 	data[string.count] = 0;
-	kString result = { .count = string.count, .data = data };
+	kString result = kString(data, string.count);
 	return result;
 }
 
 char *kStringToCstr(kString string, kAllocator *allocator) {
-	u8 *data = kAllocEx(allocator, string.count + 1);
+	u8 *data = (u8 *)kAlloc(allocator, string.count + 1);
 	memmove(data, string.data, string.count);
 	data[string.count] = 0;
 	return (char *)data;
@@ -388,7 +388,7 @@ kString kTrimString(kString str) {
 kString kSubString(const kString str, imem index, imem count) {
 	kAssert(index <= str.count);
 	count = (imem)kMin(str.count - index, count);
-	kString sub = { .count = count, .data = str.data + index };
+	kString sub = kString(str.data + index, count);
 	return sub;
 }
 
@@ -399,7 +399,7 @@ kString kSubLeft(const kString str, imem count) {
 kString kSubRight(const kString str, imem index) {
 	kAssert(index <= str.count);
 	imem count = str.count - index;
-	kString sub = { .count = count, .data = str.data + index };
+	kString sub = kString(str.data + index, count);
 	return sub;
 }
 
@@ -412,14 +412,14 @@ bool kStringEquals(kString a, kString b) {
 bool kStringStartsWith(kString str, kString sub) {
 	if (str.count < sub.count)
 		return false;
-	kString left = { .count = sub.count, str.data };
+	kString left = kString(str.data, sub.count);
 	return kStringEquals(left, sub);
 }
 
 bool kStringEndsWith(kString str, kString sub) {
 	if (str.count < sub.count)
 		return false;
-	kString left = { .count = sub.count, .data = str.data + str.count - sub.count };
+	kString left = kString(str.data + str.count - sub.count, sub.count);
 	return kStringEquals(left, sub);
 }
 
@@ -439,7 +439,7 @@ kString kRemoveSuffix(kString str, imem count) {
 imem kFindString(kString str, const kString key, imem pos) {
 	str = kSubRight(str, pos);
 	while (str.count >= key.count) {
-		kString sub = { .count = key.count, .data = str.data };
+		kString sub = kString(str.data, key.count);
 		if (kStringEquals(sub, key)) {
 			return pos;
 		}
@@ -452,13 +452,13 @@ imem kFindString(kString str, const kString key, imem pos) {
 imem kFindChar(kString str, u32 key, imem pos) {
 	u8 buffer[4];
 	int len = kCodepointToUTF8(key, buffer);
-	return kFindString(str, (kString){ .count = len, .data = buffer }, pos);
+	return kFindString(str, kString(buffer, len), pos);
 }
 
 imem kInvFindString(kString str, kString key, imem pos) {
-	imem index = kClamp(0, str.count - key.count, pos);
+	imem index = kClamp(0LL, str.count - key.count, pos);
 	while (index >= 0) {
-		kString sub = { .count = key.count, .data = str.data + index };
+		kString sub = kString(str.data + index, key.count);
 		if (kStringEquals(sub, key) == 0)
 			return index;
 		index -= 1;
@@ -469,7 +469,7 @@ imem kInvFindString(kString str, kString key, imem pos) {
 imem kInvFindChar(kString str, u32 key, imem pos) {
 	u8 buffer[4];
 	int len = kCodepointToUTF8(key, buffer);
-	return kInvFindString(str, (kString){ .count = len, .data = buffer }, pos);
+	return kInvFindString(str, kString(buffer, len), pos);
 }
 
 bool kSplitString(kString str, kString substr, kString *left, kString *right) {
@@ -482,6 +482,15 @@ bool kSplitString(kString str, kString substr, kString *left, kString *right) {
 	return false;
 }
 
+bool operator==(const kString a, const kString b) {
+	return kStringEquals(a, b);
+}
+
+bool operator!=(const kString a, const kString b) {
+	return !kStringEquals(a, b);
+}
+
+
 //
 //
 //
@@ -493,27 +502,27 @@ bool kSplitString(kString str, kString substr, kString *left, kString *right) {
 static_assert(sizeof(int) == sizeof(long), "");
 
 int kAtomicLoad(kAtomic *atomic) {
-	return _InterlockedOr(&atomic->value, 0);
+	return _InterlockedOr((volatile long *)&atomic->value, 0);
 }
 
 void kAtomicStore(kAtomic *atomic, int value) {
-	_InterlockedExchange(&atomic->value, value);
+	_InterlockedExchange((volatile long *)&atomic->value, value);
 }
 
 int kAtomicInc(kAtomic *dst) {
-	return _InterlockedIncrement(&dst->value);
+	return _InterlockedIncrement((volatile long *)&dst->value);
 }
 
 int kAtomicDec(kAtomic *dst) {
-	return _InterlockedDecrement(&dst->value);
+	return _InterlockedDecrement((volatile long *)&dst->value);
 }
 
 int kAtomicAdd(kAtomic *dst, int val) {
-	return _interlockedadd(&dst->value, val);
+	return _interlockedadd((volatile long *)&dst->value, val);
 }
 
 int kAtomicCmpExg(kAtomic *dst, int exchange, int compare) {
-	return _InterlockedCompareExchange(&dst->value, exchange, compare);
+	return _InterlockedCompareExchange((volatile long *)&dst->value, exchange, compare);
 }
 
 void *kAtomicCmpExgPtr(void *volatile *dst, void *exchange, void *compare) {
@@ -521,7 +530,7 @@ void *kAtomicCmpExgPtr(void *volatile *dst, void *exchange, void *compare) {
 }
 
 int kAtomicExg(kAtomic *dst, int val) {
-	return _InterlockedExchange(&dst->value, val);
+	return _InterlockedExchange((volatile long *)&dst->value, val);
 }
 #endif
 

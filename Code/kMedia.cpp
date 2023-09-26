@@ -21,10 +21,8 @@ typedef struct kWindow {
 	kPlatformWindow *native;
 } kWindow;
 
-kDefineArray(kEvent);
-
 typedef struct kMedia {
-	kArray(kEvent)   events;
+	kArray<kEvent>   events;
 	kKeyboardState   keyboard;
 	kMouseState      mouse;
 	kWindow          window;
@@ -40,6 +38,10 @@ static kMedia        media;
 void kFallbackUserLoadProc(void) {}
 void kFallbackUserReleaseProc(void) {}
 void kFallbackUserUpdateProc(float dt) {}
+
+kSlice<kEvent> kGetEvents(void) {
+	return media.events;
+}
 
 void *kGetUserEventData(void) {
 	return media.user.data;
@@ -64,11 +66,6 @@ void kSetUserEvents(kMediaUserEvents *user) {
 
 	if (!media.user.update)
 		media.user.update  = kFallbackUserUpdateProc;
-}
-
-kEvent *kGetEvents(int *count) {
-	*count = (int)media.events.count;
-	return media.events.data;
 }
 
 bool kIsKeyDown(kKey key) {
@@ -213,7 +210,7 @@ void kSetWindowState(kWindowState *state) {
 }
 
 void kClearInput(void) {
-	kArrayReset(&media.events);
+	media.events.Reset();
 	memset(&media.keyboard, 0, sizeof(media.keyboard));
 	memset(&media.mouse, 0, sizeof(media.mouse));
 }
@@ -238,8 +235,8 @@ void kNextFrame(void) {
 	media.window.exflags &= ~reset_flags;
 }
 
-void kAddEvent(kEvent *ev) {
-	kArrayAdd(&media.events, *ev);
+void kAddEvent(const kEvent &ev) {
+	media.events.Add(ev);
 }
 
 void kAddKeyEvent(kKey key, bool down, bool repeat) {
@@ -262,7 +259,7 @@ void kAddKeyEvent(kKey key, bool down, bool repeat) {
 		.key = {.symbol = key, .repeat = repeat }
 	};
 
-	kAddEvent(&ev);
+	kAddEvent(ev);
 }
 
 void kAddButtonEvent(kButton button, bool down) {
@@ -286,7 +283,7 @@ void kAddButtonEvent(kButton button, bool down) {
 		.button = {.symbol = button }
 	};
 
-	kAddEvent(&ev);
+	kAddEvent(ev);
 }
 
 void kAddTextInputEvent(u32 codepoint, u32 mods) {
@@ -294,7 +291,7 @@ void kAddTextInputEvent(u32 codepoint, u32 mods) {
 		.kind = kEvent_TextInput,
 		.text = {.codepoint = codepoint, .mods = mods }
 	};
-	kAddEvent(&ev);
+	kAddEvent(ev);
 }
 
 void kAddDoubleClickEvent(kButton button) {
@@ -306,7 +303,7 @@ void kAddDoubleClickEvent(kButton button) {
 		.button = {.symbol = button }
 	};
 
-	kAddEvent(&ev);
+	kAddEvent(ev);
 }
 
 void kAddCursorEvent(kVec2i pos) {
@@ -321,7 +318,7 @@ void kAddCursorEvent(kVec2i pos) {
 		.kind = kEvent_CursorMoved,
 		.cursor = {.position = pos }
 	};
-	kAddEvent(&ev);
+	kAddEvent(ev);
 }
 
 void kAddCursorDeltaEvent(kVec2i delta) {
@@ -338,7 +335,7 @@ void kAddCursorDeltaEvent(kVec2i delta) {
 		.kind   = kEvent_CursorMoved,
 		.cursor = { .position = media.mouse.cursor }
 	};
-	kAddEvent(&ev);
+	kAddEvent(ev);
 }
 
 void kAddWheelEvent(float horz, float vert) {
@@ -350,7 +347,7 @@ void kAddWheelEvent(float horz, float vert) {
 		.wheel = {.horizontal = horz, .vertical = vert }
 	};
 
-	kAddEvent(&ev);
+	kAddEvent(ev);
 }
 
 void kAddCursorEnterEvent(void) {
@@ -359,7 +356,7 @@ void kAddCursorEnterEvent(void) {
 	kEvent ev = {
 		.kind = kEvent_CursorEnter
 	};
-	kAddEvent(&ev);
+	kAddEvent(ev);
 }
 
 void kAddCursorLeaveEvent(void) {
@@ -368,7 +365,7 @@ void kAddCursorLeaveEvent(void) {
 	kEvent ev = {
 		.kind = kEvent_CursorLeave
 	};
-	kAddEvent(&ev);
+	kAddEvent(ev);
 }
 
 void kAddWindowResizeEvent(u32 width, u32 height, bool fullscreen) {
@@ -389,7 +386,7 @@ void kAddWindowResizeEvent(u32 width, u32 height, bool fullscreen) {
 		.resized = {.width = width, .height = height }
 	};
 
-	kAddEvent(&ev);
+	kAddEvent(ev);
 }
 
 void kAddWindowFocusEvent(bool focused) {
@@ -399,7 +396,7 @@ void kAddWindowFocusEvent(bool focused) {
 		.kind = focused ? kEvent_Activated : kEvent_Deactivated
 	};
 
-	kAddEvent(&ev);
+	kAddEvent(ev);
 }
 
 void kAddWindowCloseEvent(void) {
@@ -409,7 +406,7 @@ void kAddWindowCloseEvent(void) {
 		.kind = kEvent_Closed
 	};
 
-	kAddEvent(&ev);
+	kAddEvent(ev);
 }
 
 void kAddWindowDpiChangedEvent(float yfactor) {
@@ -418,7 +415,7 @@ void kAddWindowDpiChangedEvent(float yfactor) {
 	kEvent ev = {
 		.kind = kEvent_DpiChanged
 	};
-	kAddEvent(&ev);
+	kAddEvent(ev);
 }
 
 //
@@ -495,10 +492,10 @@ kFile kOpenFile(const char *mb_path, kFileAccess paccess, kFileShareMode pshare,
 	HANDLE file = CreateFileW(path, access, share_mode, NULL, disposition, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (file == INVALID_HANDLE_VALUE) {
 		kWinLogError(GetLastError(), "Failed to open file: \"%s\"", mb_path);
-		return (kFile) { .ptr = 0 };
+		return nullptr;
 	}
 
-	return (kFile){ .ptr = file };
+	return file;
 }
 
 void kCloseFile(kFile handle) {
@@ -650,12 +647,12 @@ kThread kLaunchThread(kThreadProc proc, void *arg, kThreadAttribute attr) {
 	if (handle)
 		WaitForSingleObject(data.event, INFINITE);
 	CloseHandle(data.event);
-	return (kThread) { .ptr = handle };
+	return handle;
 }
 
 kThread kGetCurrentThread(void) {
 	HANDLE handle = GetCurrentThread();
-	return (kThread ) { .ptr = handle };
+	return handle;
 }
 
 void kDetachThread(kThread thread) {
@@ -787,12 +784,11 @@ static DWORD kWinGetWindowStyle(u32 flags) {
 void kResizeWindow(u32 w, u32 h) {
 	kPlatformWindow *window = media.window.native;
 	DWORD style = (DWORD)GetWindowLongPtrW(window->wnd, GWL_STYLE);
-	RECT rect = {
-		.left = 0,
-		.right = w,
-		.top = 0,
-		.bottom = h
-	};
+	RECT rect;
+	rect.left   = 0;
+	rect.top    = 0;
+	rect.right  = w;
+	rect.bottom = h;
 	UINT dpi = GetDpiForWindow(window->wnd);
 	AdjustWindowRectExForDpi(&rect, style, FALSE, 0, dpi);
 	int width  = rect.right - rect.left;
@@ -910,101 +906,102 @@ void kCloseWindow(void) {
 	PostMessageW(media.window.native->wnd, WM_CLOSE, 0, 0);
 }
 
-static const kKey VirtualKeyMap[] = {
-	['A'] = kKey_A, ['B'] = kKey_B,
-	['C'] = kKey_C, ['D'] = kKey_D,
-	['E'] = kKey_E, ['F'] = kKey_F,
-	['G'] = kKey_G, ['H'] = kKey_H,
-	['I'] = kKey_I, ['J'] = kKey_J,
-	['K'] = kKey_K, ['L'] = kKey_L,
-	['M'] = kKey_M, ['N'] = kKey_N,
-	['O'] = kKey_O, ['P'] = kKey_P,
-	['Q'] = kKey_Q, ['R'] = kKey_R,
-	['S'] = kKey_S, ['T'] = kKey_T,
-	['U'] = kKey_U, ['V'] = kKey_V,
-	['W'] = kKey_W, ['X'] = kKey_X,
-	['Y'] = kKey_Y, ['Z'] = kKey_Z,
+static kKey VirtualKeyMap[255];
+static DWORD InvVirtualKeyMap[255];
 
-	['0'] = kKey_0, ['1'] = kKey_1,
-	['2'] = kKey_2, ['3'] = kKey_3,
-	['4'] = kKey_4, ['5'] = kKey_5,
-	['6'] = kKey_6, ['7'] = kKey_7,
-	['8'] = kKey_8, ['9'] = kKey_9,
+static void kMapVirutalKeys(void) {
+	VirtualKeyMap['A'] = kKey_A; VirtualKeyMap['B'] = kKey_B;
+	VirtualKeyMap['C'] = kKey_C; VirtualKeyMap['D'] = kKey_D;
+	VirtualKeyMap['E'] = kKey_E; VirtualKeyMap['F'] = kKey_F;
+	VirtualKeyMap['G'] = kKey_G; VirtualKeyMap['H'] = kKey_H;
+	VirtualKeyMap['I'] = kKey_I; VirtualKeyMap['J'] = kKey_J;
+	VirtualKeyMap['K'] = kKey_K; VirtualKeyMap['L'] = kKey_L;
+	VirtualKeyMap['M'] = kKey_M; VirtualKeyMap['N'] = kKey_N;
+	VirtualKeyMap['O'] = kKey_O; VirtualKeyMap['P'] = kKey_P;
+	VirtualKeyMap['Q'] = kKey_Q; VirtualKeyMap['R'] = kKey_R;
+	VirtualKeyMap['S'] = kKey_S; VirtualKeyMap['T'] = kKey_T;
+	VirtualKeyMap['U'] = kKey_U; VirtualKeyMap['V'] = kKey_V;
+	VirtualKeyMap['W'] = kKey_W; VirtualKeyMap['X'] = kKey_X;
+	VirtualKeyMap['Y'] = kKey_Y; VirtualKeyMap['Z'] = kKey_Z;
 
-	[VK_NUMPAD0] = kKey_0, [VK_NUMPAD1] = kKey_1,
-	[VK_NUMPAD2] = kKey_2, [VK_NUMPAD3] = kKey_3,
-	[VK_NUMPAD4] = kKey_4, [VK_NUMPAD5] = kKey_5,
-	[VK_NUMPAD6] = kKey_6, [VK_NUMPAD7] = kKey_7,
-	[VK_NUMPAD8] = kKey_8, [VK_NUMPAD9] = kKey_9,
+	VirtualKeyMap['0'] = kKey_0; VirtualKeyMap['1'] = kKey_1;
+	VirtualKeyMap['2'] = kKey_2; VirtualKeyMap['3'] = kKey_3;
+	VirtualKeyMap['4'] = kKey_4; VirtualKeyMap['5'] = kKey_5;
+	VirtualKeyMap['6'] = kKey_6; VirtualKeyMap['7'] = kKey_7;
+	VirtualKeyMap['8'] = kKey_8; VirtualKeyMap['9'] = kKey_9;
 
-	[VK_F1]  = kKey_F1,  [VK_F2]  = kKey_F2,
-	[VK_F3]  = kKey_F3,  [VK_F4]  = kKey_F4,
-	[VK_F5]  = kKey_F5,  [VK_F6]  = kKey_F6,
-	[VK_F7]  = kKey_F7,  [VK_F8]  = kKey_F8,
-	[VK_F9]  = kKey_F9,  [VK_F10] = kKey_F10,
-	[VK_F11] = kKey_F11, [VK_F12] = kKey_F12,
+	VirtualKeyMap[VK_NUMPAD0] = kKey_0; VirtualKeyMap[VK_NUMPAD1] = kKey_1;
+	VirtualKeyMap[VK_NUMPAD2] = kKey_2; VirtualKeyMap[VK_NUMPAD3] = kKey_3;
+	VirtualKeyMap[VK_NUMPAD4] = kKey_4; VirtualKeyMap[VK_NUMPAD5] = kKey_5;
+	VirtualKeyMap[VK_NUMPAD6] = kKey_6; VirtualKeyMap[VK_NUMPAD7] = kKey_7;
+	VirtualKeyMap[VK_NUMPAD8] = kKey_8; VirtualKeyMap[VK_NUMPAD9] = kKey_9;
 
-	[VK_SNAPSHOT] = kKey_PrintScreen, [VK_INSERT]  = kKey_Insert,
-	[VK_HOME]     = kKey_Home,        [VK_PRIOR]   = kKey_PageUp,
-	[VK_NEXT]     = kKey_PageDown,    [VK_DELETE]  = kKey_Delete,
-	[VK_END]      = kKey_End,         [VK_RIGHT]   = kKey_Right,
-	[VK_LEFT]     = kKey_Left,        [VK_DOWN]    = kKey_Down,
-	[VK_UP]       = kKey_Up,          [VK_DIVIDE]  = kKey_Divide,
-	[VK_MULTIPLY] = kKey_Multiply,    [VK_ADD]     = kKey_Plus,
-	[VK_SUBTRACT] = kKey_Minus,       [VK_DECIMAL] = kKey_Period,
-	[VK_OEM_3]    = kKey_BackTick,    [VK_CONTROL] = kKey_Ctrl,
-	[VK_RETURN]   = kKey_Return,      [VK_ESCAPE]  = kKey_Escape,
-	[VK_BACK]     = kKey_Backspace,   [VK_TAB]     = kKey_Tab,
-	[VK_SPACE]    = kKey_Space,       [VK_SHIFT]   = kKey_Shift,
-};
+	VirtualKeyMap[VK_F1]  = kKey_F1;  VirtualKeyMap[VK_F2]  = kKey_F2;
+	VirtualKeyMap[VK_F3]  = kKey_F3;  VirtualKeyMap[VK_F4]  = kKey_F4;
+	VirtualKeyMap[VK_F5]  = kKey_F5;  VirtualKeyMap[VK_F6]  = kKey_F6;
+	VirtualKeyMap[VK_F7]  = kKey_F7;  VirtualKeyMap[VK_F8]  = kKey_F8;
+	VirtualKeyMap[VK_F9]  = kKey_F9;  VirtualKeyMap[VK_F10] = kKey_F10;
+	VirtualKeyMap[VK_F11] = kKey_F11; VirtualKeyMap[VK_F12] = kKey_F12;
 
-static const DWORD InvVirtualKeyMap[] = {
-	[kKey_A] = 'A', [kKey_B] = 'B',
-	[kKey_C] = 'C', [kKey_D] = 'D',
-	[kKey_E] = 'E', [kKey_F] = 'F',
-	[kKey_G] = 'G', [kKey_H] = 'H',
-	[kKey_I] = 'I', [kKey_J] = 'J',
-	[kKey_K] = 'K', [kKey_L] = 'L',
-	[kKey_M] = 'M', [kKey_N] = 'N',
-	[kKey_O] = 'O', [kKey_P] = 'P',
-	[kKey_Q] = 'Q', [kKey_R] = 'R',
-	[kKey_S] = 'S', [kKey_T] = 'T',
-	[kKey_U] = 'U', [kKey_V] = 'V',
-	[kKey_W] = 'W', [kKey_X] = 'X',
-	[kKey_Y] = 'Y', [kKey_Z] = 'Z',
+	VirtualKeyMap[VK_SNAPSHOT] = kKey_PrintScreen; VirtualKeyMap[VK_INSERT]  = kKey_Insert;
+	VirtualKeyMap[VK_HOME]     = kKey_Home;        VirtualKeyMap[VK_PRIOR]   = kKey_PageUp;
+	VirtualKeyMap[VK_NEXT]     = kKey_PageDown;    VirtualKeyMap[VK_DELETE]  = kKey_Delete;
+	VirtualKeyMap[VK_END]      = kKey_End;         VirtualKeyMap[VK_RIGHT]   = kKey_Right;
+	VirtualKeyMap[VK_LEFT]     = kKey_Left;        VirtualKeyMap[VK_DOWN]    = kKey_Down;
+	VirtualKeyMap[VK_UP]       = kKey_Up;          VirtualKeyMap[VK_DIVIDE]  = kKey_Divide;
+	VirtualKeyMap[VK_MULTIPLY] = kKey_Multiply;    VirtualKeyMap[VK_ADD]     = kKey_Plus;
+	VirtualKeyMap[VK_SUBTRACT] = kKey_Minus;       VirtualKeyMap[VK_DECIMAL] = kKey_Period;
+	VirtualKeyMap[VK_OEM_3]    = kKey_BackTick;    VirtualKeyMap[VK_CONTROL] = kKey_Ctrl;
+	VirtualKeyMap[VK_RETURN]   = kKey_Return;      VirtualKeyMap[VK_ESCAPE]  = kKey_Escape;
+	VirtualKeyMap[VK_BACK]     = kKey_Backspace;   VirtualKeyMap[VK_TAB]     = kKey_Tab;
+	VirtualKeyMap[VK_SPACE]    = kKey_Space;       VirtualKeyMap[VK_SHIFT]   = kKey_Shift;
 
-	[kKey_0] = '0', [kKey_1] = '1',
-	[kKey_2] = '2', [kKey_3] = '3',
-	[kKey_4] = '4', [kKey_5] = '5',
-	[kKey_6] = '6', [kKey_7] = '7',
-	[kKey_8] = '8', [kKey_9] = '9',
+	InvVirtualKeyMap[kKey_A] = 'A'; InvVirtualKeyMap[kKey_B] = 'B';
+	InvVirtualKeyMap[kKey_C] = 'C'; InvVirtualKeyMap[kKey_D] = 'D';
+	InvVirtualKeyMap[kKey_E] = 'E'; InvVirtualKeyMap[kKey_F] = 'F';
+	InvVirtualKeyMap[kKey_G] = 'G'; InvVirtualKeyMap[kKey_H] = 'H';
+	InvVirtualKeyMap[kKey_I] = 'I'; InvVirtualKeyMap[kKey_J] = 'J';
+	InvVirtualKeyMap[kKey_K] = 'K'; InvVirtualKeyMap[kKey_L] = 'L';
+	InvVirtualKeyMap[kKey_M] = 'M'; InvVirtualKeyMap[kKey_N] = 'N';
+	InvVirtualKeyMap[kKey_O] = 'O'; InvVirtualKeyMap[kKey_P] = 'P';
+	InvVirtualKeyMap[kKey_Q] = 'Q'; InvVirtualKeyMap[kKey_R] = 'R';
+	InvVirtualKeyMap[kKey_S] = 'S'; InvVirtualKeyMap[kKey_T] = 'T';
+	InvVirtualKeyMap[kKey_U] = 'U'; InvVirtualKeyMap[kKey_V] = 'V';
+	InvVirtualKeyMap[kKey_W] = 'W'; InvVirtualKeyMap[kKey_X] = 'X';
+	InvVirtualKeyMap[kKey_Y] = 'Y'; InvVirtualKeyMap[kKey_Z] = 'Z';
 
-	[kKey_0] = VK_NUMPAD0, [kKey_1] = VK_NUMPAD1,
-	[kKey_2] = VK_NUMPAD2, [kKey_3] = VK_NUMPAD3,
-	[kKey_4] = VK_NUMPAD4, [kKey_5] = VK_NUMPAD5,
-	[kKey_6] = VK_NUMPAD6, [kKey_7] = VK_NUMPAD7,
-	[kKey_8] = VK_NUMPAD8, [kKey_9] = VK_NUMPAD9,
+	InvVirtualKeyMap[kKey_0] = '0'; InvVirtualKeyMap[kKey_1] = '1';
+	InvVirtualKeyMap[kKey_2] = '2'; InvVirtualKeyMap[kKey_3] = '3';
+	InvVirtualKeyMap[kKey_4] = '4'; InvVirtualKeyMap[kKey_5] = '5';
+	InvVirtualKeyMap[kKey_6] = '6'; InvVirtualKeyMap[kKey_7] = '7';
+	InvVirtualKeyMap[kKey_8] = '8'; InvVirtualKeyMap[kKey_9] = '9';
 
-	[kKey_F1]  = VK_F1,  [kKey_F2]  = VK_F2,
-	[kKey_F3]  = VK_F3,  [kKey_F4]  = VK_F4,
-	[kKey_F5]  = VK_F5,  [kKey_F6]  = VK_F6,
-	[kKey_F7]  = VK_F7,  [kKey_F8]  = VK_F8,
-	[kKey_F9]  = VK_F9,  [kKey_F10] = VK_F1,
-	[kKey_F11] = VK_F11, [kKey_F12] = VK_F1,
+	InvVirtualKeyMap[kKey_0] = VK_NUMPAD0; InvVirtualKeyMap[kKey_1] = VK_NUMPAD1;
+	InvVirtualKeyMap[kKey_2] = VK_NUMPAD2; InvVirtualKeyMap[kKey_3] = VK_NUMPAD3;
+	InvVirtualKeyMap[kKey_4] = VK_NUMPAD4; InvVirtualKeyMap[kKey_5] = VK_NUMPAD5;
+	InvVirtualKeyMap[kKey_6] = VK_NUMPAD6; InvVirtualKeyMap[kKey_7] = VK_NUMPAD7;
+	InvVirtualKeyMap[kKey_8] = VK_NUMPAD8; InvVirtualKeyMap[kKey_9] = VK_NUMPAD9;
 
-	[kKey_PrintScreen] = VK_SNAPSHOT, [kKey_Insert] = VK_INSERT,
-	[kKey_Home]        = VK_HOME,     [kKey_PageUp] = VK_PRIOR,
-	[kKey_PageDown]    = VK_NEXT,     [kKey_Delete] = VK_DELETE,
-	[kKey_End]         = VK_END,      [kKey_Right]  = VK_RIGHT,
-	[kKey_Left]        = VK_LEFT,     [kKey_Down]   = VK_DOWN,
-	[kKey_Up]          = VK_UP,       [kKey_Divide] = VK_DIVIDE,
-	[kKey_Multiply]    = VK_MULTIPLY, [kKey_Plus]   = VK_ADD,
-	[kKey_Minus]       = VK_SUBTRACT, [kKey_Period] = VK_DECIMAL,
-	[kKey_BackTick]    = VK_OEM_3,    [kKey_Ctrl]   = VK_CONTROL,
-	[kKey_Return]      = VK_RETURN,   [kKey_Escape] = VK_ESCAPE,
-	[kKey_Backspace]   = VK_BACK,     [kKey_Tab]    = VK_TAB,
-	[kKey_Space]       = VK_SPACE,    [kKey_Shift]  = VK_SHIFT,
-};
+	InvVirtualKeyMap[kKey_F1]  = VK_F1;  InvVirtualKeyMap[kKey_F2]  = VK_F2;
+	InvVirtualKeyMap[kKey_F3]  = VK_F3;  InvVirtualKeyMap[kKey_F4]  = VK_F4;
+	InvVirtualKeyMap[kKey_F5]  = VK_F5;  InvVirtualKeyMap[kKey_F6]  = VK_F6;
+	InvVirtualKeyMap[kKey_F7]  = VK_F7;  InvVirtualKeyMap[kKey_F8]  = VK_F8;
+	InvVirtualKeyMap[kKey_F9]  = VK_F9;  InvVirtualKeyMap[kKey_F10] = VK_F1;
+	InvVirtualKeyMap[kKey_F11] = VK_F11; InvVirtualKeyMap[kKey_F12] = VK_F1;
+
+	InvVirtualKeyMap[kKey_PrintScreen] = VK_SNAPSHOT; InvVirtualKeyMap[kKey_Insert] = VK_INSERT;
+	InvVirtualKeyMap[kKey_Home]        = VK_HOME;     InvVirtualKeyMap[kKey_PageUp] = VK_PRIOR;
+	InvVirtualKeyMap[kKey_PageDown]    = VK_NEXT;     InvVirtualKeyMap[kKey_Delete] = VK_DELETE;
+	InvVirtualKeyMap[kKey_End]         = VK_END;      InvVirtualKeyMap[kKey_Right]  = VK_RIGHT;
+	InvVirtualKeyMap[kKey_Left]        = VK_LEFT;     InvVirtualKeyMap[kKey_Down]   = VK_DOWN;
+	InvVirtualKeyMap[kKey_Up]          = VK_UP;       InvVirtualKeyMap[kKey_Divide] = VK_DIVIDE;
+	InvVirtualKeyMap[kKey_Multiply]    = VK_MULTIPLY; InvVirtualKeyMap[kKey_Plus]   = VK_ADD;
+	InvVirtualKeyMap[kKey_Minus]       = VK_SUBTRACT; InvVirtualKeyMap[kKey_Period] = VK_DECIMAL;
+	InvVirtualKeyMap[kKey_BackTick]    = VK_OEM_3;    InvVirtualKeyMap[kKey_Ctrl]   = VK_CONTROL;
+	InvVirtualKeyMap[kKey_Return]      = VK_RETURN;   InvVirtualKeyMap[kKey_Escape] = VK_ESCAPE;
+	InvVirtualKeyMap[kKey_Backspace]   = VK_BACK;     InvVirtualKeyMap[kKey_Tab]    = VK_TAB;
+	InvVirtualKeyMap[kKey_Space]       = VK_SPACE;    InvVirtualKeyMap[kKey_Shift]  = VK_SHIFT;
+}
 
 static u32 kWinGetKeyModFlags(void) {
 	u32 mods = 0;
@@ -1171,7 +1168,7 @@ static LRESULT kWinHandleEvents(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam
 			if (kIsCursorEnabled() || !media.window.native->raw_input) {
 				int x         = GET_X_LPARAM(lparam);
 				int y         = GET_Y_LPARAM(lparam);
-				kVec2i cursor = { .x = x, .y = media.window.state.height - y };
+				kVec2i cursor = kVec2i(x, media.window.state.height - y);
 				kAddCursorEvent(cursor);
 			}
 
@@ -1185,7 +1182,7 @@ static LRESULT kWinHandleEvents(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam
 			UINT rid_size = 0;
 			GetRawInputData(hri, RID_INPUT, 0, &rid_size, sizeof(RAWINPUTHEADER));
 
-			RAWINPUT *input = rid_size ? alloca(rid_size) : 0;
+			RAWINPUT *input = rid_size ? (RAWINPUT *)alloca(rid_size) : nullptr;
 			if (!input) break;
 
 			if (GetRawInputData(hri, RID_INPUT, input, &rid_size, sizeof(RAWINPUTHEADER) != rid_size))
@@ -1198,19 +1195,19 @@ static LRESULT kWinHandleEvents(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam
 			UINT     dpi    = GetDpiForWindow(wnd);
 
 			if ((mouse->usFlags & MOUSE_MOVE_ABSOLUTE) == MOUSE_MOVE_ABSOLUTE) {
-				bool virtual  = (mouse->usFlags & MOUSE_VIRTUAL_DESKTOP) == MOUSE_VIRTUAL_DESKTOP;
-				int width     = GetSystemMetricsForDpi(virtual ? SM_CXVIRTUALSCREEN : SM_CXSCREEN, dpi);
-				int height    = GetSystemMetricsForDpi(virtual ? SM_CYVIRTUALSCREEN : SM_CYSCREEN, dpi);
-				int abs_x     = (int)((mouse->lLastX / 65535.0f) * width);
-				int abs_y     = (int)((mouse->lLastY / 65535.0f) * height);
-				POINT pt      = { .x = abs_x, .y = abs_y };
+				bool isvirtual = (mouse->usFlags & MOUSE_VIRTUAL_DESKTOP) == MOUSE_VIRTUAL_DESKTOP;
+				int width      = GetSystemMetricsForDpi(isvirtual ? SM_CXVIRTUALSCREEN : SM_CXSCREEN, dpi);
+				int height     = GetSystemMetricsForDpi(isvirtual ? SM_CYVIRTUALSCREEN : SM_CYSCREEN, dpi);
+				int abs_x      = (int)((mouse->lLastX / 65535.0f) * width);
+				int abs_y      = (int)((mouse->lLastY / 65535.0f) * height);
+				POINT pt       = { .x = abs_x, .y = abs_y };
 				ScreenToClient(wnd, &pt);
-				kVec2i cursor = { .x = pt.x, .y = media.window.state.height - pt.y };
+				kVec2i cursor = kVec2i(pt.x, media.window.state.height - pt.y);
 				kAddCursorEvent(cursor);
 			} else if (mouse->lLastX != 0 || mouse->lLastY != 0) {
 				int rel_x     = mouse->lLastX;
 				int rel_y     = mouse->lLastY;
-				kVec2i delta  = { .x = rel_x, .y = -rel_y };
+				kVec2i delta  = kVec2i(rel_x, -rel_y);
 				kAddCursorDeltaEvent(delta);
 			}
 
@@ -1273,7 +1270,7 @@ static LRESULT kWinHandleEvents(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam
 		case WM_KEYUP:
 		case WM_KEYDOWN:
 		{
-			if (wparam < kFixedCount(VirtualKeyMap)) {
+			if (wparam < kArrayCount(VirtualKeyMap)) {
 				kKey key    = VirtualKeyMap[wparam];
 				bool repeat = HIWORD(lparam) & KF_REPEAT;
 				bool down   = (msg == WM_KEYDOWN);
@@ -1355,9 +1352,9 @@ static void kWinCreateWindow(const char *mb_title, uint w, uint h, uint flags) {
 	WNDCLASSEXW window_class       = { 0 };
 
 	{
-		HICON   icon     = LoadImageW(instance, MAKEINTRESOURCEW(IDI_KICON), IMAGE_ICON, 0, 0, LR_SHARED);
-		HICON   icon_sm  = LoadImageW(instance, MAKEINTRESOURCEW(IDI_KICON), IMAGE_ICON, 0, 0, LR_SHARED);
-		HICON   win_icon = LoadImageW(0, IDI_APPLICATION, IMAGE_ICON, 0, 0, LR_SHARED);
+		HICON   icon     = (HICON)LoadImageW(instance, MAKEINTRESOURCEW(IDI_KICON), IMAGE_ICON, 0, 0, LR_SHARED);
+		HICON   icon_sm  = (HICON)LoadImageW(instance, MAKEINTRESOURCEW(IDI_KICON), IMAGE_ICON, 0, 0, LR_SHARED);
+		HICON   win_icon = (HICON)LoadImageW(0, IDI_APPLICATION, IMAGE_ICON, 0, 0, LR_SHARED);
 
 		window_class.cbSize        = sizeof(window_class);
 		window_class.style         = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
@@ -1365,7 +1362,7 @@ static void kWinCreateWindow(const char *mb_title, uint w, uint h, uint flags) {
 		window_class.hInstance     = instance;
 		window_class.hIcon         = icon ? icon : win_icon;
 		window_class.hIconSm       = icon_sm ? icon_sm : win_icon;
-		window_class.hCursor       = LoadImageW(0, IDC_ARROW, IMAGE_CURSOR, 0, 0, LR_SHARED);
+		window_class.hCursor       = (HCURSOR)LoadImageW(0, IDC_ARROW, IMAGE_CURSOR, 0, 0, LR_SHARED);
 		window_class.lpszClassName = L"KrWindowClass";
 		RegisterClassExW(&window_class);
 	}
@@ -1373,7 +1370,7 @@ static void kWinCreateWindow(const char *mb_title, uint w, uint h, uint flags) {
 	wchar_t title[2048] = L"KrWindow | Windows";
 
 	if (mb_title) {
-		MultiByteToWideChar(CP_UTF8, 0, (char *)mb_title, -1, title, kFixedCount(title));
+		MultiByteToWideChar(CP_UTF8, 0, (char *)mb_title, -1, title, kArrayCount(title));
 	}
 
 	int width      = CW_USEDEFAULT;
@@ -1389,12 +1386,11 @@ static void kWinCreateWindow(const char *mb_title, uint w, uint h, uint flags) {
 
 		GetDpiForMonitor(mprimary, MDT_EFFECTIVE_DPI, &xdpi, &ydpi);
 
-		RECT rect   = {
-			.left   = 0,
-			.right  = w,
-			.top    = 0,
-			.bottom = h
-		};
+		RECT rect;
+		rect.left   = 0;
+		rect.top    = 0;
+		rect.right  = w;
+		rect.bottom = h;
 
 		AdjustWindowRectExForDpi(&rect, style, FALSE, 0, ydpi);
 		width  = rect.right - rect.left;
@@ -1405,7 +1401,7 @@ static void kWinCreateWindow(const char *mb_title, uint w, uint h, uint flags) {
 	media.window.state.flags = flags;
 
 	// Allocate before CreateWindow because CreateWindow requires it
-	kPlatformWindow *window = kAlloc(sizeof(kPlatformWindow));
+	kPlatformWindow *window = (kPlatformWindow *)kAlloc(sizeof(kPlatformWindow));
 	if (!window) {
 		kLogError("Windows: Failed to create window: out of memory");
 		return;
@@ -1479,9 +1475,8 @@ static void kWinLoadInitialState(void) {
 	if (GetAsyncKeyState(VK_RMENU)    & 0x8000) mods |= kKeyMod_RightAlt;
 
 	media.keyboard.mods    = mods;
-	media.events.count     = 0;
-	media.events.allocated = 64;
-	media.events.data      = kAlloc(sizeof(kEvent) * media.events.allocated);
+
+	media.events.Reserve(64);
 }
 
 static int kWinRunEventLoop(void) {
@@ -1514,7 +1509,7 @@ static int kWinRunEventLoop(void) {
 				.kind    = kEvent_Resized,
 				.resized = { .width = media.window.state.width, .height = media.window.state.height }
 			};
-			kAddEvent(&ev);
+			kAddEvent(ev);
 		}
 
 		media.keyboard.mods = kWinGetKeyModFlags();
@@ -1603,6 +1598,8 @@ static int kWinMain(void) {
 	} else {
 		argc = 0;
 	}
+
+	kMapVirutalKeys();
 
 	Main(argc, argv);
 
