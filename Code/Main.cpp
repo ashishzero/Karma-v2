@@ -1,38 +1,48 @@
 #include "kMedia.h"
 #include "kArray.h"
 
-void Update(float dt) {
+void Update(float dt)
+{
 	kSlice<kEvent> events = kGetEvents();
 
-	if (kKeyPressed(kKey_Escape)) {
+	if (kKeyPressed(kKey_Escape))
+	{
 		kBreakLoop(0);
 	}
 
-	if (kKeyPressed(kKey_F11)) {
+	if (kKeyPressed(kKey_F11))
+	{
 		kToggleWindowFullscreen();
 	}
 
-	if (kKeyPressed(kKey_H)) {
-		if (kIsCursorEnabled()) {
+	if (kKeyPressed(kKey_H))
+	{
+		if (kIsCursorEnabled())
+		{
 			kDisableCursor();
-		} else {
+		}
+		else
+		{
 			kEnableCursor();
 		}
 	}
 
-	if (kKeyPressed(kKey_M)) {
-		if (kIsWindowMaximized()) {
+	if (kKeyPressed(kKey_M))
+	{
+		if (kIsWindowMaximized())
+		{
 			kRestoreWindow();
-		} else {
+		}
+		else
+		{
 			kMaximizeWindow();
 		}
 	}
 }
 
-void Main(int argc, const char **argv) {
-	kMediaUserEvents user = {
-		.update = Update
-	};
+void Main(int argc, const char **argv)
+{
+	kMediaUserEvents user = {.update = Update};
 
-	kEventLoop(&kDefaultSpec, user);
+	kEventLoop(kDefaultSpec, user);
 }

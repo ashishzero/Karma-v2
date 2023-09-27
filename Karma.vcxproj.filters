@@ -79,4 +79,7 @@
   <ItemGroup>
     <Manifest Include="Code\kWindows.manifest" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include=".clang-format" />
+  </ItemGroup>
 </Project>

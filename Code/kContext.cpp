@@ -6,15 +6,14 @@
 #include <stdarg.h>
 #include <math.h>
 
-static kContext context = {
-	.allocator = { .proc  = kDefaultHeapAllocator },
-	.random    = { .state = 0x853c49e6748fea9bULL, .inc = 0xda3e39cb94b95bdbULL },
-	.assertion = kDefaultHandleAssertion,
-	.logger    = { .proc = kDefaultHandleLog },
-	.fatal     =  kDefaultFatalError
-};
+static kContext context = {.allocator = {.proc = kDefaultHeapAllocator},
+						   .random	  = {.state = 0x853c49e6748fea9bULL, .inc = 0xda3e39cb94b95bdbULL},
+						   .assertion = kDefaultHandleAssertion,
+						   .logger	  = {.proc = kDefaultHandleLog},
+						   .fatal	  = kDefaultFatalError};
 
-void kHandleAssertion(const char *file, int line, const char *proc, const char *desc) {
+void			kHandleAssertion(const char *file, int line, const char *proc, const char *desc)
+{
 	context.assertion(file, line, proc, desc);
 	kTriggerBreakpoint();
 }
@@ -23,103 +22,125 @@ void kHandleAssertion(const char *file, int line, const char *proc, const char *
 //
 //
 
-kContext *kGetContext(void) {
+kContext *kGetContext(void)
+{
 	return &context;
 }
 
-void *kAlloc(umem size) {
+void *kAlloc(umem size)
+{
 	return kAlloc(&context.allocator, size);
 }
 
-void *kRealloc(void *ptr, umem prev, umem size) {
+void *kRealloc(void *ptr, umem prev, umem size)
+{
 	return kRealloc(&context.allocator, ptr, prev, size);
 }
 
-void kFree(void *ptr, umem size) {
+void kFree(void *ptr, umem size)
+{
 	kFree(&context.allocator, ptr, size);
 }
 
-u32 kRandom(void) {
+u32 kRandom(void)
+{
 	return kRandom(&context.random);
 }
 
-u32 kRandomBound(u32 bound) {
+u32 kRandomBound(u32 bound)
+{
 	return kRandomBound(&context.random, bound);
 }
 
-u32 kRandomRange(u32 min, u32 max) {
+u32 kRandomRange(u32 min, u32 max)
+{
 	return kRandomRange(&context.random, min, max);
 }
 
-float kRandomFloat01(void) {
+float kRandomFloat01(void)
+{
 	return kRandomFloat01(&context.random);
 }
 
-float kRandomFloatBound(float bound) {
+float kRandomFloatBound(float bound)
+{
 	return kRandomFloatBound(&context.random, bound);
 }
 
-float kRandomFloatRange(float min, float max) {
+float kRandomFloatRange(float min, float max)
+{
 	return kRandomFloatRange(&context.random, min, max);
 }
 
-float kRandomFloat(void) {
+float kRandomFloat(void)
+{
 	return kRandomFloat(&context.random);
 }
 
-void kRandomSourceSeed(u64 state, u64 seq) {
+void kRandomSourceSeed(u64 state, u64 seq)
+{
 	kRandomSourceSeed(&context.random, state, seq);
 }
 
-void kLogPrintV(kLogLevel level, const char *fmt, va_list list) {
-	if (level >= context.logger.level) {
+void kLogPrintV(kLogLevel level, const char *fmt, va_list list)
+{
+	if (level >= context.logger.level)
+	{
 		char buff[4096];
-		int len = vsnprintf(buff, kArrayCount(buff), fmt, list);
+		int	 len = vsnprintf(buff, kArrayCount(buff), fmt, list);
 		context.logger.proc(context.logger.data, context.logger.level, (u8 *)buff, len);
 	}
 }
 
-void kLogTraceV(const char *fmt, va_list list) {
+void kLogTraceV(const char *fmt, va_list list)
+{
 	kLogPrintV(kLogLevel_Verbose, fmt, list);
 }
 
-void kLogWarningV(const char *fmt, va_list list) {
+void kLogWarningV(const char *fmt, va_list list)
+{
 	kLogPrintV(kLogLevel_Warning, fmt, list);
 }
 
-void kLogErrorV(const char *fmt, va_list list) {
+void kLogErrorV(const char *fmt, va_list list)
+{
 	kLogPrintV(kLogLevel_Error, fmt, list);
 }
 
-void kLogPrint(kLogLevel level, const char *fmt, ...) {
+void kLogPrint(kLogLevel level, const char *fmt, ...)
+{
 	va_list args;
 	va_start(args, fmt);
 	kLogPrintV(level, fmt, args);
 	va_end(args);
 }
 
-void kLogTrace(const char *fmt, ...) {
+void kLogTrace(const char *fmt, ...)
+{
 	va_list args;
 	va_start(args, fmt);
 	kLogTraceV(fmt, args);
 	va_end(args);
 }
 
-void kLogWarning(const char *fmt, ...) {
+void kLogWarning(const char *fmt, ...)
+{
 	va_list args;
 	va_start(args, fmt);
 	kLogWarningV(fmt, args);
 	va_end(args);
 }
 
-void kLogError(const char *fmt, ...) {
+void kLogError(const char *fmt, ...)
+{
 	va_list args;
 	va_start(args, fmt);
 	kLogErrorV(fmt, args);
 	va_end(args);
 }
 
-void kFatalError(const char *msg) {
+void kFatalError(const char *msg)
+{
 	context.fatal(msg);
 }
 
@@ -131,15 +152,18 @@ void kFatalError(const char *msg) {
 
 #include "kWindowsCommon.h"
 
-void kDefaultHandleAssertion(const char *file, int line, const char *proc, const char *string) {
+void kDefaultHandleAssertion(const char *file, int line, const char *proc, const char *string)
+{
 	kLogError("Assertion Failed: %(%): % ; Procedure: %", file, line, string, proc);
 	kTriggerBreakpoint();
 }
 
-void kDefaultFatalError(const char *message) {
-	int wlen = MultiByteToWideChar(CP_UTF8, 0, message, (int)strlen(message), NULL, 0);
-	wchar_t *msg = (wchar_t *)HeapAlloc(GetProcessHeap(), 0, ((imem)wlen + 1) * sizeof(wchar_t));
-	if (msg) {
+void kDefaultFatalError(const char *message)
+{
+	int		 wlen = MultiByteToWideChar(CP_UTF8, 0, message, (int)strlen(message), NULL, 0);
+	wchar_t *msg  = (wchar_t *)HeapAlloc(GetProcessHeap(), 0, ((imem)wlen + 1) * sizeof(wchar_t));
+	if (msg)
+	{
 		MultiByteToWideChar(CP_UTF8, 0, message, (int)strlen(message), msg, wlen + 1);
 		msg[wlen] = 0;
 		FatalAppExitW(0, msg);
@@ -147,28 +171,25 @@ void kDefaultFatalError(const char *message) {
 	FatalAppExitW(0, L"out of memory");
 }
 
-void kDefaultHandleLog(void *data, kLogLevel level, const u8 *msg, imem msg_len) {
-	static kAtomic Guard = { 0 };
+void kDefaultHandleLog(void *data, kLogLevel level, const u8 *msg, imem msg_len)
+{
+	static kAtomic	  Guard		  = {0};
 
-	static const WORD ColorsMap[] = {
-		FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE,
-		FOREGROUND_RED | FOREGROUND_GREEN,
-		FOREGROUND_RED
-	};
+	static const WORD ColorsMap[] = {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE,
+									 FOREGROUND_RED | FOREGROUND_GREEN, FOREGROUND_RED};
 	static_assert(kArrayCount(ColorsMap) == kLogLevel_Error + 1, "");
 
 	wchar_t buff[4096];
 
-	int len   = MultiByteToWideChar(CP_UTF8, 0, (char *)msg, (int)msg_len, buff, kArrayCount(buff) - 1);
-	buff[len] = 0;
+	int		len = MultiByteToWideChar(CP_UTF8, 0, (char *)msg, (int)msg_len, buff, kArrayCount(buff) - 1);
+	buff[len]	= 0;
 
 	kAtomicLock(&Guard);
 
-	HANDLE handle = (level == kLogLevel_Error) ?
-		GetStdHandle(STD_ERROR_HANDLE) :
-		GetStdHandle(STD_OUTPUT_HANDLE);
+	HANDLE handle = (level == kLogLevel_Error) ? GetStdHandle(STD_ERROR_HANDLE) : GetStdHandle(STD_OUTPUT_HANDLE);
 
-	if (handle != INVALID_HANDLE_VALUE) {
+	if (handle != INVALID_HANDLE_VALUE)
+	{
 		CONSOLE_SCREEN_BUFFER_INFO buffer_info;
 		GetConsoleScreenBufferInfo(handle, &buffer_info);
 		SetConsoleTextAttribute(handle, ColorsMap[level]);
@@ -183,7 +204,8 @@ void kDefaultHandleLog(void *data, kLogLevel level, const u8 *msg, imem msg_len)
 	kAtomicUnlock(&Guard);
 }
 
-void *kDefaultHeapAllocator(kAllocatorMode mode, void *ptr, umem prev, umem size, void *ctx) {
+void *kDefaultHeapAllocator(kAllocatorMode mode, void *ptr, umem prev, umem size, void *ctx)
+{
 	HANDLE heap = GetProcessHeap();
 	if (mode == kAllocatorMode_Alloc)
 		return HeapAlloc(heap, 0, size);

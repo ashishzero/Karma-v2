@@ -1,13 +1,17 @@
 #pragma once
 #include "kCommon.h"
 
-typedef struct kWindow    { void *ptr; } kWindow;
-typedef struct kSwapChain { void *ptr; } kSwapChain;
-typedef struct kShader    { void *ptr; } kShader;
-typedef struct kTexture   { void *ptr; } kTexture;
-typedef struct kBuffer    { void *ptr; } kBuffer;
+struct kPlatformWindow;
+struct kPlatformSwapChain;
+struct kPlatformShader;
+struct kPlatformTexture;
 
-typedef enum kFormat {
+using kSwapChain = kHandle<kPlatformSwapChain>;
+using kShader	 = kHandle<kPlatformShader>;
+using kTexture	 = kHandle<kPlatformTexture>;
+
+typedef enum kFormat
+{
 	kFormat_RGBA32_FLOAT,
 	kFormat_RGBA32_SINT,
 	kFormat_RGBA32_UINT,
@@ -33,17 +37,19 @@ typedef enum kFormat {
 	kFormat_Count
 } kFormat;
 
-enum kBindFlags {
-	kBind_VertexBuffer    = 0x1,
-	kBind_IndexBuffer     = 0x2,
+enum kBindFlags
+{
+	kBind_VertexBuffer	  = 0x1,
+	kBind_IndexBuffer	  = 0x2,
 	kBind_ConstantBuffer  = 0x4,
 	kBind_ShaderResource  = 0x8,
-	kBind_RenderTarget    = 0x10,
-	kBind_DepthStencil    = 0x20,
+	kBind_RenderTarget	  = 0x10,
+	kBind_DepthStencil	  = 0x20,
 	kBind_UnorderedAccess = 0x40,
 };
 
-typedef enum kUsage {
+typedef enum kUsage
+{
 	kUsage_Default,
 	kUsage_Immutable,
 	kUsage_Dynamic,
@@ -51,32 +57,36 @@ typedef enum kUsage {
 	kUsage_Count
 } kUsage;
 
-typedef struct kTextureSpec {
-	kFormat   format;
-	u32       width;
-	u32       height;
-	u32       pitch;
-	u8 *      pixels;
-	u32       bind_flags;
-	kUsage    usage;
-	u32       num_samples;
+typedef struct kTextureSpec
+{
+	kFormat format;
+	u32		width;
+	u32		height;
+	u32		pitch;
+	u8	   *pixels;
+	u32		bind_flags;
+	kUsage	usage;
+	u32		num_samples;
 } kTextureSpec;
 
-typedef enum kCpuAccess {
+typedef enum kCpuAccess
+{
 	kCpuAccess_None,
 	kCpuAccess_Read,
 	kCpuAccess_Write,
 	kCpuAccess_ReadWrite
 } kCpuAccess;
 
-typedef struct kBufferSpec {
-	u32          size;
-	kUsage       usage;
-	u32          bind_flags;
-	kCpuAccess   cpu_access;
+typedef struct kBufferSpec
+{
+	u32		   size;
+	kUsage	   usage;
+	u32		   bind_flags;
+	kCpuAccess cpu_access;
 } kBufferSpec;
 
-typedef enum kMap {
+typedef enum kMap
+{
 	kMap_Read,
 	kMap_Write,
 	kMap_ReadWrite,
@@ -84,20 +94,22 @@ typedef enum kMap {
 	kMap_Count
 } kMap;
 
-struct kRenderBackend {
-	kSwapChain  (*CreateSwapChain)(kWindow *);
-	void        (*DestroySwapChain)(kSwapChain );
-	void        (*ResizeSwapChain)(kSwapChain , uint, uint);
-	kTexture    (*GetSwapChainRenderTarget)(kSwapChain );
-	void        (*Present)(kSwapChain );
+struct kSwapChainBackend
+{
+	kSwapChain (*create)(kPlatformWindow *);
+	void (*destroy)(kSwapChain);
+	void (*resize)(kSwapChain, uint, uint);
+	kTexture (*render_target)(kSwapChain);
+	void (*present)(kSwapChain);
+};
 
-	kTexture    (*CreateTexture)(const kTextureSpec *);
-	void        (*DestroyTexture)(kTexture *);
-	void        (*GetTextureSize)(kTexture *, u32 *, u32 *);
+struct kRenderBackend
+{
+	kTexture (*swap_chain_target)(void);
 
-	kBuffer     (*CreateBuffer)(const kBufferSpec *, void *);
-	void        (*DestroyBuffer)(kBuffer );
-	u32         (*GetBufferSize)(kBuffer );
-	void *      (*MapBuffer)(kBuffer , kMap );
-	void        (*UnmapBuffer)(kBuffer );
+	kTexture (*create_texture)(const kTextureSpec &);
+	void (*destroy_texture)(kTexture);
+	void (*texture_size)(kTexture, u32 *, u32 *);
+
+	void (*destroy)(void);
 };

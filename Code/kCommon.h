@@ -76,7 +76,8 @@
 #define K_PLATFORM_WASM 0
 #endif
 
-#if defined(__amd64__) || defined(__amd64) || defined(__x86_64__) || defined(__x86_64) || defined(_M_AMD64) || defined(_M_X64)
+#if defined(__amd64__) || defined(__amd64) || defined(__x86_64__) || defined(__x86_64) || defined(_M_AMD64) ||         \
+	defined(_M_X64)
 #define K_ARCH_X64 1
 #elif defined(i386) || defined(__i386) || defined(__i386__) || defined(_M_IX86) || defined(_X86_)
 #define K_ARCH_X86 1
@@ -133,7 +134,8 @@
 #ifndef kTriggerBreakpoint
 #if defined(_MSC_VER)
 #define kTriggerBreakpoint() __debugbreak()
-#elif ((!defined(__NACL__)) && ((defined(__GNUC__) || defined(__clang__)) && (defined(__i386__) || defined(__x86_64__))))
+#elif ((!defined(__NACL__)) &&                                                                                         \
+	   ((defined(__GNUC__) || defined(__clang__)) && (defined(__i386__) || defined(__x86_64__))))
 #define kTriggerBreakpoint() __asm__ __volatile__("int $3\n\t")
 #elif defined(__386__) && defined(__WATCOMC__)
 #define kTriggerBreakpoint() _asm { int 0x03}
@@ -169,36 +171,56 @@
 #endif
 
 #ifdef __GNUC__
-[[noreturn]] inproc __attribute__((always_inline)) void Unreachable() { kDebugTriggerbreakpoint(); __builtin_unreachable(); }
+[[noreturn]] inproc __attribute__((always_inline)) void Unreachable()
+{
+	kDebugTriggerbreakpoint();
+	__builtin_unreachable();
+}
 #elif defined(_MSC_VER)
-[[noreturn]] __forceinline void kUnreachable() { kDebugTriggerbreakpoint(); __assume(false); }
+[[noreturn]] __forceinline void kUnreachable()
+{
+	kDebugTriggerbreakpoint();
+	__assume(false);
+}
 #else // ???
-inproc void kUnreachable() { kTriggerBreakpoint(); }
+inproc void kUnreachable()
+{
+	kTriggerBreakpoint();
+}
 #endif
 
-#define kNoDefaultCase() default: kUnreachable(); break
+#define kNoDefaultCase()                                                                                               \
+	default:                                                                                                           \
+		kUnreachable();                                                                                                \
+		break
 
-[[noreturn]]  inproc void kUnimplemented() { kTriggerBreakpoint(); kUnreachable(); }
+[[noreturn]] inproc void kUnimplemented()
+{
+	kTriggerBreakpoint();
+	kUnreachable();
+}
 
 //
 //
 //
 
 #define kConcatRaw(x, y) x##y
-#define kConcatRaw2(x, y)   kConcatRaw(x, y)
+#define kConcatRaw2(x, y) kConcatRaw(x, y)
 
-template <typename Item>
-struct kExitScope {
+template <typename Item> struct kExitScope
+{
 	Item lambda;
-	kExitScope(Item lambda) : lambda(lambda) {
-	}
-	~kExitScope() {
+	kExitScope(Item lambda) : lambda(lambda)
+	{}
+	~kExitScope()
+	{
 		lambda();
 	}
 };
-struct kExitScope2 {
-	template <typename Item>
-	kExitScope<Item> operator+(Item t) {
+struct kExitScope2
+{
+	template <typename Item> kExitScope<Item> operator+(Item t)
+	{
 		return t;
 	}
 };
@@ -208,88 +230,121 @@ struct kExitScope2 {
 //
 //
 
-typedef uint32_t              uint;
-typedef float                 real;
-typedef uint8_t               byte;
-typedef uint8_t               u8;
-typedef uint16_t              u16;
-typedef uint32_t              u32;
-typedef uint64_t              u64;
-typedef int8_t                i8;
-typedef int16_t               i16;
-typedef int32_t               i32;
-typedef int32_t               b32;
-typedef int64_t               i64;
-typedef float                 r32;
-typedef double                r64;
-typedef size_t                umem;
-typedef ptrdiff_t             imem;
+typedef uint32_t  uint;
+typedef float	  real;
+typedef uint8_t	  byte;
+typedef uint8_t	  u8;
+typedef uint16_t  u16;
+typedef uint32_t  u32;
+typedef uint64_t  u64;
+typedef int8_t	  i8;
+typedef int16_t	  i16;
+typedef int32_t	  i32;
+typedef int32_t	  b32;
+typedef int64_t	  i64;
+typedef float	  r32;
+typedef double	  r64;
+typedef size_t	  umem;
+typedef ptrdiff_t imem;
 
-#define REAL32_MIN            FLT_MIN
-#define REAL32_MAX            FLT_MAX
-#define REAL64_MIN            DBL_MIN
-#define REAL64_MAX            DBL_MAX
-#define REAL_MIN              REAL32_MIN
-#define REAL_MAX              REAL32_MAX
-#define REAL_EPSILON          FLT_EPSILON
+#define REAL32_MIN FLT_MIN
+#define REAL32_MAX FLT_MAX
+#define REAL64_MIN DBL_MIN
+#define REAL64_MAX DBL_MAX
+#define REAL_MIN REAL32_MIN
+#define REAL_MAX REAL32_MAX
+#define REAL_EPSILON FLT_EPSILON
 
-#define K_PI                  (3.1415926535f)
-#define K_PI_INVERSE          (1.0f / K_PI)
-#define K_TAU                 (K_PI / 2)
+#define K_PI (3.1415926535f)
+#define K_PI_INVERSE (1.0f / K_PI)
+#define K_TAU (K_PI / 2)
 
-#define kArrayCount(a)         (sizeof(a) / sizeof((a)[0]))
+#define kArrayCount(a) (sizeof(a) / sizeof((a)[0]))
 
-template <typename Item> constexpr Item             kMin(Item a, Item b)               { return a < b ? a : b; }
-template <typename Item> constexpr Item             kMax(Item a, Item b)               { return a > b ? a : b; }
-template <typename Item> constexpr Item             kClamp(Item a, Item b, Item v)     { return kMin(b, kMax(a, v)); }
-template <typename Item> constexpr bool             kIsInRange(Item a, Item b, Item v) { return v >= a && v <= b; }
-template <typename Item> void                       kSwap(Item *a, Item *b)            { Item t = *b; *b = *a; *a = t; }
-template <typename Item> constexpr Item             kIsPower2(Item value)              { return ((value != 0) && ((value) & ((value)-1)) == 0); }
-template <typename Item, typename U> constexpr Item kAlignUp(Item x, U p)              { return (((x) + (p)-1) & ~((p)-1)); }
-template <typename Item, typename U> constexpr Item kAlignDown(Item x, U p)            { return ((x) & ~((p)-1)); }
+template <typename Item> constexpr Item kMin(Item a, Item b)
+{
+	return a < b ? a : b;
+}
+template <typename Item> constexpr Item kMax(Item a, Item b)
+{
+	return a > b ? a : b;
+}
+template <typename Item> constexpr Item kClamp(Item a, Item b, Item v)
+{
+	return kMin(b, kMax(a, v));
+}
+template <typename Item> constexpr bool kIsInRange(Item a, Item b, Item v)
+{
+	return v >= a && v <= b;
+}
+template <typename Item> void kSwap(Item *a, Item *b)
+{
+	Item t = *b;
+	*b	   = *a;
+	*a	   = t;
+}
+template <typename Item> constexpr Item kIsPower2(Item value)
+{
+	return ((value != 0) && ((value) & ((value)-1)) == 0);
+}
+template <typename Item, typename U> constexpr Item kAlignUp(Item x, U p)
+{
+	return (((x) + (p)-1) & ~((p)-1));
+}
+template <typename Item, typename U> constexpr Item kAlignDown(Item x, U p)
+{
+	return ((x) & ~((p)-1));
+}
 
-template <typename Item, typename U> constexpr Item kIPower(Item v, U p) {
+template <typename Item, typename U> constexpr Item kIPower(Item v, U p)
+{
 	Item r = v;
 	for (Item i = 1; i < p; ++i)
 		r *= v;
 	return r;
 }
 
-template <typename Item> constexpr static Item kNextPowerOf2(Item n) {
+template <typename Item> constexpr static Item kNextPowerOf2(Item n)
+{
 	if (kIsPower2(n))
 		return n;
 	Item count = 0;
-	while (n != 0) {
+	while (n != 0)
+	{
 		n >>= 1;
 		count += 1;
 	}
 	return (Item)1 << (Item)count;
 }
 
-inproc u16 constexpr kBSwap16(u16 a) {
+inproc u16 constexpr kBSwap16(u16 a)
+{
 	return ((((a)&0x00FF) << 8) | (((a)&0xFF00) >> 8));
 }
 
-inproc u32 constexpr kBSwap32(u32 a) {
+inproc u32 constexpr kBSwap32(u32 a)
+{
 	return ((((a)&0x000000FF) << 24) | (((a)&0x0000FF00) << 8) | (((a)&0x00FF0000) >> 8) | (((a)&0xFF000000) >> 24));
 }
 
-inproc u64 constexpr kBSwap64(u64 a) {
-	return ((((a)&0x00000000000000FFULL) << 56) | (((a)&0x000000000000FF00ULL) << 40) | (((a)&0x0000000000FF0000ULL) << 24) |
-     (((a)&0x00000000FF000000ULL) << 8) | (((a)&0x000000FF00000000ULL) >> 8) | (((a)&0x0000FF0000000000ULL) >> 24) |
-     (((a)&0x00FF000000000000ULL) >> 40) | (((a)&0xFF00000000000000ULL) >> 56));
+inproc u64 constexpr kBSwap64(u64 a)
+{
+	return ((((a)&0x00000000000000FFULL) << 56) | (((a)&0x000000000000FF00ULL) << 40) |
+			(((a)&0x0000000000FF0000ULL) << 24) | (((a)&0x00000000FF000000ULL) << 8) |
+			(((a)&0x000000FF00000000ULL) >> 8) | (((a)&0x0000FF0000000000ULL) >> 24) |
+			(((a)&0x00FF000000000000ULL) >> 40) | (((a)&0xFF00000000000000ULL) >> 56));
 }
 
-inproc constexpr umem kKiloByte   = (1024ULL);
-inproc constexpr umem kMegaByte   = (kKiloByte * 1024ULL);
-inproc constexpr umem kGegaByte   = (kMegaByte * 1024ULL);
+inproc constexpr umem  kKiloByte  = (1024ULL);
+inproc constexpr umem  kMegaByte  = (kKiloByte * 1024ULL);
+inproc constexpr umem  kGegaByte  = (kMegaByte * 1024ULL);
 
 inproc constexpr float kDegToRad  = ((K_PI / 180.0f));
 inproc constexpr float kRadToDeg  = ((180.0f / K_PI));
 inproc constexpr float kRadToTurn = (1.0f / (2.0f * K_PI));
 inproc constexpr float kTurnToRad = (2.0f * K_PI);
 
-#define kAlignNative alignas(sizeof(void*))
+#define kAlignNative alignas(sizeof(void *))
 
 //
 //
@@ -299,18 +354,18 @@ void kHandleAssertion(const char *file, int line, const char *proc, const char *
 
 #if defined(K_BUILD_DEBUG) || defined(K_BUILD_DEVELOPER) || defined(K_BUILD_TEST)
 
-#define kAssert(x)                                                   \
-	do                                                               \
-	{                                                                \
-		if (!(x))                                                    \
-			kHandleAssertion(__FILE__, __LINE__, __PROCEDURE__, #x); \
+#define kAssert(x)                                                                                                     \
+	do                                                                                                                 \
+	{                                                                                                                  \
+		if (!(x))                                                                                                      \
+			kHandleAssertion(__FILE__, __LINE__, __PROCEDURE__, #x);                                                   \
 	} while (0)
 #else
 #define kDebugTriggerbreakpoint()
-#define kAssert(x) \
-	do             \
-	{              \
-		0;         \
+#define kAssert(x)                                                                                                     \
+	do                                                                                                                 \
+	{                                                                                                                  \
+		0;                                                                                                             \
 	} while (0)
 #endif
 
@@ -318,56 +373,100 @@ void kHandleAssertion(const char *file, int line, const char *proc, const char *
 //
 //
 
-template <typename T>
-struct kVec2T {
+template <typename T> struct kVec2T
+{
 	union {
-		struct { T x, y; };
+		struct
+		{
+			T x, y;
+		};
 		T m[2];
 	};
 
-	constexpr kVec2T(): x(0), y(0) {}
-	explicit constexpr kVec2T(T a): x(a), y(a) {}
-	explicit constexpr kVec2T(T a, T b) : x(a), y(b) {}
+	constexpr kVec2T() : x(0), y(0)
+	{}
+	explicit constexpr kVec2T(T a) : x(a), y(a)
+	{}
+	explicit constexpr kVec2T(T a, T b) : x(a), y(b)
+	{}
 };
 
-template <typename T>
-struct kVec3T {
+template <typename T> struct kVec3T
+{
 	union {
-		struct { T x, y, z; };
-		T  m[3];
-		struct { kVec2T<T> xy; T _end; };
-		struct { T _beg; kVec2T<T> yz; };
+		struct
+		{
+			T x, y, z;
+		};
+		T m[3];
+		struct
+		{
+			kVec2T<T> xy;
+			T		  _end;
+		};
+		struct
+		{
+			T		  _beg;
+			kVec2T<T> yz;
+		};
 	};
 
-	constexpr kVec3T(): x(0), y(0), z(0) {}
-	explicit constexpr kVec3T(T a): x(a), y(a), z(a) {}
-	explicit constexpr kVec3T(T a, T b, T c) : x(a), y(b), z(c) {}
-	explicit constexpr kVec3T(kVec2T<T> ab, T c) : x(ab.x), y(ab.y), z(c) {}
-	explicit constexpr kVec3T(T a, kVec2T<T> cd) : x(a), y(cd.x), z(cd.y) {}
+	constexpr kVec3T() : x(0), y(0), z(0)
+	{}
+	explicit constexpr kVec3T(T a) : x(a), y(a), z(a)
+	{}
+	explicit constexpr kVec3T(T a, T b, T c) : x(a), y(b), z(c)
+	{}
+	explicit constexpr kVec3T(kVec2T<T> ab, T c) : x(ab.x), y(ab.y), z(c)
+	{}
+	explicit constexpr kVec3T(T a, kVec2T<T> cd) : x(a), y(cd.x), z(cd.y)
+	{}
 };
 
-template <typename T>
-struct kVec4T {
+template <typename T> struct kVec4T
+{
 	union {
-		struct { T x, y, z, w; };
-		T  m[4];
-		struct { kVec2T<T> xy; kVec2T<T> zw; };
-		struct { kVec3T<T> xyz; T _end; };
-		struct { kVec3T<T> _beg; kVec3T<T> yzw; };
+		struct
+		{
+			T x, y, z, w;
+		};
+		T m[4];
+		struct
+		{
+			kVec2T<T> xy;
+			kVec2T<T> zw;
+		};
+		struct
+		{
+			kVec3T<T> xyz;
+			T		  _end;
+		};
+		struct
+		{
+			kVec3T<T> _beg;
+			kVec3T<T> yzw;
+		};
 	};
 
-	constexpr kVec4T(): x(0), y(0), z(0), w(0) {}
-	explicit constexpr kVec4T(T a): x(a), y(a), z(a), w(a) {}
-	explicit constexpr kVec4T(T a, T b, T c, T d) : x(a), y(b), z(c), w(d) {}
-	explicit constexpr kVec4T(kVec2T<T> ab, kVec2T<T> cd) : x(ab.x), y(ab.y), z(cd.x), w(cd.y) {}
-	explicit constexpr kVec4T(kVec2T<T> ab, T c, T d) : x(ab.x), y(ab.y), z(c), w(d) {}
-	explicit constexpr kVec4T(kVec3T<T> abc, T d) : x(abc.x), y(abc.y), z(abc.z), w(d) {}
-	explicit constexpr kVec4T(T a, kVec3T<T> bcd) : x(a), y(bcd.x), z(bcd.y), w(bcd.z) {}
+	constexpr kVec4T() : x(0), y(0), z(0), w(0)
+	{}
+	explicit constexpr kVec4T(T a) : x(a), y(a), z(a), w(a)
+	{}
+	explicit constexpr kVec4T(T a, T b, T c, T d) : x(a), y(b), z(c), w(d)
+	{}
+	explicit constexpr kVec4T(kVec2T<T> ab, kVec2T<T> cd) : x(ab.x), y(ab.y), z(cd.x), w(cd.y)
+	{}
+	explicit constexpr kVec4T(kVec2T<T> ab, T c, T d) : x(ab.x), y(ab.y), z(c), w(d)
+	{}
+	explicit constexpr kVec4T(kVec3T<T> abc, T d) : x(abc.x), y(abc.y), z(abc.z), w(d)
+	{}
+	explicit constexpr kVec4T(T a, kVec3T<T> bcd) : x(a), y(bcd.x), z(bcd.y), w(bcd.z)
+	{}
 };
 
-using kVec2  = kVec2T<float>;
-using kVec3  = kVec3T<float>;
-using kVec4  = kVec4T<float>;
+using kVec2	 = kVec2T<float>;
+using kVec3	 = kVec3T<float>;
+using kVec4	 = kVec4T<float>;
 using kVec2i = kVec2T<int>;
 using kVec3i = kVec3T<int>;
 using kVec4i = kVec4T<int>;
@@ -377,13 +476,17 @@ typedef union kMat2 {
 	float m[4];
 	float m2[2][2];
 
-	inline kMat2() {}
-	explicit inline kMat2(kVec2 a, kVec2 b): rows{ a, b } {}
-	explicit inline kMat2(float a) {
+	inline kMat2()
+	{}
+	explicit inline kMat2(kVec2 a, kVec2 b) : rows{a, b}
+	{}
+	explicit inline kMat2(float a)
+	{
 		rows[0] = kVec2(a, 0);
 		rows[1] = kVec2(0, a);
 	}
-	explicit inline kMat2(float _00, float _01, float _10, float _11) {
+	explicit inline kMat2(float _00, float _01, float _10, float _11)
+	{
 		m2[0][0] = _00;
 		m2[0][1] = _01;
 		m2[1][0] = _10;
@@ -396,9 +499,12 @@ typedef union kMat3 {
 	float m[9];
 	float m2[3][3];
 
-	inline kMat3() {}
-	explicit inline kMat3(kVec3 a, kVec3 b, kVec3 c): rows{ a, b, c } {}
-	explicit inline kMat3(float a) {
+	inline kMat3()
+	{}
+	explicit inline kMat3(kVec3 a, kVec3 b, kVec3 c) : rows{a, b, c}
+	{}
+	explicit inline kMat3(float a)
+	{
 		rows[0] = kVec3(a, 0, 0);
 		rows[1] = kVec3(0, a, 0);
 		rows[2] = kVec3(0, 0, a);
@@ -410,9 +516,12 @@ typedef union kMat4 {
 	float m[16];
 	float m2[4][4];
 
-	inline kMat4() {}
-	explicit inline kMat4(kVec4 a, kVec4 b, kVec4 c, kVec4 d): rows{ a, b, c, d } {}
-	explicit inline kMat4(float a) {
+	inline kMat4()
+	{}
+	explicit inline kMat4(kVec4 a, kVec4 b, kVec4 c, kVec4 d) : rows{a, b, c, d}
+	{}
+	explicit inline kMat4(float a)
+	{
 		rows[0] = kVec4(a, 0, 0, 0);
 		rows[1] = kVec4(0, a, 0, 0);
 		rows[2] = kVec4(0, 0, a, 0);
@@ -421,17 +530,23 @@ typedef union kMat4 {
 } kMat4;
 
 typedef union kQuat {
-	struct { float x, y, z, w; };
-	kVec4  vector;
+	struct
+	{
+		float x, y, z, w;
+	};
+	kVec4 vector;
 
-	kQuat(): x(0), y(0), z(0), w(0) {}
-	kQuat(kVec4 v) {
+	kQuat() : x(0), y(0), z(0), w(0)
+	{}
+	kQuat(kVec4 v)
+	{
 		x = v.x;
 		y = v.y;
 		z = v.z;
 		w = v.w;
 	}
-	explicit kQuat(float b, float c, float d, float a) {
+	explicit kQuat(float b, float c, float d, float a)
+	{
 		x = b;
 		y = c;
 		z = d;
@@ -443,82 +558,161 @@ typedef union kQuat {
 //
 //
 
-template <typename Item>
-struct kSlice {
-	imem    count;
-	Item *  data;
+template <typename Item> struct kSlice
+{
+	imem  count;
+	Item *data;
 
-	inline kSlice() :count(0), data(nullptr) {}
-	inline kSlice(const Item *p, imem n) : count(n), data((Item *)p) {}
-	template <imem _Count> constexpr kSlice(const Item(&a)[_Count]) : count(_Count), data((Item *)a) {}
-	inline Item &operator[](imem index) const { kAssert(index < count); return data[index]; }
-	inline Item *begin() { return data; }
-	inline Item *end() { return data + count; }
-	inline const Item *begin() const { return data; }
-	inline const Item *end() const { return data + count; }
+	inline kSlice() : count(0), data(nullptr)
+	{}
+	inline kSlice(const Item *p, imem n) : count(n), data((Item *)p)
+	{}
+	template <imem _Count> constexpr kSlice(const Item (&a)[_Count]) : count(_Count), data((Item *)a)
+	{}
+	inline Item &operator[](imem index) const
+	{
+		kAssert(index < count);
+		return data[index];
+	}
+	inline Item *begin()
+	{
+		return data;
+	}
+	inline Item *end()
+	{
+		return data + count;
+	}
+	inline const Item *begin() const
+	{
+		return data;
+	}
+	inline const Item *end() const
+	{
+		return data + count;
+	}
 
-	Item &First(void) { kAssert(count); return data[0]; }
-	Item &Last(void)  { kAssert(count); return data[count - 1]; }
-	const Item &First(void) const { kAssert(count); return data[0]; }
-	const Item &Last(void)  const { kAssert(count); return data[count - 1]; }
+	Item &First(void)
+	{
+		kAssert(count);
+		return data[0];
+	}
+	Item &Last(void)
+	{
+		kAssert(count);
+		return data[count - 1];
+	}
+	const Item &First(void) const
+	{
+		kAssert(count);
+		return data[0];
+	}
+	const Item &Last(void) const
+	{
+		kAssert(count);
+		return data[count - 1];
+	}
 };
 
-#define kArrFmt                  "{ %zd, %p }"
-#define kArrArg(x)               ((x).count), ((x).data)
-#define kArrSizeInBytes(arr)     ((arr).count * sizeof(*((arr).data)))
+#define kArrFmt "{ %zd, %p }"
+#define kArrArg(x) ((x).count), ((x).data)
+#define kArrSizeInBytes(arr) ((arr).count * sizeof(*((arr).data)))
 
 //
 //
 //
 
-template <typename T>
-struct kHandle {
-	void *ptr;
+template <typename T> struct kHandle
+{
+	T *resource;
 
-	kHandle(): ptr(0) {}
+	kHandle() : resource(0)
+	{}
 
-	kHandle(void *p) {
-		ptr = p;
+	kHandle(void *p)
+	{
+		resource = (T *)p;
 	}
 
-	kHandle(nullptr_t) {
-		ptr = 0;
+	kHandle(nullptr_t)
+	{
+		resource = 0;
 	}
 
-	operator bool() {
-		return ptr != 0;
+	operator bool()
+	{
+		return resource != 0;
 	}
 };
 
+template <typename T> bool operator==(kHandle<T> a, kHandle<T> b)
+{
+	return a.resource == b.resource;
+}
+
+template <typename T> bool operator!=(kHandle<T> a, kHandle<T> b)
+{
+	return a.resource != b.resource;
+}
+
 //
 //
 //
 
-struct kString {
+struct kString
+{
 	imem count;
-	u8 * data;
+	u8	*data;
 
-	kString() : count(0), data(0) {}
-	kString(kSlice<u8> av): count(av.count), data(av.data) {}
-	kString(kSlice<char> av): count(av.count), data((u8 *)av.data) {}
-	template <imem _Length>
-	constexpr kString(const char(&a)[_Length]) : count(_Length - 1), data((u8 *)a) {}
-	kString(const u8 *_Data, imem _Length) : count(_Length), data((u8 *)_Data) {}
-	kString(const char *_Data, imem _Length) : count(_Length), data((u8 *)_Data) {}
-	const u8 &operator[](const imem index) const { kAssert(index < count); return data[index]; }
-	u8 &operator[](const imem index) { kAssert(index < count); return data[index]; }
-	inline u8 *begin() { return data; }
-	inline u8 *end() { return data + count; }
-	inline const u8 *begin() const { return data; }
-	inline const u8 *end() const { return data + count; }
-	operator kSlice<u8>() { return kSlice<u8>(data, count); }
+	kString() : count(0), data(0)
+	{}
+	kString(kSlice<u8> av) : count(av.count), data(av.data)
+	{}
+	kString(kSlice<char> av) : count(av.count), data((u8 *)av.data)
+	{}
+	template <imem _Length> constexpr kString(const char (&a)[_Length]) : count(_Length - 1), data((u8 *)a)
+	{}
+	kString(const u8 *_Data, imem _Length) : count(_Length), data((u8 *)_Data)
+	{}
+	kString(const char *_Data, imem _Length) : count(_Length), data((u8 *)_Data)
+	{}
+	const u8 &operator[](const imem index) const
+	{
+		kAssert(index < count);
+		return data[index];
+	}
+	u8 &operator[](const imem index)
+	{
+		kAssert(index < count);
+		return data[index];
+	}
+	inline u8 *begin()
+	{
+		return data;
+	}
+	inline u8 *end()
+	{
+		return data + count;
+	}
+	inline const u8 *begin() const
+	{
+		return data;
+	}
+	inline const u8 *end() const
+	{
+		return data + count;
+	}
+	operator kSlice<u8>()
+	{
+		return kSlice<u8>(data, count);
+	}
 };
 
 //
 //
 //
 
-typedef struct kRandomSource {
+typedef struct kRandomSource
+{
 	u64 state;
 	u64 inc;
 } kRandomSource;
@@ -527,20 +721,23 @@ typedef struct kRandomSource {
 //
 //
 
-typedef enum kAllocatorMode {
+typedef enum kAllocatorMode
+{
 	kAllocatorMode_Alloc,
 	kAllocatorMode_Realloc,
 	kAllocatorMode_Free,
 } kAllocatorMode;
 
-typedef void *(*kAllocatorProc)(kAllocatorMode, void *, umem, umem , void *);
+typedef void *(*kAllocatorProc)(kAllocatorMode, void *, umem, umem, void *);
 
-typedef struct kAllocator {
+typedef struct kAllocator
+{
 	kAllocatorProc proc;
-	void *         data;
+	void		  *data;
 } kAllocator;
 
-enum kArenaFlags {
+enum kArenaFlags
+{
 	kArena_Sync = 0x1,
 	kArena_Zero = 0x2
 };
@@ -549,25 +746,31 @@ enum kArenaFlags {
 //
 //
 
-typedef struct kAtomic { i32 volatile value; } kAtomic;
+typedef struct kAtomic
+{
+	i32 volatile value;
+} kAtomic;
 
-typedef struct kArena {
-	u8 *    mem;
-	umem    pos;
-	umem    cap;
-	u32     alignment;
-	u32     flags;
+typedef struct kArena
+{
+	u8	   *mem;
+	umem	pos;
+	umem	cap;
+	u32		alignment;
+	u32		flags;
 	kAtomic lock;
 } kArena;
 
-typedef struct kTempBlock {
+typedef struct kTempBlock
+{
 	kArena *arena;
-	umem    checkpoint;
+	umem	checkpoint;
 } kTempBlock;
 
-typedef struct kArenaSpec {
-	u32  flags;
-	u32  alignment;
+typedef struct kArenaSpec
+{
+	u32	 flags;
+	u32	 alignment;
 	umem capacity;
 } kArenaSpec;
 
@@ -575,8 +778,13 @@ typedef struct kArenaSpec {
 //
 //
 
-typedef enum  kLogLevel { kLogLevel_Verbose = 0, kLogLevel_Warning, kLogLevel_Error } kLogLevel;
-typedef void(*kLogProc)(void *, kLogLevel, const u8 *, imem);
+typedef enum kLogLevel
+{
+	kLogLevel_Verbose = 0,
+	kLogLevel_Warning,
+	kLogLevel_Error
+} kLogLevel;
+typedef void (*kLogProc)(void *, kLogLevel, const u8 *, imem);
 
 typedef void (*kFatalErrorProc)(const char *message);
 typedef void (*kHandleAssertionProc)(const char *file, int line, const char *proc, const char *string);
@@ -585,111 +793,115 @@ typedef void (*kHandleAssertionProc)(const char *file, int line, const char *pro
 //
 //
 
-typedef struct kLogger {
+typedef struct kLogger
+{
 	kLogProc  proc;
 	kLogLevel level;
-	void *    data;
+	void	 *data;
 } kLogger;
 
 //
 //
 //
 
-inproc void *kFallbackAllocatorProc(kAllocatorMode mode, void *ptr, umem prev, umem nsize, void* data) { return ptr; }
+inproc void *kFallbackAllocatorProc(kAllocatorMode mode, void *ptr, umem prev, umem nsize, void *data)
+{
+	return ptr;
+}
 
-static const kAllocator   kFallbackAllocator = { kFallbackAllocatorProc };
-static const kArena       kFallbackArena     = { 0, 0, 0, 0, 0, 0 };
+static const kAllocator kFallbackAllocator = {kFallbackAllocatorProc};
+static const kArena		kFallbackArena	   = {0, 0, 0, 0, 0, 0};
 
 //
 //
 //
 
-u8   *     kAlignPointer(u8 *location, umem alignment);
+u8	   *kAlignPointer(u8 *location, umem alignment);
 
-void *     kAlloc(kAllocator *allocator, umem size);
-void *     kRealloc(kAllocator *allocator, void *ptr, umem prev, umem size);
-void       kFree(kAllocator *allocator, void *ptr, umem size);
+void   *kAlloc(kAllocator *allocator, umem size);
+void   *kRealloc(kAllocator *allocator, void *ptr, umem prev, umem size);
+void	kFree(kAllocator *allocator, void *ptr, umem size);
 
-void       kArenaAllocator(kArena *arena, kAllocator *allocator);
-kArena *   kAllocArena(kArenaSpec *spec, kAllocator *allocator);
-void       kFreeArena(kArena *arena, kAllocator *allocator);
-void       kResetArena(kArena *arena);
+void	kArenaAllocator(kArena *arena, kAllocator *allocator);
+kArena *kAllocArena(kArenaSpec *spec, kAllocator *allocator);
+void	kFreeArena(kArena *arena, kAllocator *allocator);
+void	kResetArena(kArena *arena);
 
-void       kLockArena(kArena *arena);
-void       kUnlockArena(kArena *arena);
+void	kLockArena(kArena *arena);
+void	kUnlockArena(kArena *arena);
 
-bool       kSetPosition(kArena *arena, umem pos, uint flags);
-bool       kAlignPosition(kArena *arena, umem alignment, uint flags);
+bool	kSetPosition(kArena *arena, umem pos, uint flags);
+bool	kAlignPosition(kArena *arena, umem alignment, uint flags);
 
-void *     kPushSize(kArena *arena, umem size, uint flags);
-void *     kPushSizeAligned(kArena *arena, umem size, u32 alignment, uint flags);
+void   *kPushSize(kArena *arena, umem size, uint flags);
+void   *kPushSizeAligned(kArena *arena, umem size, u32 alignment, uint flags);
 
-#define    kPushType(arena, type, flags)         (type *)kPushSizeAligned(arena, sizeof(type), alignof(type), flags)
-#define    kPushArray(arena, type, count, flags) (type *)kPushSizeAligned(arena, sizeof(type) * (count), alignof(type), flags)
+#define kPushType(arena, type, flags) (type *)kPushSizeAligned(arena, sizeof(type), alignof(type), flags)
+#define kPushArray(arena, type, count, flags)                                                                          \
+	(type *)kPushSizeAligned(arena, sizeof(type) * (count), alignof(type), flags)
 
-void       kPopSize(kArena *arena, umem size, uint flags);
+void	   kPopSize(kArena *arena, umem size, uint flags);
 
 kTempBlock kBeginTemporaryMemory(kArena *arena, uint flags);
-void       kEndTemporaryMemory(kTempBlock *temp, uint flags);
+void	   kEndTemporaryMemory(kTempBlock *temp, uint flags);
 
 //
 //
 //
 
-u32        kRandom(kRandomSource *random);
-u32        kRandomBound(kRandomSource *random, u32 bound);
-u32        kRandomRange(kRandomSource *random, u32 min, u32 max);
-float      kRandomFloat01(kRandomSource *random);
-float      kRandomFloatBound(kRandomSource *random, float bound);
-float      kRandomFloatRange(kRandomSource *random, float min, float max);
-float      kRandomFloat(kRandomSource *random);
-void       kRandomSourceSeed(kRandomSource *random, u64 state, u64 seq);
+u32	  kRandom(kRandomSource *random);
+u32	  kRandomBound(kRandomSource *random, u32 bound);
+u32	  kRandomRange(kRandomSource *random, u32 min, u32 max);
+float kRandomFloat01(kRandomSource *random);
+float kRandomFloatBound(kRandomSource *random, float bound);
+float kRandomFloatRange(kRandomSource *random, float min, float max);
+float kRandomFloat(kRandomSource *random);
+void  kRandomSourceSeed(kRandomSource *random, u64 state, u64 seq);
 
 //
 //
 //
 
-int        kCodepointToUTF8(u32 codepoint, u8 buffer[4]);
-int        kUTF8ToCodepoint(const u8 *start, u8 *end, u32 *codepoint);
+int		kCodepointToUTF8(u32 codepoint, u8 buffer[4]);
+int		kUTF8ToCodepoint(const u8 *start, u8 *end, u32 *codepoint);
 
-kString    kCopyString(kString string, kAllocator *allocator);
-char *     kStringToCstr(kString string, kAllocator *allocator);
+kString kCopyString(kString string, kAllocator *allocator);
+char   *kStringToCstr(kString string, kAllocator *allocator);
 
-bool       kIsWhitespace(u32 ch);
-kString    kTrimString(kString str);
-kString    kSubString(const kString str, imem index, imem count);
-kString    kSubLeft(const kString str, imem count);
-kString    kSubRight(const kString str, imem index);
+bool	kIsWhitespace(u32 ch);
+kString kTrimString(kString str);
+kString kSubString(const kString str, imem index, imem count);
+kString kSubLeft(const kString str, imem count);
+kString kSubRight(const kString str, imem index);
 
-bool       kStringEquals(kString a, kString b);
-bool       kStringStartsWith(kString str, kString sub);
-bool       kStringEndsWith(kString str, kString sub);
+bool	kStringEquals(kString a, kString b);
+bool	kStringStartsWith(kString str, kString sub);
+bool	kStringEndsWith(kString str, kString sub);
 
-kString    kRemovePrefix(kString str, imem count);
-kString    kRemoveSuffix(kString str, imem count);
+kString kRemovePrefix(kString str, imem count);
+kString kRemoveSuffix(kString str, imem count);
 
-imem       kFindString(kString str, const kString key, imem pos);
-imem       kFindChar(kString str, u32 key, imem pos);
-imem       kInvFindString(kString str, kString key, imem pos);
-imem       kInvFindChar(kString str, u32 key, imem pos);
+imem	kFindString(kString str, const kString key, imem pos);
+imem	kFindChar(kString str, u32 key, imem pos);
+imem	kInvFindString(kString str, kString key, imem pos);
+imem	kInvFindChar(kString str, u32 key, imem pos);
 
-bool       kSplitString(kString str, kString substr, kString *left, kString *right);
+bool	kSplitString(kString str, kString substr, kString *left, kString *right);
 
-bool       operator==(const kString a, const kString b);
-bool       operator!=(const kString a, const kString b);
-
+bool	operator==(const kString a, const kString b);
+bool	operator!=(const kString a, const kString b);
 
 //
 //
 //
 
-int        kAtomicLoad(kAtomic *atomic);
-void       kAtomicStore(kAtomic *atomic, int value);
-int        kAtomicInc(kAtomic *dst);
-int        kAtomicDec(kAtomic *dst);
-int        kAtomicAdd(kAtomic *dst, int val);
-int        kAtomicCmpExg(kAtomic *dst, int exchange, int compare);
-void *     kAtomicCmpExgPtr(void *volatile *dst, void *exchange, void *compare);
-int        kAtomicExg(kAtomic *dst, int val);
-void       kAtomicLock(kAtomic *lock);
-void       kAtomicUnlock(kAtomic *lock);
+int	  kAtomicLoad(kAtomic *atomic);
+void  kAtomicStore(kAtomic *atomic, int value);
+int	  kAtomicInc(kAtomic *dst);
+int	  kAtomicDec(kAtomic *dst);
+int	  kAtomicAdd(kAtomic *dst, int val);
+int	  kAtomicCmpExg(kAtomic *dst, int exchange, int compare);
+void *kAtomicCmpExgPtr(void *volatile *dst, void *exchange, void *compare);
+int	  kAtomicExg(kAtomic *dst, int val);
+void  kAtomicLock(kAtomic *lock);
+void  kAtomicUnlock(kAtomic *lock);
