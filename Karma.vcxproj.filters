@@ -62,6 +62,9 @@
     <ClCompile Include="Code\kRender.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Code\kRenderApi.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="Code\kVisualizer.natvis" />

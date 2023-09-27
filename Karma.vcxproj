@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClCompile Include="Code\kContext.cpp" />
     <ClCompile Include="Code\kRender.cpp" />
+    <ClCompile Include="Code\kRenderApi.cpp" />
     <ClCompile Include="Code\Main.cpp" />
     <ClInclude Include="Code\kArray.h" />
     <ClInclude Include="Code\kMedia.h" />

@@ -1789,9 +1789,13 @@ static int kWinRunEventLoop(void)
 	return status;
 }
 
+extern void kCreateRenderBackend(kRenderBackend *backend, kSwapChainBackend *swap_chain);
+
 int kEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user)
 {
 	memset(&media, 0, sizeof(media));
+
+	kCreateRenderBackend(&media.render_backend, &media.swap_chain);
 
 	kSetThreadAttribute(spec.thread.attribute);
 
