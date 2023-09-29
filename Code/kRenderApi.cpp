@@ -51,6 +51,8 @@ static void kBackendTextureSizeFallback(kTexture, u32 *, u32 *)
 {}
 static void kBackendResizeTextureFallback(kTexture, u32, u32)
 {}
+static void kBackendExecuteRenderCommandsFallback(const kRenderData2D &)
+{}
 static void kBackendDestroyFallback(void)
 {}
 
@@ -608,7 +610,7 @@ static void kD3D11_ResizeTexture(kTexture texture, u32 w, u32 h)
 //
 //
 
-static void kD3D11_ExecuteRenderCommands(const kRenderData2D &data)
+static void kD3D11_ExecuteCommands(const kRenderData2D &data)
 {
 	if (data.vertices.count == 0 || data.indices.count == 0)
 		return;
@@ -903,6 +905,7 @@ bool kD3D11_CreateRenderBackend(kRenderBackend *backend, kSwapChainBackend *swap
 	backend->destroy_texture   = kD3D11_DestroyTexture;
 	backend->texture_size	   = kD3D11_GetTextureSize;
 	backend->resize_texture	   = kD3D11_ResizeTexture;
+	backend->execute_commands  = kD3D11_ExecuteCommands;
 	backend->destroy		   = kD3D11_DestroyGraphicsDevice;
 
 	swap_chain->create		   = kD3D11_CreateSwapChain;
@@ -937,5 +940,6 @@ void kCreateRenderBackend(kRenderBackend *backend, kSwapChainBackend *swap_chain
 	backend->destroy_texture   = kBackendDestroyTextureFallback;
 	backend->texture_size	   = kBackendTextureSizeFallback;
 	backend->resize_texture	   = kBackendResizeTextureFallback;
+	backend->execute_commands  = kBackendExecuteRenderCommandsFallback;
 	backend->destroy		   = kBackendDestroyFallback;
 }

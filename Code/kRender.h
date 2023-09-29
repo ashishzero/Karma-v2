@@ -36,7 +36,7 @@ static constexpr kRenderSpec kDefaultRenderSpec = {.thickness  = 1,
 void						 kCreateRenderContext(kRenderBackend backend, const kRenderSpec &spec = kDefaultRenderSpec);
 void						 kDestroyRenderContext(void);
 
-void						 kFlushFrame(void);
+void						 kCommitFrame(void);
 void						 kGetRenderData2D(kRenderData2D *data);
 
 void kBeginRenderPass(kTexture texture, kTexture depth_stencil = nullptr, uint flags = kRenderPass_ClearColor,

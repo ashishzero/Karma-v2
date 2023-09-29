@@ -269,6 +269,7 @@ typedef void (*kRenderBackendDestroyTextureProc)(kTexture);
 typedef void (*kRenderBackendTextureSizeProc)(kTexture, u32 *, u32 *);
 typedef void (*kRenderBackendResizeTextureProc)(kTexture, u32, u32);
 typedef void (*kRenderBackendDestroyProc)(void);
+typedef void (*kRenderBackendExecuteCommandsProc)(const kRenderData2D &);
 
 typedef struct kRenderBackend
 {
@@ -278,5 +279,6 @@ typedef struct kRenderBackend
 	kRenderBackendDestroyTextureProc	 destroy_texture;
 	kRenderBackendTextureSizeProc		 texture_size;
 	kRenderBackendResizeTextureProc		 resize_texture;
+	kRenderBackendExecuteCommandsProc	 execute_commands;
 	kRenderBackendDestroyProc			 destroy;
 } kRenderBackend;

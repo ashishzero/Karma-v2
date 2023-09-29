@@ -122,6 +122,22 @@ static float kCosLookup(float turns)
 	return kLerp(Cosines[a], Cosines[b], lookup - a);
 }
 
+static void kResetFrame(void)
+{
+	memset(&render.context2d.state, 0, sizeof(render.context2d.state));
+
+	render.context2d.vertices.count	  = 0;
+	render.context2d.indices.count	  = 0;
+	render.context2d.params.count	  = 0;
+	render.context2d.commands.count	  = 0;
+	render.context2d.passes.count	  = 0;
+	render.context2d.rects.count	  = 1;
+	render.context2d.transforms.count = 1;
+
+	for (u32 i = 0; i < K_MAX_TEXTURE_SLOTS; ++i)
+		render.context2d.textures[i].count = 1;
+}
+
 //
 //
 //
@@ -171,6 +187,8 @@ void kCreateRenderContext(kRenderBackend backend, const kRenderSpec &spec)
 		render.context2d.textures[i].Reserve(spec.textures);
 
 	render.context2d.builder.Reserve(spec.builder);
+
+	kResetFrame();
 }
 
 void kDestroyRenderContext(void)
@@ -194,20 +212,13 @@ void kDestroyRenderContext(void)
 	memset(&render, 0, sizeof(render));
 }
 
-void kFlushFrame(void)
+void kCommitFrame(void)
 {
-	memset(&render.context2d.state, 0, sizeof(render.context2d.state));
+	kRenderData2D data;
+	kGetRenderData2D(&data);
+	render.backend.execute_commands(data);
 
-	render.context2d.vertices.count	  = 0;
-	render.context2d.indices.count	  = 0;
-	render.context2d.params.count	  = 0;
-	render.context2d.commands.count	  = 0;
-	render.context2d.passes.count	  = 0;
-	render.context2d.rects.count	  = 1;
-	render.context2d.transforms.count = 1;
-
-	for (u32 i = 0; i < K_MAX_TEXTURE_SLOTS; ++i)
-		render.context2d.textures[i].count = 1;
+	kResetFrame();
 }
 
 void kGetRenderData2D(kRenderData2D *data)
