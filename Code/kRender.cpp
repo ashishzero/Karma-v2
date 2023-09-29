@@ -8,20 +8,28 @@
 //
 //
 
+typedef struct kRenderShader2D
+{
+	u8			   modes[kRenderMode2D_Count];
+	kBlendSpec	   blend;
+	kTextureFilter filter;
+} kRenderShader2D;
+
 typedef struct kRenderState2D
 {
-	i32			   vertex;
-	u32			   index;
-	u32			   count;
-	u32			   next;
-	u32			   param;
-	u32			   command;
-	u32			   pass;
-	kTexture	   render_target;
-	kTexture	   depth_stenil;
-	kViewport	   viewport;
-	u32			   flags;
-	kRenderClear2D clear;
+	i32				vertex;
+	u32				index;
+	u32				count;
+	u32				next;
+	u32				param;
+	u32				command;
+	u32				pass;
+	kTexture		render_target;
+	kTexture		depth_stenil;
+	kViewport		viewport;
+	u32				flags;
+	kRenderClear2D	clear;
+	kRenderShader2D shader;
 } kRenderState2D;
 
 typedef struct kRenderContext2D
@@ -38,7 +46,6 @@ typedef struct kRenderContext2D
 	kArray<kRect>			 rects;
 	kArray<kMat4>			 transforms;
 	kArray<kTexture>		 textures[K_MAX_TEXTURE_SLOTS];
-	kArray<kShader>			 shaders;
 
 	kArray<kVec2>			 builder;
 } kRenderContext2D;
@@ -163,7 +170,6 @@ void kCreateRenderContext(kRenderBackend backend, const kRenderSpec &spec)
 	for (u32 i = 0; i < K_MAX_TEXTURE_SLOTS; ++i)
 		render.context2d.textures[i].Reserve(spec.textures);
 
-	render.context2d.shaders.Reserve(spec.shaders);
 	render.context2d.builder.Reserve(spec.builder);
 }
 
@@ -183,7 +189,6 @@ void kDestroyRenderContext(void)
 	for (u32 i = 0; i < K_MAX_TEXTURE_SLOTS; ++i)
 		kFree(&render.context2d.textures[i]);
 
-	kFree(&render.context2d.shaders);
 	kFree(&render.context2d.builder);
 
 	memset(&render, 0, sizeof(render));
@@ -200,7 +205,6 @@ void kFlushFrame(void)
 	render.context2d.passes.count	  = 0;
 	render.context2d.rects.count	  = 1;
 	render.context2d.transforms.count = 1;
-	render.context2d.shaders.count	  = 1;
 
 	for (u32 i = 0; i < K_MAX_TEXTURE_SLOTS; ++i)
 		render.context2d.textures[i].count = 1;
@@ -317,38 +321,65 @@ void kFlushRenderCommand(void)
 
 	kRenderCommand2D *command = ctx->commands.Add();
 
-	command->shader			  = ctx->shaders.Last();
-	command->params.data	  = ctx->params.data + ctx->state.count;
-	command->params.count	  = ctx->params.count - ctx->state.param;
-	ctx->state.param		  = (u32)ctx->params.count;
+	memcpy(command->modes, ctx->state.shader.modes, sizeof(ctx->state.shader.modes));
+
+	command->blend		  = ctx->state.shader.blend;
+	command->params.data  = ctx->params.data + ctx->state.count;
+	command->params.count = ctx->params.count - ctx->state.param;
+	ctx->state.param	  = (u32)ctx->params.count;
 }
 
-void kSetShader(kShader shader)
+void kSetRenderMode(kRenderMode2D mode, u8 value)
 {
-	kRenderContext2D *ctx  = kGetRenderContext2D();
-	kShader			 *prev = &ctx->shaders.Last();
-	if (*prev != shader)
-	{
-		kFlushRenderCommand();
-	}
-	*prev = shader;
+	kRenderContext2D *ctx = kGetRenderContext2D();
+
+	if (ctx->state.shader.modes[mode] == value)
+		return;
+
+	kFlushRenderCommand();
+
+	ctx->state.shader.modes[mode] = value;
 }
 
-void kPushShader(kShader shader)
+void kBlendFunc(const kBlendSpec &spec)
 {
-	kRenderContext2D *ctx  = kGetRenderContext2D();
-	kShader			  last = ctx->shaders.Last();
-	ctx->shaders.Add(last);
-	kSetShader(last);
+	kRenderContext2D *ctx = kGetRenderContext2D();
+
+	if (memcmp(&spec, &ctx->state.shader.blend, sizeof(spec)) == 0)
+		return;
+
+	kFlushRenderCommand();
+
+	ctx->state.shader.blend = spec;
 }
 
-void kPopShader(void)
+void kBlendFunc(kBlend src_color, kBlend dst_color, kBlendOp op_color, kBlend src_alpha, kBlend dst_alpha,
+				kBlendOp op_alpha)
 {
-	kRenderContext2D *ctx	= kGetRenderContext2D();
-	imem			  count = ctx->shaders.count;
-	kAssert(count > 1);
-	kSetShader(ctx->shaders.data[count - 2]);
-	ctx->shaders.Pop();
+	kBlendSpec spec;
+	spec.color.src	= src_color;
+	spec.color.dest = dst_color;
+	spec.color.op	= op_color;
+	spec.alpha.src	= src_alpha;
+	spec.alpha.dest = dst_alpha;
+	spec.alpha.op	= op_alpha;
+	kBlendFunc(spec);
+}
+
+void kBlendFunc(kBlend src, kBlend dst, kBlendOp op)
+{
+	kBlendFunc(src, dst, op, src, dst, op);
+}
+
+void kSetTextureFilter(kTextureFilter filter)
+{
+	kRenderContext2D *ctx = kGetRenderContext2D();
+	if (filter == ctx->state.shader.filter)
+		return;
+
+	kFlushRenderCommand();
+
+	ctx->state.shader.filter = filter;
 }
 
 void kFlushRenderParam(void)

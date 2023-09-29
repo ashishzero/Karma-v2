@@ -7,11 +7,9 @@
 
 struct kPlatformWindow;
 struct kPlatformSwapChain;
-struct kPlatformShader;
 struct kPlatformTexture;
 
 using kSwapChain = kHandle<kPlatformSwapChain>;
-using kShader	 = kHandle<kPlatformShader>;
 using kTexture	 = kHandle<kPlatformTexture>;
 
 //
@@ -70,9 +68,63 @@ typedef struct kRenderParam2D
 	u32		 count;
 } kRenderParam2D;
 
+typedef enum kRenderMode2D
+{
+	kRenderMode2D_Blend,
+	kRenderMode2D_Depth,
+	kRenderMode2D_Count,
+} kRenderMode2D;
+
+enum kBlend
+{
+	PL_Blend_Zero,
+	PL_Blend_One,
+	PL_Blend_SrcColor,
+	PL_Blend_InvSrcColor,
+	PL_Blend_SrcAlpha,
+	PL_Blend_InvSrcAlpha,
+	PL_Blend_DestAlpha,
+	PL_Blend_InvDestAlpha,
+	PL_Blend_DestColor,
+	PL_Blend_InvDestColor,
+	PL_Blend_Count
+};
+
+enum kBlendOp
+{
+	PL_BlendOp_Add,
+	PL_BlendOp_Subtract,
+	PL_BlendOp_RevSubtract,
+	PL_BlendOp_Min,
+	PL_BlendOp_Max,
+	PL_BlendOp_Count
+};
+
+struct kBlendFunction
+{
+	kBlend	 src;
+	kBlend	 dest;
+	kBlendOp op;
+};
+
+typedef struct kBlendSpec
+{
+	kBlendFunction color;
+	kBlendFunction alpha;
+} kBlendSpec;
+
+typedef enum kTextureFilter
+{
+	kTextureFilter_Linear,
+	kTextureFilter_Point,
+	kTextureFilter_Count
+} kTextureFilter;
+
 typedef struct kRenderCommand2D
 {
-	kShader				   shader;
+	u8					   modes[kRenderMode2D_Count];
+	kBlendSpec			   blend;
+	kTextureFilter		   filter;
 	kSlice<kRenderParam2D> params;
 } kRenderCommand2D;
 
@@ -80,7 +132,7 @@ enum kRenderPassFlags
 {
 	kRenderPass_ClearColor	 = 0x1,
 	kRenderPass_ClearDepth	 = 0x2,
-	kRenderPass_ClearStencil = 0x4
+	kRenderPass_ClearStencil = 0x4,
 };
 
 typedef struct kRenderClear2D

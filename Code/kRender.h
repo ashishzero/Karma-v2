@@ -19,7 +19,6 @@ typedef struct kRenderSpec
 	u32	  rects;
 	u32	  transforms;
 	u32	  textures;
-	u32	  shaders;
 	u32	  builder;
 } kRenderSpec;
 
@@ -32,16 +31,16 @@ static constexpr kRenderSpec kDefaultRenderSpec = {.thickness  = 1,
 												   .rects	   = 256,
 												   .transforms = 256,
 												   .textures   = 256,
-												   .shaders	   = 64,
 												   .builder	   = 16384};
 
-void kCreateRenderContext(kRenderBackend backend, const kRenderSpec &spec = kDefaultRenderSpec);
-void kDestroyRenderContext(void);
+void						 kCreateRenderContext(kRenderBackend backend, const kRenderSpec &spec = kDefaultRenderSpec);
+void						 kDestroyRenderContext(void);
 
-void kFlushFrame(void);
-void kGetRenderData2D(kRenderData2D *data);
+void						 kFlushFrame(void);
+void						 kGetRenderData2D(kRenderData2D *data);
 
-void kBeginRenderPass(kTexture texture, kTexture depth_stencil = nullptr, uint flags = kRenderPass_ClearColor, kVec4 color = kVec4(0), float depth = 1.0f);
+void kBeginRenderPass(kTexture texture, kTexture depth_stencil = nullptr, uint flags = kRenderPass_ClearColor,
+					  kVec4 color = kVec4(0), float depth = 1.0f);
 void kBeginDefaultRenderPass(uint flags = kRenderPass_ClearColor, kVec4 color = kVec4(0), float depth = 1.0f);
 void kEndRenderPass(void);
 
@@ -52,9 +51,13 @@ void kEndCamera(void);
 void kLineThickness(float thickness);
 
 void kFlushRenderCommand(void);
-void kSetShader(kShader shader);
-void kPushShader(kShader shader);
-void kPopShader(void);
+
+void kSetRenderMode(kRenderMode2D mode, u8 value);
+void kBlendFunc(const kBlendSpec &spec);
+void kBlendFunc(kBlend src_color, kBlend dst_color, kBlendOp op_color, kBlend src_alpha, kBlend dst_alpha,
+				kBlendOp op_alpha);
+void kBlendFunc(kBlend src, kBlend dst, kBlendOp op);
+void kSetTextureFilter(kTextureFilter filter);
 
 void kFlushRenderParam(void);
 
