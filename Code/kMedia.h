@@ -448,7 +448,6 @@ void	 kMaximizeWindow(void);
 void	 kRestoreWindow(void);
 void	 kMinimizeWindow(void);
 void	 kCloseWindow(void);
-kTexture kGetWindowRenderTarget(void);
 
 //
 //

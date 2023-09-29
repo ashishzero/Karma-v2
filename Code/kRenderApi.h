@@ -1,6 +1,10 @@
 #pragma once
 #include "kCommon.h"
 
+//
+//
+//
+
 struct kPlatformWindow;
 struct kPlatformSwapChain;
 struct kPlatformShader;
@@ -9,6 +13,103 @@ struct kPlatformTexture;
 using kSwapChain = kHandle<kPlatformSwapChain>;
 using kShader	 = kHandle<kPlatformShader>;
 using kTexture	 = kHandle<kPlatformTexture>;
+
+//
+//
+//
+
+#define K_MAX_TEXTURE_SLOTS 2
+
+typedef struct kVertex2D
+{
+	kVec3 pos;
+	kVec2 tex;
+	kVec4 col;
+} kVertex2D;
+
+typedef u32 kIndex2D;
+
+typedef struct kRect
+{
+	kVec2 min;
+	kVec2 max;
+} kRect;
+
+typedef struct kViewport
+{
+	float x, y;
+	float w, h;
+	float n, f;
+} kViewport;
+
+typedef struct kGlyph
+{
+	kRect rect;
+	kVec2 bearing;
+	kVec2 size;
+	float advance;
+} kGlyph;
+
+typedef struct kFont
+{
+	kTexture texture;
+	u16		*map;
+	kGlyph	*glyphs;
+	kGlyph	*fallback;
+	u32		 largest;
+	u32		 count;
+} kFont;
+
+typedef struct kRenderParam2D
+{
+	kTexture textures[K_MAX_TEXTURE_SLOTS];
+	kMat4	 transform;
+	kRect	 rect;
+	i32		 vertex;
+	u32		 index;
+	u32		 count;
+} kRenderParam2D;
+
+typedef struct kRenderCommand2D
+{
+	kShader				   shader;
+	kSlice<kRenderParam2D> params;
+} kRenderCommand2D;
+
+enum kRenderPassFlags
+{
+	kRenderPass_ClearColor	 = 0x1,
+	kRenderPass_ClearDepth	 = 0x2,
+	kRenderPass_ClearStencil = 0x4
+};
+
+typedef struct kRenderClear2D
+{
+	kVec4 color;
+	float depth;
+	u8	  stencil;
+} kRenderClear2D;
+
+typedef struct kRenderPass2D
+{
+	kTexture				 render_target;
+	kTexture				 depth_stencil;
+	kViewport				 viewport;
+	u32						 flags;
+	kRenderClear2D			 clear;
+	kSlice<kRenderCommand2D> commands;
+} kRenderPass2D;
+
+typedef struct kRenderData2D
+{
+	kSlice<kRenderPass2D> passes;
+	kSlice<kVertex2D>	  vertices;
+	kSlice<kIndex2D>	  indices;
+} kRenderData2D;
+
+//
+//
+//
 
 typedef enum kFormat
 {
@@ -94,22 +195,36 @@ typedef enum kMap
 	kMap_Count
 } kMap;
 
-struct kSwapChainBackend
+typedef kSwapChain (*kSwapChainCreateProc)(void *);
+typedef void (*kSwapChainDestroyProc)(kSwapChain);
+typedef void (*kSwapChainResizeProc)(kSwapChain, uint, uint);
+typedef kTexture (*kSwapChainRenderTargetProc)(kSwapChain);
+typedef void (*kSwapChainPresentProc)(kSwapChain);
+
+typedef struct kSwapChainBackend
 {
-	kSwapChain (*create)(kPlatformWindow *);
-	void (*destroy)(kSwapChain);
-	void (*resize)(kSwapChain, uint, uint);
-	kTexture (*render_target)(kSwapChain);
-	void (*present)(kSwapChain);
-};
+	kSwapChainCreateProc	   create;
+	kSwapChainDestroyProc	   destroy;
+	kSwapChainResizeProc	   resize;
+	kSwapChainRenderTargetProc render_target;
+	kSwapChainPresentProc	   present;
+} kSwapChainBackend;
 
-struct kRenderBackend
+typedef kSwapChain (*kRenderBackendGetWindowSwapChainProc)(void);
+typedef kTexture (*kRenderBackendSwapChainTargetProc)(kSwapChain);
+typedef kTexture (*kRenderBackendCreateTextureProc)(const kTextureSpec &);
+typedef void (*kRenderBackendDestroyTextureProc)(kTexture);
+typedef void (*kRenderBackendTextureSizeProc)(kTexture, u32 *, u32 *);
+typedef void (*kRenderBackendResizeTextureProc)(kTexture, u32, u32);
+typedef void (*kRenderBackendDestroyProc)(void);
+
+typedef struct kRenderBackend
 {
-	kTexture (*swap_chain_target)(void);
-
-	kTexture (*create_texture)(const kTextureSpec &);
-	void (*destroy_texture)(kTexture);
-	void (*texture_size)(kTexture, u32 *, u32 *);
-
-	void (*destroy)(void);
-};
+	kRenderBackendGetWindowSwapChainProc window_swap_chain;
+	kRenderBackendSwapChainTargetProc	 swap_chain_target;
+	kRenderBackendCreateTextureProc		 create_texture;
+	kRenderBackendDestroyTextureProc	 destroy_texture;
+	kRenderBackendTextureSizeProc		 texture_size;
+	kRenderBackendResizeTextureProc		 resize_texture;
+	kRenderBackendDestroyProc			 destroy;
+} kRenderBackend;

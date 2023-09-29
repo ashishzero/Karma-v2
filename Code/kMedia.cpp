@@ -32,7 +32,7 @@ typedef struct kMedia
 	kWindow			  window;
 	kMediaUserEvents  user;
 	kSwapChainBackend swap_chain;
-	kRenderBackend    render_backend;
+	kRenderBackend	  render_backend;
 } kMedia;
 
 static kMedia media;
@@ -481,6 +481,14 @@ void kAddWindowDpiChangedEvent(float yfactor)
 
 #ifndef DWMWA_USE_IMMERSIVE_DARK_MODE
 #define DWMWA_USE_IMMERSIVE_DARK_MODE 20
+#endif
+
+#ifndef DWMWA_WINDOW_CORNER_PREFERENCE
+#define DWMWA_WINDOW_CORNER_PREFERENCE 33
+#define DWMWCP_DEFAULT 0
+#define DWMWCP_DONOTROUND 1
+#define DWMWCP_ROUND 2
+#define DWMWCP_ROUNDSMALL 3
 #endif
 
 #pragma comment(lib, "Avrt.lib")	// AvSetMmThreadCharacteristicsW
@@ -1014,12 +1022,6 @@ void kMinimizeWindow(void)
 void kCloseWindow(void)
 {
 	PostMessageW(media.window.native->wnd, WM_CLOSE, 0, 0);
-}
-
-kTexture kGetWindowRenderTarget(void)
-{
-	kTexture target = media.swap_chain.render_target(media.window.native->swap_chain);
-	return target;
 }
 
 static kKey	 VirtualKeyMap[255];
@@ -1575,6 +1577,8 @@ static void kWinDestroyWindow(void)
 		DestroyWindow(window->wnd);
 		kFree(window, sizeof(*window));
 	}
+
+	media.window.native = nullptr;
 }
 
 static void kWinCreateWindow(const char *mb_title, uint w, uint h, uint flags)
@@ -1656,7 +1660,7 @@ static void kWinCreateWindow(const char *mb_title, uint w, uint h, uint flags)
 	BOOL dark = TRUE;
 	DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &dark, sizeof(dark));
 
-	DWM_WINDOW_CORNER_PREFERENCE corner = DWMWCP_ROUND;
+	LONG corner = DWMWCP_ROUND;
 	DwmSetWindowAttribute(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, &corner, sizeof(corner));
 
 	window->wnd = hwnd;
@@ -1671,12 +1675,7 @@ static void kWinCreateWindow(const char *mb_title, uint w, uint h, uint flags)
 		kToggleWindowFullscreen();
 	}
 
-	window->swap_chain = media.swap_chain.create(media.window.native);
-
-	if (!window->swap_chain)
-	{
-		kWinDestroyWindow();
-	}
+	window->swap_chain = media.swap_chain.create(media.window.native->wnd);
 }
 
 static void kWinInitMediaState(void)
@@ -1789,13 +1788,19 @@ static int kWinRunEventLoop(void)
 	return status;
 }
 
+static kSwapChain kWinGetWindowSwapChain(void) {
+	return media.window.native->swap_chain;
+}
+
 extern void kCreateRenderBackend(kRenderBackend *backend, kSwapChainBackend *swap_chain);
 
-int kEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user)
+int			kEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user)
 {
 	memset(&media, 0, sizeof(media));
 
 	kCreateRenderBackend(&media.render_backend, &media.swap_chain);
+
+	media.render_backend.window_swap_chain = kWinGetWindowSwapChain;
 
 	kSetThreadAttribute(spec.thread.attribute);
 

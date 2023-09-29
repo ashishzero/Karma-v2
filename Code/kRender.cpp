@@ -10,16 +10,18 @@
 
 typedef struct kRenderState2D
 {
-	i32		 vertex;
-	u32		 index;
-	u32		 count;
-	u32		 next;
-	u32		 param;
-	u32		 command;
-	u32		 pass;
-	kTexture target;
-	u32		 flags;
-	kVec4	 color;
+	i32			   vertex;
+	u32			   index;
+	u32			   count;
+	u32			   next;
+	u32			   param;
+	u32			   command;
+	u32			   pass;
+	kTexture	   render_target;
+	kTexture	   depth_stenil;
+	kViewport	   viewport;
+	u32			   flags;
+	kRenderClear2D clear;
 } kRenderState2D;
 
 typedef struct kRenderContext2D
@@ -211,19 +213,35 @@ void kGetRenderData2D(kRenderData2D *data)
 	data->indices  = render.context2d.indices;
 }
 
-void kBeginRenderPass(kTexture texture, kVec4 color, uint flags)
+void kBeginRenderPass(kTexture texture, kTexture depth_stencil, uint flags, kVec4 color, float depth)
 {
 	kRenderContext2D *ctx = kGetRenderContext2D();
-	kAssert(ctx->state.target == 0);
-	ctx->state.color   = color;
-	ctx->state.flags   = flags;
-	ctx->state.command = (u32)ctx->commands.count;
+	kAssert(ctx->state.render_target == 0 && ctx->state.depth_stenil == 0);
+
+	u32 w, h;
+	render.backend.texture_size(texture, &w, &h);
+
+	kViewport viewport;
+	viewport.x				 = 0;
+	viewport.y				 = 0;
+	viewport.w				 = (float)w;
+	viewport.h				 = (float)h;
+	viewport.n				 = 0;
+	viewport.f				 = 1;
+
+	ctx->state.viewport		 = viewport;
+	ctx->state.clear.color	 = color;
+	ctx->state.clear.depth	 = depth;
+	ctx->state.clear.stencil = 0;
+	ctx->state.flags		 = flags;
+	ctx->state.command		 = (u32)ctx->commands.count;
 }
 
-void kBeginDefaultRenderPass(kVec4 color, uint flags)
+void kBeginDefaultRenderPass(uint flags, kVec4 color, float depth)
 {
-	kTexture target = render.backend.swap_chain_target();
-	kBeginRenderPass(target, color, flags);
+	kSwapChain swap_chain = render.backend.window_swap_chain();
+	kTexture   target	  = render.backend.swap_chain_target(swap_chain);
+	kBeginRenderPass(target, nullptr, flags, color, depth);
 }
 
 void kEndRenderPass(void)
@@ -235,16 +253,19 @@ void kEndRenderPass(void)
 	if (ctx->state.command != ctx->commands.count)
 	{
 		kRenderPass2D *pass	 = ctx->passes.Add();
-		pass->target		 = ctx->state.target;
+		pass->render_target	 = ctx->state.render_target;
+		pass->depth_stencil	 = ctx->state.depth_stenil;
+		pass->viewport		 = ctx->state.viewport;
 		pass->flags			 = ctx->state.flags;
-		pass->color			 = ctx->state.color;
+		pass->clear			 = ctx->state.clear;
 		pass->commands.data	 = ctx->commands.data + ctx->state.command;
 		pass->commands.count = ctx->commands.count - ctx->state.command;
 		ctx->state.command	 = (u32)ctx->commands.count;
 	}
 
-	ctx->state.target = nullptr;
-	ctx->state.flags  = 0;
+	ctx->state.render_target = nullptr;
+	ctx->state.depth_stenil	 = nullptr;
+	ctx->state.flags		 = 0;
 }
 
 void kBeginCameraRect(float left, float right, float bottom, float top)

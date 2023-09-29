@@ -3,80 +3,6 @@
 #include "kRenderApi.h"
 
 #define K_MAX_CIRCLE_SEGMENTS 512
-#define K_MAX_TEXTURE_SLOTS 2
-
-//
-//
-//
-
-typedef struct kVertex2D
-{
-	kVec3 pos;
-	kVec2 tex;
-	kVec4 col;
-} kVertex2D;
-
-typedef u32 kIndex2D;
-
-typedef struct kRect
-{
-	kVec2 min;
-	kVec2 max;
-} kRect;
-
-typedef struct kGlyph
-{
-	kRect rect;
-	kVec2 bearing;
-	kVec2 size;
-	float advance;
-} kGlyph;
-
-typedef struct kFont
-{
-	kTexture texture;
-	u16		*map;
-	kGlyph	*glyphs;
-	kGlyph	*fallback;
-	u32		 largest;
-	u32		 count;
-} kFont;
-
-typedef struct kRenderParam2D
-{
-	kTexture textures[K_MAX_TEXTURE_SLOTS];
-	kMat4	 transform;
-	kRect	 rect;
-	i32		 vertex;
-	u32		 index;
-	u32		 count;
-} kRenderParam2D;
-
-typedef struct kRenderCommand2D
-{
-	kShader				   shader;
-	kSlice<kRenderParam2D> params;
-} kRenderCommand2D;
-
-enum kRenderPassFlags
-{
-	kRenderPass_ClearTarget = 0x1
-};
-
-typedef struct kRenderPass2D
-{
-	kTexture				 target;
-	u32						 flags;
-	kVec4					 color;
-	kSlice<kRenderCommand2D> commands;
-} kRenderPass2D;
-
-typedef struct kRenderData2D
-{
-	kSlice<kRenderPass2D> passes;
-	kSlice<kVertex2D>	  vertices;
-	kSlice<kIndex2D>	  indices;
-} kRenderData2D;
 
 //
 //
@@ -115,8 +41,8 @@ void kDestroyRenderContext(void);
 void kFlushFrame(void);
 void kGetRenderData2D(kRenderData2D *data);
 
-void kBeginRenderPass(kTexture texture, kVec4 color = kVec4(0), uint flags = kRenderPass_ClearTarget);
-void kBeginDefaultRenderPass(kVec4 color = kVec4(0), uint flags = kRenderPass_ClearTarget);
+void kBeginRenderPass(kTexture texture, kTexture depth_stencil = nullptr, uint flags = kRenderPass_ClearColor, kVec4 color = kVec4(0), float depth = 1.0f);
+void kBeginDefaultRenderPass(uint flags = kRenderPass_ClearColor, kVec4 color = kVec4(0), float depth = 1.0f);
 void kEndRenderPass(void);
 
 void kBeginCameraRect(float left, float right, float bottom, float top);

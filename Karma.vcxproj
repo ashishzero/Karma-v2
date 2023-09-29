@@ -24,6 +24,7 @@
     <ClCompile Include="Code\kRenderApi.cpp" />
     <ClCompile Include="Code\Main.cpp" />
     <ClInclude Include="Code\kArray.h" />
+    <ClInclude Include="Code\kLinkedList.h" />
     <ClInclude Include="Code\kMedia.h" />
     <ClInclude Include="Code\kCommon.h" />
     <ClInclude Include="Code\kMath.h" />
