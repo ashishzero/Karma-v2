@@ -16,9 +16,10 @@ enum kBuildArch
 
 enum kBuildFlags
 {
-	kBuild_Optimization = 0x1,
-	kBuild_DebugSymbols = 0x2,
-	kBuild_Recurse		= 0x100 // internal
+	kBuild_Optimization	 = 0x1,
+	kBuild_DebugSymbols	 = 0x2,
+	kBuild_WindowsSystem = 0x4,
+	kBuild_Recurse		 = 0x100 // internal
 };
 
 struct kProject;
@@ -27,6 +28,7 @@ kProject *kCreateProject(kString name);
 void	  kConfigureProject(kProject *p, uint flags, kBuildKind kind, kBuildArch arch);
 void	  kSetProjectDirectory(kProject *p, kString dir);
 void	  kSetBuildDirectory(kProject *p, kString out, kString obj = "");
+void	  kSetTemporaryDirectory(kProject *p, kString temp);
 void	  kAddIncludeDirectory(kProject *p, kString path);
 void	  kAddLibraryDirectory(kProject *p, kString path);
 void	  kAddDefine(kProject *p, kString key, kString value = "");

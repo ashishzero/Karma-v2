@@ -120,6 +120,11 @@ void kSetBuildDirectory(kProject *p, kString out, kString obj)
 	p->objdir = kPushString(p, obj);
 }
 
+void kSetTemporaryDirectory(kProject *p, kString temp)
+{
+	p->gendir = kPushString(p, temp);
+}
+
 void kAddIncludeDirectory(kProject *p, kString path)
 {
 	path = kPushString(p, path);
@@ -210,7 +215,7 @@ bool kAddString(kProject *p, const kString src)
 	kString path = kGetNextGenFileName(p);
 	if (kWriteEntireFile((char *)path.data, src.data, src.count))
 	{
-		kAddFile(p, src);
+		kAddFile(p, path);
 		return true;
 	}
 	return false;
@@ -220,9 +225,10 @@ bool kEmbedBinaryData(kProject *p, const kSlice<u8> buff, kString name)
 {
 	kStringBuilder builder;
 
-	builder.Write(kString("const unsigned char "));
+	builder.Write("#include <stdint.h>\n\n");
+	builder.Write("extern const uint8_t ");
 	builder.Write(name);
-	builder.Write(kString("[] = {"));
+	builder.Write("[] = {");
 
 	for (imem i = 0; i < buff.count; ++i)
 	{
@@ -234,7 +240,7 @@ bool kEmbedBinaryData(kProject *p, const kSlice<u8> buff, kString name)
 		builder.Write(',');
 	}
 
-	builder.Write(kString("[] = };\n"));
+	builder.Write(kString("};\n"));
 
 	kString string = builder.ToString();
 
@@ -456,8 +462,7 @@ int kBuildProject(kProject *p)
 	builder.Write(".exe");
 	builder.Write('"');
 
-	builder.Write(" /MANIFEST ");
-	builder.Write("/NXCOMPAT ");
+	builder.Write(" /NXCOMPAT ");
 	builder.Write("/PDB:");
 	builder.Write('"');
 	builder.Write(p->outdir);
@@ -509,8 +514,6 @@ int kBuildProject(kProject *p)
 		builder.Write("/MACHINE:X86 ");
 	}
 
-	builder.Write("/MANIFESTUAC:\"level='asInvoker' uiAccess='false'\" ");
-
 	if (p->manifest.count)
 	{
 		builder.Write("/ManifestFile:");
@@ -521,6 +524,15 @@ int kBuildProject(kProject *p)
 	}
 
 	builder.Write("/NOLOGO /ERRORREPORT:PROMPT ");
+
+	if (p->flags & kBuild_WindowsSystem)
+	{
+		builder.Write("/SUBSYSTEM:WINDOWS ");
+	}
+	else
+	{
+		builder.Write("/SUBSYSTEM:CONSOLE ");
+	}
 
 	for (kString obj : p->objects)
 	{

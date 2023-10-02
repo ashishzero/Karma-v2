@@ -41,16 +41,41 @@ void Update(float dt)
 	}
 }
 
+static const kString Code = R"Foo(
+#include <stdio.h>
+#include <stdint.h>
+
+extern const uint8_t UntitledImage[];
+
+int main() {
+	printf("Hello world: %p\n", UntitledImage);
+	return 0;
+}
+)Foo";
+
 void Main(int argc, const char **argv)
 {
-	kProject *project = kCreateProject("Karma");
+	kProject *project = kCreateProject("example");
 
 	kConfigureProject(project, kBuild_DebugSymbols, kBuildKind_EXE, kBuildArch_x64);
 
-	kAddFilesFromDirectory(project, "Code");
-	kAddManifestFile(project, "Code/kWindows.manifest");
+	kSetBuildDirectory(project, "example", "example/obj");
+	kSetTemporaryDirectory(project, "example/gens");
+
+	umem size = 0;
+	u8 *bytes = kReadEntireFile("C:/Users/zeroa/Downloads/Untitled.png", &size);
+	kEmbedBinaryData(project, kSlice<u8>(bytes, size), "UntitledImage");
+
+	//kEmbedFile(project, "C:/Users/zeroa/Downloads/Untitled.png", "UntitledImage");
+	kAddString(project, Code);
 
 	kBuildProject(project);
+
+	kExecuteProcess("example/example.exe");
+
+	//kAddFilesFromDirectory(project, "Code");
+	//kAddManifestFile(project, "Code/kWindows.manifest");
+
 
 	kMediaUserEvents user = {.update = Update};
 
