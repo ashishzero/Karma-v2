@@ -1,3 +1,5 @@
+#pragma once
+
 #include "kContext.h"
 #include <string.h>
 
@@ -7,7 +9,7 @@ template <typename T> struct kArray
 	imem allocated;
 	T	*data;
 
-	kArray() : count(0), data(nullptr), allocated(0)
+	kArray() : count(0), allocated(0), data(nullptr)
 	{}
 
 	operator kSlice<T>()

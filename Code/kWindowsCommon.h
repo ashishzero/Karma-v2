@@ -38,11 +38,11 @@ static void kWinLogError(DWORD error, const char *source, const char *fmt, ...)
 static int kWinWideToUTF8(char *utf8_buff, int utf8_buff_len, const wchar_t *utf16_string)
 {
 	int length = WideCharToMultiByte(CP_UTF8, 0, utf16_string, -1, utf8_buff, utf8_buff_len, 0, 0);
-	return length;
+	return length - 1;
 }
 
 static int kWinUTF8ToWide(wchar_t *utf16_buff, int utf16_buff_len, const char *utf8_string)
 {
 	int length = MultiByteToWideChar(CP_UTF8, 0, utf8_string, -1, utf16_buff, utf16_buff_len);
-	return length;
+	return length - 1;
 }

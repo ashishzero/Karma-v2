@@ -19,11 +19,13 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Code\kBuild.cpp" />
     <ClCompile Include="Code\kContext.cpp" />
     <ClCompile Include="Code\kRender.cpp" />
     <ClCompile Include="Code\kRenderApi.cpp" />
     <ClCompile Include="Code\Main.cpp" />
     <ClInclude Include="Code\kArray.h" />
+    <ClInclude Include="Code\kBuild.h" />
     <ClInclude Include="Code\kLinkedList.h" />
     <ClInclude Include="Code\kMedia.h" />
     <ClInclude Include="Code\kCommon.h" />
@@ -33,6 +35,7 @@
     <ClCompile Include="Code\kMath.cpp" />
     <ClInclude Include="Code\kRender.h" />
     <ClInclude Include="Code\kRenderApi.h" />
+    <ClInclude Include="Code\kStrings.h" />
     <ClInclude Include="Code\kWindowsCommon.h" />
     <ClInclude Include="Code\kResource.h" />
   </ItemGroup>

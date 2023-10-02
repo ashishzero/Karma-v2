@@ -1,4 +1,3 @@
-#pragma once
 #include "kArray.h"
 #include "kRender.h"
 
@@ -287,7 +286,6 @@ void kBeginCameraRect(float left, float right, float bottom, float top)
 {
 	kRenderContext2D *ctx  = kGetRenderContext2D();
 	kMat4			  proj = kOrthographicLH(left, right, top, bottom, -1, 1);
-	kMat4			  last = ctx->transforms.Last();
 	ctx->transforms.Add();
 	kSetTransform(proj);
 }

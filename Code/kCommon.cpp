@@ -79,15 +79,15 @@ void kArenaAllocator(kArena *arena, kAllocator *allocator)
 	allocator->proc = kArenaAllocatorProc;
 }
 
-kArena *kAllocArena(kArenaSpec *spec, kAllocator *allocator)
+kArena *kAllocArena(const kArenaSpec &spec, kAllocator *allocator)
 {
-	umem max_size = kAlignUp(spec->capacity, 4 * 1024);
+	umem max_size = kAlignUp(spec.capacity, 4 * 1024);
 	u8	*mem	  = (u8 *)kAlloc(allocator, max_size);
 
 	if (!mem)
 		return (kArena *)&kFallbackArena;
 
-	kArena	stub  = {.mem = mem, .pos = 0, .cap = max_size, .alignment = spec->alignment, .flags = spec->flags};
+	kArena	stub  = {.mem = mem, .pos = 0, .cap = max_size, .alignment = spec.alignment, .flags = spec.flags};
 
 	kArena *arena = (kArena *)kPushSize(&stub, sizeof(kArena), kArena_Zero);
 
@@ -537,7 +537,7 @@ imem kInvFindString(kString str, kString key, imem pos)
 	while (index >= 0)
 	{
 		kString sub = kString(str.data + index, key.count);
-		if (kStringEquals(sub, key) == 0)
+		if (kStringEquals(sub, key))
 			return index;
 		index -= 1;
 	}
@@ -625,32 +625,32 @@ int kAtomicExg(kAtomic *dst, int val)
 #endif
 
 #if K_COMPILER_CLANG == 1 || K_COMPILER_GCC == 1
-int kAtomicLoad(Atomic *atomic)
+int kAtomicLoad(kAtomic *atomic)
 {
 	return __atomic_load_n(&atomic->value, __ATOMIC_SEQ_CST);
 }
 
-void kAtomicStore(Atomic *atomic, int value)
+void kAtomicStore(kAtomic *atomic, int value)
 {
 	__atomic_store_n(&atomic->value, value, __ATOMIC_SEQ_CST);
 }
 
-int kAtomicInc(Atomic *dst)
+int kAtomicInc(kAtomic *dst)
 {
 	return __atomic_add_fetch(&dst->value, 1, __ATOMIC_SEQ_CST);
 }
 
-int kAtomicDec(Atomic *dst)
+int kAtomicDec(kAtomic *dst)
 {
 	return __atomic_add_fetch(&dst->value, -1, __ATOMIC_SEQ_CST);
 }
 
-int kAtomicAdd(Atomic *dst, int val)
+int kAtomicAdd(kAtomic *dst, int val)
 {
 	return __atomic_fetch_add(&dst->value, val, __ATOMIC_SEQ_CST);
 }
 
-int kAtomicCmpExg(Atomic *dst, int exchange, int compare)
+int kAtomicCmpExg(kAtomic *dst, int exchange, int compare)
 {
 	__atomic_compare_exchange_n(&dst->value, &compare, exchange, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
 	return compare;
@@ -662,7 +662,7 @@ void *kAtomicCmpExgPtr(void *volatile *dst, void *exchange, void *compare)
 	return compare;
 }
 
-int kAtomicExg(Atomic *dst, int val)
+int kAtomicExg(kAtomic *dst, int val)
 {
 	return __atomic_exchange_n(&dst->value, val, __ATOMIC_SEQ_CST);
 }

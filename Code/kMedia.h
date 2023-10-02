@@ -2,6 +2,8 @@
 #include "kCommon.h"
 #include "kRenderApi.h"
 
+constexpr int K_MAX_PATH = 512;
+
 typedef enum kKey
 {
 	kKey_Unknown,
@@ -268,6 +270,26 @@ typedef enum kFileAttribute
 	kFileAttribute_Temporary  = 0x200,
 } kFileAttribute;
 
+typedef enum kDirectoryVisit
+{
+	kDirectoryVisit_Next,
+	kDirectoryVisit_Break,
+	kDirectoryVisit_Recurse
+} kDirectoryVisit;
+
+typedef struct kDirectoryItem
+{
+	uint	attributes;
+	u64		size;
+	u64		created;
+	u64		modified;
+	u64		accessed;
+	kString path;
+	kString name;
+} kDirectoryItem;
+
+typedef kDirectoryVisit (*kDirectoryVisitorProc)(const kDirectoryItem &, void *);
+
 //
 //
 //
@@ -405,13 +427,20 @@ umem  kGetFileSize(kFile handle);
 u8	 *kReadEntireFile(const char *filepath, umem *file_size);
 bool  kWriteEntireFile(const char *filepath, u8 *buffer, umem size);
 uint  kGetFileAttributes(const char *mb_filepath);
+bool  kSetWorkingDirectory(const char *mb_path);
+bool  kGetWorkingDirectory(char *mb_path, int len);
+bool  kSearchPath(const char *exe);
+bool  kCreateDirectories(const char *mb_path);
+void  kGetUserPath(char *mb_path, int len);
+bool  kVisitDirectories(const char *mb_path, kDirectoryVisitorProc visitor, void *data);
 
 //
 //
 //
 
+int		kExecuteProcess(const char *cmdline);
 kThread kLaunchThread(kThreadProc proc, void *arg, kThreadAttribute attr);
-;
+
 kThread kGetCurrentThread(void);
 void	kDetachThread(kThread thread);
 void	kWaitThread(kThread thread);
@@ -440,14 +469,14 @@ int		kWaitCondVarTimed(kCondVar *cond, kMutex *mutex, u32 millisecs);
 //
 //
 
-void	 kResizeWindow(u32 w, u32 h);
-void	 kToggleWindowFullscreen(void);
-void	 kEnableCursor(void);
-void	 kDisableCursor(void);
-void	 kMaximizeWindow(void);
-void	 kRestoreWindow(void);
-void	 kMinimizeWindow(void);
-void	 kCloseWindow(void);
+void kResizeWindow(u32 w, u32 h);
+void kToggleWindowFullscreen(void);
+void kEnableCursor(void);
+void kDisableCursor(void);
+void kMaximizeWindow(void);
+void kRestoreWindow(void);
+void kMinimizeWindow(void);
+void kCloseWindow(void);
 
 //
 //

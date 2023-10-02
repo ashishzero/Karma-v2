@@ -810,7 +810,7 @@ inproc void *kFallbackAllocatorProc(kAllocatorMode mode, void *ptr, umem prev, u
 }
 
 static const kAllocator kFallbackAllocator = {kFallbackAllocatorProc};
-static const kArena		kFallbackArena	   = {0, 0, 0, 0, 0, 0};
+static const kArena		kFallbackArena	   = {};
 
 //
 //
@@ -823,7 +823,7 @@ void   *kRealloc(kAllocator *allocator, void *ptr, umem prev, umem size);
 void	kFree(kAllocator *allocator, void *ptr, umem size);
 
 void	kArenaAllocator(kArena *arena, kAllocator *allocator);
-kArena *kAllocArena(kArenaSpec *spec, kAllocator *allocator);
+kArena *kAllocArena(const kArenaSpec &spec, kAllocator *allocator);
 void	kFreeArena(kArena *arena, kAllocator *allocator);
 void	kResetArena(kArena *arena);
 

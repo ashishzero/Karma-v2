@@ -470,6 +470,7 @@ void kAddWindowDpiChangedEvent(float yfactor)
 #include <objbase.h>
 #include <shellapi.h>
 #include <ShellScalingApi.h>
+#include <UserEnv.h>
 #include <dwmapi.h>
 #include <avrt.h>
 
@@ -491,11 +492,13 @@ void kAddWindowDpiChangedEvent(float yfactor)
 #define DWMWCP_ROUNDSMALL 3
 #endif
 
-#pragma comment(lib, "Avrt.lib")	// AvSetMmThreadCharacteristicsW
-#pragma comment(lib, "Shell32.lib") // CommandLineToArgvW
-#pragma comment(lib, "Shcore.lib")	// GetDpiForMonitor
-#pragma comment(lib, "Ole32.lib")	// COM
-#pragma comment(lib, "Dwmapi.lib")	// DwmSetWindowAttribute
+#pragma comment(lib, "Avrt.lib")	 // AvSetMmThreadCharacteristicsW
+#pragma comment(lib, "Shell32.lib")	 // CommandLineToArgvW
+#pragma comment(lib, "Shcore.lib")	 // GetDpiForMonitor
+#pragma comment(lib, "Ole32.lib")	 // COM
+#pragma comment(lib, "Dwmapi.lib")	 // DwmSetWindowAttribute
+#pragma comment(lib, "Userenv.lib")	 // GetUserProfileDirectoryW
+#pragma comment(lib, "Advapi32.lib") // OpenProcessToken
 
 u64 kGetPerformanceFrequency(void)
 {
@@ -522,8 +525,8 @@ void kTerminate(uint code)
 
 kFile kOpenFile(const char *mb_path, kFileAccess paccess, kFileShareMode pshare, kFileMethod method)
 {
-	wchar_t path[MAX_PATH];
-	kWinUTF8ToWide(path, MAX_PATH, mb_path);
+	wchar_t path[K_MAX_PATH];
+	kWinUTF8ToWide(path, K_MAX_PATH, mb_path);
 
 	DWORD access = 0;
 	if (paccess == kFileAccess_Read)
@@ -630,7 +633,7 @@ umem kWriteFile(kFile handle, u8 *buff, umem size)
 
 umem kGetFileSize(kFile handle)
 {
-	LARGE_INTEGER size = {0};
+	LARGE_INTEGER size = {};
 	GetFileSizeEx((HANDLE)handle.resource, &size);
 	return size.QuadPart;
 }
@@ -663,13 +666,9 @@ bool kWriteEntireFile(const char *path, u8 *buffer, umem size)
 	return false;
 }
 
-uint kGetFileAttributes(const char *mb_path)
+static uint kTranslateAttributes(DWORD attrs)
 {
-	wchar_t path[MAX_PATH];
-	kWinUTF8ToWide(path, MAX_PATH, mb_path);
-
-	DWORD attrs			   = GetFileAttributesW(path);
-	uint  translated_attrs = 0;
+	uint translated_attrs = 0;
 	if (attrs != INVALID_FILE_ATTRIBUTES)
 	{
 		if (attrs & FILE_ATTRIBUTE_ARCHIVE)
@@ -693,8 +692,198 @@ uint kGetFileAttributes(const char *mb_path)
 		if (attrs & FILE_ATTRIBUTE_TEMPORARY)
 			translated_attrs |= kFileAttribute_Temporary;
 	}
-
 	return translated_attrs;
+}
+
+uint kGetFileAttributes(const char *mb_path)
+{
+	wchar_t path[K_MAX_PATH];
+	kWinUTF8ToWide(path, K_MAX_PATH, mb_path);
+	DWORD attrs = GetFileAttributesW(path);
+	return kTranslateAttributes(attrs);
+}
+
+bool kSetWorkingDirectory(const char *mb_path)
+{
+	wchar_t path[K_MAX_PATH];
+	kWinUTF8ToWide(path, K_MAX_PATH, mb_path);
+	return SetCurrentDirectoryW(path);
+}
+
+bool kGetWorkingDirectory(char *mb_path, int len)
+{
+	wchar_t path[K_MAX_PATH] = {};
+	if (GetCurrentDirectoryW(kArrayCount(path), path))
+	{
+		kWinWideToUTF8(mb_path, len, path);
+		return true;
+	}
+	return false;
+}
+
+bool kSearchPath(const char *exe)
+{
+	wchar_t path[K_MAX_PATH];
+	kWinUTF8ToWide(path, K_MAX_PATH, exe);
+	return SearchPathW(0, path, L".exe", 0, 0, 0);
+}
+
+bool kCreateDirectories(const char *mb_path)
+{
+	wchar_t path[K_MAX_PATH];
+	int		len	  = kWinUTF8ToWide(path, K_MAX_PATH, mb_path);
+	int		count = 0;
+
+	for (int i = 0; i < len + 1; i++)
+	{
+		if (path[i] == '/' || path[i] == 0)
+		{
+			path[i] = 0;
+			if (!CreateDirectoryW(path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS)
+				break;
+			path[i] = '/';
+			count += 1;
+		}
+	}
+
+	return count;
+}
+
+void kGetUserPath(char *mb_path, int len)
+{
+	HANDLE token = INVALID_HANDLE_VALUE;
+	if (OpenProcessToken(GetCurrentProcess(), TOKEN_READ, &token))
+	{
+		wchar_t path[K_MAX_PATH] = {};
+
+		DWORD	wlen			 = kArrayCount(path);
+		if (GetUserProfileDirectoryW(token, path, &wlen))
+		{
+			kWinWideToUTF8(mb_path, len, path);
+			return;
+		}
+	}
+	snprintf(mb_path, len, "%s", "C:\\");
+}
+
+static void kTranslateDirectoryItem(kDirectoryItem *dst, WIN32_FIND_DATAW *src, wchar_t *root, imem root_len,
+									char *buffer, imem buff_len)
+{
+	ULARGE_INTEGER converter;
+
+	converter.HighPart = src->ftCreationTime.dwHighDateTime;
+	converter.LowPart  = src->ftCreationTime.dwLowDateTime;
+	dst->created	   = converter.QuadPart;
+
+	converter.HighPart = src->ftLastAccessTime.dwHighDateTime;
+	converter.LowPart  = src->ftLastAccessTime.dwLowDateTime;
+	dst->accessed	   = converter.QuadPart;
+
+	converter.HighPart = src->ftLastWriteTime.dwHighDateTime;
+	converter.LowPart  = src->ftLastWriteTime.dwLowDateTime;
+	dst->modified	   = converter.QuadPart;
+
+	converter.HighPart = src->nFileSizeHigh;
+	converter.LowPart  = src->nFileSizeLow;
+	dst->size		   = converter.QuadPart;
+
+	DWORD attr		   = src->dwFileAttributes;
+	dst->attributes	   = kTranslateAttributes(attr);
+
+	int count		   = snprintf(buffer, buff_len, "%S%S", root, src->cFileName);
+
+	for (int i = 0; i < count; ++i)
+	{
+		if (buffer[i] == '\\')
+			buffer[i] = '/';
+	}
+
+	dst->path = kString(buffer, count);
+	dst->name = kSubRight(dst->path, root_len);
+}
+
+static bool kVisitDirectories(wchar_t *path, int len, kDirectoryVisitorProc visitor, void *data)
+{
+	WIN32_FIND_DATAW find;
+	HANDLE			 handle = FindFirstFileW(path, &find);
+	if (handle == INVALID_HANDLE_VALUE)
+	{
+		kWinLogError(GetLastError(), "Windows", "Failed to visit directory: \"%S\"", path);
+		return false;
+	}
+
+	// Removing "*"
+	len -= 1;
+	path[len] = 0;
+
+	while (true)
+	{
+		if (wcscmp(find.cFileName, L".") != 0 && wcscmp(find.cFileName, L"..") != 0)
+		{
+			char		   buffer[K_MAX_PATH];
+
+			kDirectoryItem item;
+			kTranslateDirectoryItem(&item, &find, path, len, buffer, kArrayCount(buffer));
+
+			kDirectoryVisit r = visitor(item, data);
+
+			if ((item.attributes & kFileAttribute_Directory) && r == kDirectoryVisit_Recurse)
+			{
+				wchar_t append[] = L"\\*";
+				int		flen	 = lstrlenW(find.cFileName);
+				int		sublen	 = len + flen + kArrayCount(append) - 1;
+
+				if (sublen + 1 >= K_MAX_PATH)
+					return false;
+
+				wchar_t subpath[K_MAX_PATH];
+				memcpy(subpath, path, len * sizeof(wchar_t));
+				memcpy(subpath + len, find.cFileName, flen * sizeof(wchar_t));
+				memcpy(subpath + len + flen, append, kArrayCount(append) * sizeof(wchar_t));
+
+				if (!kVisitDirectories(subpath, sublen, visitor, data))
+					return false;
+			}
+			else if (r == kDirectoryVisit_Break)
+			{
+				break;
+			}
+		}
+
+		if (FindNextFileW(handle, &find) == 0)
+			break;
+	}
+
+	FindClose(handle);
+
+	return true;
+}
+
+bool kVisitDirectories(const char *mb_path, kDirectoryVisitorProc visitor, void *data)
+{
+	if (!visitor)
+		return false;
+
+	wchar_t path[K_MAX_PATH];
+	int		len		 = kWinUTF8ToWide(path, K_MAX_PATH, mb_path);
+
+	wchar_t append[] = L"\\*";
+
+	if (len + kArrayCount(append) >= K_MAX_PATH)
+		return false;
+
+	memcpy(path + len, append, sizeof(append));
+	len += kArrayCount(append) - 1;
+
+	path[len] = 0;
+
+	for (int i = 0; i < len; ++i)
+	{
+		if (path[i] == '/')
+			path[i] = '\\';
+	}
+
+	return kVisitDirectories(path, len, visitor, data);
 }
 
 //
@@ -723,6 +912,42 @@ static DWORD WINAPI kThreadStartRoutine(LPVOID thread_param)
 	kSetThreadAttribute(thrd.attr);
 	SetEvent(thrd.event);
 	return thrd.proc(thrd.data);
+}
+
+int kExecuteProcess(const char *cmdline)
+{
+	int					len		 = MultiByteToWideChar(CP_UTF8, 0, cmdline, -1, 0, 0) + 1;
+	wchar_t			   *cmd		 = (wchar_t *)kAlloc(sizeof(wchar_t) * len);
+	STARTUPINFOW		start_up = {sizeof(start_up)};
+	PROCESS_INFORMATION process	 = {};
+
+	if (!cmd)
+	{
+		kLogError("Windows: Failed to execute process. Reason: Out of memory");
+		return 1;
+	}
+
+	MultiByteToWideChar(CP_UTF8, 0, cmdline, -1, cmd, len - 1);
+	cmd[len - 1] = 0;
+
+	DWORD rc	 = 1;
+	if (CreateProcessW(NULL, cmd, NULL, NULL, FALSE, NORMAL_PRIORITY_CLASS, NULL, NULL, &start_up, &process))
+	{
+		WaitForSingleObject(process.hProcess, INFINITE);
+
+		GetExitCodeProcess(process.hProcess, &rc);
+
+		CloseHandle(process.hProcess);
+		CloseHandle(process.hThread);
+	}
+	else
+	{
+		kWinLogError(GetLastError(), "Windows", "Failed to execute process");
+	}
+
+	kFree(cmd, sizeof(wchar_t) * len);
+
+	return rc;
 }
 
 kThread kLaunchThread(kThreadProc proc, void *arg, kThreadAttribute attr)
@@ -908,7 +1133,8 @@ void kResizeWindow(u32 w, u32 h)
 	AdjustWindowRectExForDpi(&rect, style, FALSE, 0, dpi);
 	int width  = rect.right - rect.left;
 	int height = rect.bottom - rect.top;
-	SetWindowPos(window->wnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+	SetWindowPos(window->wnd, NULL, 0, 0, width, height,
+				 SWP_NOMOVE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
 
 	media.window.state.width  = w;
 	media.window.state.height = h;
@@ -916,8 +1142,7 @@ void kResizeWindow(u32 w, u32 h)
 
 void kToggleWindowFullscreen(void)
 {
-	kPlatformWindow *window	  = media.window.native;
-	DWORD			 dw_style = (DWORD)GetWindowLongPtrW(window->wnd, GWL_STYLE);
+	kPlatformWindow *window = media.window.native;
 	if ((media.window.state.flags & kWindow_Fullscreen) == 0)
 	{
 		MONITORINFO mi = {.cbSize = sizeof(mi)};
@@ -1029,43 +1254,43 @@ static DWORD InvVirtualKeyMap[255];
 
 static void	 kMapVirutalKeys(void)
 {
-	VirtualKeyMap['A']				   = kKey_A;
-	VirtualKeyMap['B']				   = kKey_B;
-	VirtualKeyMap['C']				   = kKey_C;
-	VirtualKeyMap['D']				   = kKey_D;
-	VirtualKeyMap['E']				   = kKey_E;
-	VirtualKeyMap['F']				   = kKey_F;
-	VirtualKeyMap['G']				   = kKey_G;
-	VirtualKeyMap['H']				   = kKey_H;
-	VirtualKeyMap['I']				   = kKey_I;
-	VirtualKeyMap['J']				   = kKey_J;
-	VirtualKeyMap['K']				   = kKey_K;
-	VirtualKeyMap['L']				   = kKey_L;
-	VirtualKeyMap['M']				   = kKey_M;
-	VirtualKeyMap['N']				   = kKey_N;
-	VirtualKeyMap['O']				   = kKey_O;
-	VirtualKeyMap['P']				   = kKey_P;
-	VirtualKeyMap['Q']				   = kKey_Q;
-	VirtualKeyMap['R']				   = kKey_R;
-	VirtualKeyMap['S']				   = kKey_S;
-	VirtualKeyMap['T']				   = kKey_T;
-	VirtualKeyMap['U']				   = kKey_U;
-	VirtualKeyMap['V']				   = kKey_V;
-	VirtualKeyMap['W']				   = kKey_W;
-	VirtualKeyMap['X']				   = kKey_X;
-	VirtualKeyMap['Y']				   = kKey_Y;
-	VirtualKeyMap['Z']				   = kKey_Z;
+	VirtualKeyMap[(int)'A']			   = kKey_A;
+	VirtualKeyMap[(int)'B']			   = kKey_B;
+	VirtualKeyMap[(int)'C']			   = kKey_C;
+	VirtualKeyMap[(int)'D']			   = kKey_D;
+	VirtualKeyMap[(int)'E']			   = kKey_E;
+	VirtualKeyMap[(int)'F']			   = kKey_F;
+	VirtualKeyMap[(int)'G']			   = kKey_G;
+	VirtualKeyMap[(int)'H']			   = kKey_H;
+	VirtualKeyMap[(int)'I']			   = kKey_I;
+	VirtualKeyMap[(int)'J']			   = kKey_J;
+	VirtualKeyMap[(int)'K']			   = kKey_K;
+	VirtualKeyMap[(int)'L']			   = kKey_L;
+	VirtualKeyMap[(int)'M']			   = kKey_M;
+	VirtualKeyMap[(int)'N']			   = kKey_N;
+	VirtualKeyMap[(int)'O']			   = kKey_O;
+	VirtualKeyMap[(int)'P']			   = kKey_P;
+	VirtualKeyMap[(int)'Q']			   = kKey_Q;
+	VirtualKeyMap[(int)'R']			   = kKey_R;
+	VirtualKeyMap[(int)'S']			   = kKey_S;
+	VirtualKeyMap[(int)'T']			   = kKey_T;
+	VirtualKeyMap[(int)'U']			   = kKey_U;
+	VirtualKeyMap[(int)'V']			   = kKey_V;
+	VirtualKeyMap[(int)'W']			   = kKey_W;
+	VirtualKeyMap[(int)'X']			   = kKey_X;
+	VirtualKeyMap[(int)'Y']			   = kKey_Y;
+	VirtualKeyMap[(int)'Z']			   = kKey_Z;
 
-	VirtualKeyMap['0']				   = kKey_0;
-	VirtualKeyMap['1']				   = kKey_1;
-	VirtualKeyMap['2']				   = kKey_2;
-	VirtualKeyMap['3']				   = kKey_3;
-	VirtualKeyMap['4']				   = kKey_4;
-	VirtualKeyMap['5']				   = kKey_5;
-	VirtualKeyMap['6']				   = kKey_6;
-	VirtualKeyMap['7']				   = kKey_7;
-	VirtualKeyMap['8']				   = kKey_8;
-	VirtualKeyMap['9']				   = kKey_9;
+	VirtualKeyMap[(int)'0']			   = kKey_0;
+	VirtualKeyMap[(int)'1']			   = kKey_1;
+	VirtualKeyMap[(int)'2']			   = kKey_2;
+	VirtualKeyMap[(int)'3']			   = kKey_3;
+	VirtualKeyMap[(int)'4']			   = kKey_4;
+	VirtualKeyMap[(int)'5']			   = kKey_5;
+	VirtualKeyMap[(int)'6']			   = kKey_6;
+	VirtualKeyMap[(int)'7']			   = kKey_7;
+	VirtualKeyMap[(int)'8']			   = kKey_8;
+	VirtualKeyMap[(int)'9']			   = kKey_9;
 
 	VirtualKeyMap[VK_NUMPAD0]		   = kKey_0;
 	VirtualKeyMap[VK_NUMPAD1]		   = kKey_1;
@@ -1790,7 +2015,8 @@ static int kWinRunEventLoop(void)
 	return status;
 }
 
-static kSwapChain kWinGetWindowSwapChain(void) {
+static kSwapChain kWinGetWindowSwapChain(void)
+{
 	return media.window.native->swap_chain;
 }
 

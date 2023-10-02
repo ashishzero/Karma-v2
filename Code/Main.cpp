@@ -1,5 +1,6 @@
 #include "kMedia.h"
 #include "kArray.h"
+#include "kBuild.h"
 
 void Update(float dt)
 {
@@ -42,6 +43,15 @@ void Update(float dt)
 
 void Main(int argc, const char **argv)
 {
+	kProject *project = kCreateProject("Karma");
+
+	kConfigureProject(project, kBuild_DebugSymbols, kBuildKind_EXE, kBuildArch_x64);
+
+	kAddFilesFromDirectory(project, "Code");
+	kAddManifestFile(project, "Code/kWindows.manifest");
+
+	kBuildProject(project);
+
 	kMediaUserEvents user = {.update = Update};
 
 	kEventLoop(kDefaultSpec, user);
