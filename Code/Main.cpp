@@ -59,8 +59,8 @@ void Main(int argc, const char **argv)
 
 	kConfigureProject(project, kBuild_DebugSymbols, kBuildKind_EXE, kBuildArch_x64);
 
-	kSetBuildDirectory(project, "example", "example/obj");
-	kSetTemporaryDirectory(project, "example/gens");
+	kSetBuildDirectory(project, "build/example", "build/example/obj");
+	kSetTemporaryDirectory(project, "build/example/gens");
 
 	umem size = 0;
 	u8 *bytes = kReadEntireFile("C:/Users/zeroa/Downloads/Untitled.png", &size);
@@ -71,7 +71,7 @@ void Main(int argc, const char **argv)
 
 	kBuildProject(project);
 
-	kExecuteProcess("example/example.exe");
+	kExecuteProcess("build/example/example.exe");
 
 	//kAddFilesFromDirectory(project, "Code");
 	//kAddManifestFile(project, "Code/kWindows.manifest");

@@ -557,7 +557,7 @@ kFile kOpenFile(const char *mb_path, kFileAccess paccess, kFileShareMode pshare,
 	HANDLE file = CreateFileW(path, access, share_mode, NULL, disposition, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (file == INVALID_HANDLE_VALUE)
 	{
-		kWinLogError(GetLastError(), "Failed to open file: \"%s\"", mb_path);
+		kWinLogError(GetLastError(), "Windows", "Failed to open file: \"%s\"", mb_path);
 		return nullptr;
 	}
 
@@ -701,6 +701,26 @@ uint kGetFileAttributes(const char *mb_path)
 	kWinUTF8ToWide(path, K_MAX_PATH, mb_path);
 	DWORD attrs = GetFileAttributesW(path);
 	return kTranslateAttributes(attrs);
+}
+
+u64 kGetFileLastModifiedTime(const char *mb_filepath)
+{
+	kFile file = kOpenFile(mb_filepath, kFileAccess_Read, kFileShareMode_ReadWrite, kFileMethod_OpenExisting);
+	if (file)
+	{
+		HANDLE	 handle = file.resource;
+		FILETIME tm;
+		if (GetFileTime(handle, 0, 0, &tm))
+		{
+			ULARGE_INTEGER u;
+			u.HighPart = tm.dwHighDateTime;
+			u.LowPart  = tm.dwLowDateTime;
+			kCloseFile(file);
+			return u.QuadPart;
+		}
+		kCloseFile(file);
+	}
+	return 0;
 }
 
 bool kSetWorkingDirectory(const char *mb_path)

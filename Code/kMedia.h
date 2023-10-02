@@ -427,6 +427,7 @@ umem  kGetFileSize(kFile handle);
 u8	 *kReadEntireFile(const char *filepath, umem *file_size);
 bool  kWriteEntireFile(const char *filepath, u8 *buffer, umem size);
 uint  kGetFileAttributes(const char *mb_filepath);
+u64	  kGetFileLastModifiedTime(const char *mb_filepath);
 bool  kSetWorkingDirectory(const char *mb_path);
 bool  kGetWorkingDirectory(char *mb_path, int len);
 bool  kSearchPath(const char *exe);
