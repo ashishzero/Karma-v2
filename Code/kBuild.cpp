@@ -45,10 +45,9 @@ static kString kPushString(kProject *p, kString src)
 	return kString(buff, src.count);
 }
 
-static void kCreateBuildDir(kString spath)
+static void kCreateBuildDir(kString path)
 {
-	const char *path  = (char *)spath.data;
-	uint		attrs = kGetFileAttributes(path);
+	uint attrs = kGetFileAttributes(path);
 	if ((attrs & kFileAttribute_Directory) == 0)
 	{
 		kCreateDirectories(path);
@@ -206,14 +205,14 @@ static kDirectoryVisit kVisitProjectFile(const kDirectoryItem &item, void *data)
 void kAddFilesFromDirectory(kProject *p, kString path, bool recurse)
 {
 	kString mb_path = kPushString(p, path);
-	kVisitDirectories((char *)mb_path.data, kVisitProjectFile, p);
+	kVisitDirectories(mb_path, kVisitProjectFile, p);
 }
 
 bool kAddString(kProject *p, const kString src)
 {
 	kPrepareForGeneration(p);
 	kString path = kGetNextGenFileName(p);
-	if (kWriteEntireFile((char *)path.data, src.data, src.count))
+	if (kWriteEntireFile(path, src.data, src.count))
 	{
 		kAddFile(p, path);
 		return true;
@@ -252,7 +251,7 @@ bool kEmbedBinaryData(kProject *p, const kSlice<u8> buff, kString name)
 	return r;
 }
 
-bool kEmbedFile(kProject *p, const char *path, kString name)
+bool kEmbedFile(kProject *p, kString path, kString name)
 {
 	umem count;
 	u8	*buff = kReadEntireFile(path, &count);
@@ -386,13 +385,6 @@ int kBuildProject(kProject *p)
 
 	builder.Reset();
 
-	// kArray<kString> sources;
-	// kArray<kString> resources;
-
-	// kArray<kString> libraries;
-	// kArray<kString> libdirs;
-	// kArray<kString> objects;
-
 	for (kString src : p->sources)
 	{
 		kString	   obj	  = kOutputSourceFile(p, src);
@@ -413,7 +405,7 @@ int kBuildProject(kProject *p)
 
 		kLogTrace("CMD: %s\n", cmd.data);
 
-		int rc = kExecuteProcess((char *)cmd.data);
+		int rc = kExecuteProcess(cmd);
 
 		if (rc)
 		{
@@ -443,7 +435,7 @@ int kBuildProject(kProject *p)
 
 		kLogTrace("CMD: %s\n", cmd.data);
 
-		int rc = kExecuteProcess((char *)cmd.data);
+		int rc = kExecuteProcess(cmd);
 
 		if (rc)
 		{
@@ -546,7 +538,7 @@ int kBuildProject(kProject *p)
 
 	kLogTrace("CMD: %s\n", cmd.data);
 
-	int rc = kExecuteProcess((char *)cmd.data);
+	int rc = kExecuteProcess(cmd);
 
 	if (rc)
 	{

@@ -523,10 +523,12 @@ void kTerminate(uint code)
 //
 //
 
-kFile kOpenFile(const char *mb_path, kFileAccess paccess, kFileShareMode pshare, kFileMethod method)
+kFile kOpenFile(kString mb_path, kFileAccess paccess, kFileShareMode pshare, kFileMethod method)
 {
 	wchar_t path[K_MAX_PATH];
-	kWinUTF8ToWide(path, K_MAX_PATH, mb_path);
+
+	int		len	 = MultiByteToWideChar(CP_UTF8, 0, (char *)mb_path.data, (int)mb_path.count, path, kArrayCount(path) - 1);
+	path[len]	 = 0;
 
 	DWORD access = 0;
 	if (paccess == kFileAccess_Read)
@@ -638,7 +640,7 @@ umem kGetFileSize(kFile handle)
 	return size.QuadPart;
 }
 
-u8 *kReadEntireFile(const char *path, umem *out_size)
+u8 *kReadEntireFile(kString path, umem *out_size)
 {
 	*out_size	 = 0;
 	kFile handle = kOpenFile(path, kFileAccess_Read, kFileShareMode_Read, kFileMethod_OpenExisting);
@@ -654,7 +656,7 @@ u8 *kReadEntireFile(const char *path, umem *out_size)
 	return 0;
 }
 
-bool kWriteEntireFile(const char *path, u8 *buffer, umem size)
+bool kWriteEntireFile(kString path, u8 *buffer, umem size)
 {
 	kFile handle = kOpenFile(path, kFileAccess_Write, kFileShareMode_Read, kFileMethod_CreateAlways);
 	if (handle.resource)
@@ -695,15 +697,16 @@ static uint kTranslateAttributes(DWORD attrs)
 	return translated_attrs;
 }
 
-uint kGetFileAttributes(const char *mb_path)
+uint kGetFileAttributes(kString mb_path)
 {
 	wchar_t path[K_MAX_PATH];
-	kWinUTF8ToWide(path, K_MAX_PATH, mb_path);
+	int		len = MultiByteToWideChar(CP_UTF8, 0, (char *)mb_path.data, (int)mb_path.count, path, kArrayCount(path) - 1);
+	path[len]	= 0;
 	DWORD attrs = GetFileAttributesW(path);
 	return kTranslateAttributes(attrs);
 }
 
-u64 kGetFileLastModifiedTime(const char *mb_filepath)
+u64 kGetFileLastModifiedTime(kString mb_filepath)
 {
 	kFile file = kOpenFile(mb_filepath, kFileAccess_Read, kFileShareMode_ReadWrite, kFileMethod_OpenExisting);
 	if (file)
@@ -723,36 +726,38 @@ u64 kGetFileLastModifiedTime(const char *mb_filepath)
 	return 0;
 }
 
-bool kSetWorkingDirectory(const char *mb_path)
+bool kSetWorkingDirectory(kString mb_path)
 {
 	wchar_t path[K_MAX_PATH];
-	kWinUTF8ToWide(path, K_MAX_PATH, mb_path);
+	int		len = MultiByteToWideChar(CP_UTF8, 0, (char *)mb_path.data, (int)mb_path.count, path, kArrayCount(path) - 1);
+	path[len]	= 0;
 	return SetCurrentDirectoryW(path);
 }
 
-bool kGetWorkingDirectory(char *mb_path, int len)
+int kGetWorkingDirectory(u8 *mb_path, int len)
 {
 	wchar_t path[K_MAX_PATH] = {};
 	if (GetCurrentDirectoryW(kArrayCount(path), path))
 	{
-		kWinWideToUTF8(mb_path, len, path);
-		return true;
+		return kWinWideToUTF8((char *)mb_path, len, path);
 	}
-	return false;
+	return 0;
 }
 
-bool kSearchPath(const char *exe)
+bool kSearchPath(kString exe)
 {
 	wchar_t path[K_MAX_PATH];
-	kWinUTF8ToWide(path, K_MAX_PATH, exe);
+	int		len = MultiByteToWideChar(CP_UTF8, 0, (char *)exe.data, (int)exe.count, path, kArrayCount(path) - 1);
+	path[len]	= 0;
 	return SearchPathW(0, path, L".exe", 0, 0, 0);
 }
 
-bool kCreateDirectories(const char *mb_path)
+bool kCreateDirectories(kString mb_path)
 {
 	wchar_t path[K_MAX_PATH];
-	int		len	  = kWinUTF8ToWide(path, K_MAX_PATH, mb_path);
-	int		count = 0;
+	int		len = MultiByteToWideChar(CP_UTF8, 0, (char *)mb_path.data, (int)mb_path.count, path, kArrayCount(path) - 1);
+	path[len]	= 0;
+	int count	= 0;
 
 	for (int i = 0; i < len + 1; i++)
 	{
@@ -769,7 +774,7 @@ bool kCreateDirectories(const char *mb_path)
 	return count;
 }
 
-void kGetUserPath(char *mb_path, int len)
+int kGetUserPath(u8 *mb_path, int len)
 {
 	HANDLE token = INVALID_HANDLE_VALUE;
 	if (OpenProcessToken(GetCurrentProcess(), TOKEN_READ, &token))
@@ -779,11 +784,10 @@ void kGetUserPath(char *mb_path, int len)
 		DWORD	wlen			 = kArrayCount(path);
 		if (GetUserProfileDirectoryW(token, path, &wlen))
 		{
-			kWinWideToUTF8(mb_path, len, path);
-			return;
+			return kWinWideToUTF8((char *)mb_path, len, path);
 		}
 	}
-	snprintf(mb_path, len, "%s", "C:\\");
+	return snprintf((char *)mb_path, len, "%s", "C:\\");
 }
 
 static void kTranslateDirectoryItem(kDirectoryItem *dst, WIN32_FIND_DATAW *src, wchar_t *root, imem root_len,
@@ -879,13 +883,14 @@ static bool kVisitDirectories(wchar_t *path, int len, kDirectoryVisitorProc visi
 	return true;
 }
 
-bool kVisitDirectories(const char *mb_path, kDirectoryVisitorProc visitor, void *data)
+bool kVisitDirectories(kString mb_path, kDirectoryVisitorProc visitor, void *data)
 {
 	if (!visitor)
 		return false;
 
 	wchar_t path[K_MAX_PATH];
-	int		len		 = kWinUTF8ToWide(path, K_MAX_PATH, mb_path);
+	int		len = MultiByteToWideChar(CP_UTF8, 0, (char *)mb_path.data, (int)mb_path.count, path, kArrayCount(path) - 1);
+	path[len]	= 0;
 
 	wchar_t append[] = L"\\*";
 
@@ -934,10 +939,10 @@ static DWORD WINAPI kThreadStartRoutine(LPVOID thread_param)
 	return thrd.proc(thrd.data);
 }
 
-int kExecuteProcess(const char *cmdline)
+int kExecuteProcess(kString cmdline)
 {
-	int					len		 = MultiByteToWideChar(CP_UTF8, 0, cmdline, -1, 0, 0) + 1;
-	wchar_t			   *cmd		 = (wchar_t *)kAlloc(sizeof(wchar_t) * len);
+	int					len		 = MultiByteToWideChar(CP_UTF8, 0, (char *)cmdline.data, (int)cmdline.count, 0, 0) + 1;
+	wchar_t			   *cmd		 = (wchar_t *)kAlloc(sizeof(wchar_t));
 	STARTUPINFOW		start_up = {sizeof(start_up)};
 	PROCESS_INFORMATION process	 = {};
 
@@ -947,7 +952,7 @@ int kExecuteProcess(const char *cmdline)
 		return 1;
 	}
 
-	MultiByteToWideChar(CP_UTF8, 0, cmdline, -1, cmd, len - 1);
+	len			 = MultiByteToWideChar(CP_UTF8, 0, (char *)cmdline.data, (int)cmdline.count, cmd, len - 1);
 	cmd[len - 1] = 0;
 
 	DWORD rc	 = 1;
@@ -965,7 +970,7 @@ int kExecuteProcess(const char *cmdline)
 		kWinLogError(GetLastError(), "Windows", "Failed to execute process");
 	}
 
-	kFree(cmd, sizeof(wchar_t) * len);
+	//kFree(cmd, sizeof(wchar_t) * (len + 1));
 
 	return rc;
 }
@@ -1826,7 +1831,7 @@ static void kWinDestroyWindow(void)
 	media.window.native = nullptr;
 }
 
-static void kWinCreateWindow(const char *mb_title, uint w, uint h, uint flags)
+static void kWinCreateWindow(kString mb_title, uint w, uint h, uint flags)
 {
 	HMODULE		instance	 = GetModuleHandleW(0);
 	WNDCLASSEXW window_class = {0};
@@ -1849,9 +1854,10 @@ static void kWinCreateWindow(const char *mb_title, uint w, uint h, uint flags)
 
 	wchar_t title[2048] = L"KrWindow | Windows";
 
-	if (mb_title)
+	if (mb_title.count)
 	{
-		MultiByteToWideChar(CP_UTF8, 0, (char *)mb_title, -1, title, kArrayCount(title));
+		int len = MultiByteToWideChar(CP_UTF8, 0, (char *)mb_title.data, (int)mb_title.count, title, kArrayCount(title) - 1);
+		title[len] = 0;
 	}
 
 	int	  width	 = CW_USEDEFAULT;

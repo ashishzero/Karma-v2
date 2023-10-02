@@ -419,27 +419,27 @@ void kTerminate(uint code);
 //
 //
 
-kFile kOpenFile(const char *mb_filepath, kFileAccess paccess, kFileShareMode pshare, kFileMethod method);
+kFile kOpenFile(kString mb_filepath, kFileAccess paccess, kFileShareMode pshare, kFileMethod method);
 void  kCloseFile(kFile handle);
 umem  kReadFile(kFile handle, u8 *buffer, umem size);
 umem  kWriteFile(kFile handle, u8 *buff, umem size);
 umem  kGetFileSize(kFile handle);
-u8	 *kReadEntireFile(const char *filepath, umem *file_size);
-bool  kWriteEntireFile(const char *filepath, u8 *buffer, umem size);
-uint  kGetFileAttributes(const char *mb_filepath);
-u64	  kGetFileLastModifiedTime(const char *mb_filepath);
-bool  kSetWorkingDirectory(const char *mb_path);
-bool  kGetWorkingDirectory(char *mb_path, int len);
-bool  kSearchPath(const char *exe);
-bool  kCreateDirectories(const char *mb_path);
-void  kGetUserPath(char *mb_path, int len);
-bool  kVisitDirectories(const char *mb_path, kDirectoryVisitorProc visitor, void *data);
+u8	 *kReadEntireFile(kString filepath, umem *file_size);
+bool  kWriteEntireFile(kString filepath, u8 *buffer, umem size);
+uint  kGetFileAttributes(kString mb_filepath);
+u64	  kGetFileLastModifiedTime(kString mb_filepath);
+bool  kSetWorkingDirectory(kString mb_path);
+int	  kGetWorkingDirectory(u8 *mb_path, int len);
+bool  kSearchPath(kString exe);
+bool  kCreateDirectories(kString mb_path);
+int	  kGetUserPath(u8 *mb_path, int len);
+bool  kVisitDirectories(kString mb_path, kDirectoryVisitorProc visitor, void *data);
 
 //
 //
 //
 
-int		kExecuteProcess(const char *cmdline);
+int		kExecuteProcess(kString cmdline);
 kThread kLaunchThread(kThreadProc proc, void *arg, kThreadAttribute attr);
 
 kThread kGetCurrentThread(void);
@@ -485,10 +485,10 @@ void kCloseWindow(void);
 
 typedef struct kMediaWindowSpec
 {
-	const char *title;
-	u32			width;
-	u32			height;
-	u32			flags;
+	kString title;
+	u32		width;
+	u32		height;
+	u32		flags;
 } kMediaWindowSpec;
 
 typedef struct kMediaThreadSpec
