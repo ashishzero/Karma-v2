@@ -41,6 +41,13 @@ static kString kPushString(kProject *p, kString src)
 {
 	u8 *buff = (u8 *)kPushSize(p->arena, src.count + 1, 0);
 	memcpy(buff, src.data, src.count);
+
+	for (int i = 0; i < src.count; ++i)
+	{
+		if (buff[i] == '\\')
+			buff[i] = '/';
+	}
+
 	buff[src.count] = 0;
 	return kString(buff, src.count);
 }
@@ -257,10 +264,33 @@ bool kEmbedFile(kProject *p, kString path, kString name)
 	u8	*buff = kReadEntireFile(path, &count);
 	if (buff)
 	{
-		return kEmbedBinaryData(p, kSlice<u8>(buff, count), name);
+		bool r = kEmbedBinaryData(p, kSlice<u8>(buff, count), name);
 		kFree(buff, count);
+		return r;
 	}
 	return false;
+}
+
+bool kAddUnityFiles(kProject *p, kSlice<kString> files)
+{
+	kStringBuilder builder;
+
+	for (kString file : files)
+	{
+		builder.Write("#include ");
+		builder.Write('"');
+		builder.Write(file);
+		builder.Write('"');
+		builder.Write('\n');
+	}
+
+	kString unity = builder.ToString();
+	bool	r	  = kAddString(p, unity);
+
+	kFreeStringBuilder(&builder);
+	kFree(unity.data, unity.count);
+
+	return r;
 }
 
 void kDiscardProject(kProject *p)
@@ -283,195 +313,130 @@ void kDiscardProject(kProject *p)
 //
 //
 
-static kString kOutputSourceFile(kProject *p, kString src)
+static kString kPrepareOutputFile(kProject *p, kString src)
 {
-	imem pos = src.count;
+	imem		ppos = kInvFindChar(src, '.', src.count);
+	imem		spos = kInvFindChar(src, '/', ppos >= 0 ? ppos : src.count);
+	kString		ex	 = kSubRight(src, ppos);
+	kString		name = kSubString(src, spos + 1, ppos - spos);
 
-	for (; pos > 0; --pos)
-	{
-		if (src[pos - 1] == '\\' || src[pos - 1] == '/')
-			break;
-	}
+	const char *out	 = ".obj";
+	if (ex == ".rc")
+		out = ".aps";
 
-	char	path[K_MAX_PATH];
+	char path[K_MAX_PATH];
+	int	 len = snprintf(path, kArrayCount(path), "%s/%.*s.%s", p->objdir.data, (int)name.count, name.data, out);
 
-	int		len = snprintf(path, kArrayCount(path), "%s/%s.obj", p->objdir.data, src.data + pos);
+	kAddObjectFile(p, kString(path, len));
 
-	kString obj = kPushString(p, kString(path, len));
-	p->objects.Add(obj);
-
-	return obj;
+	return p->objects.Last();
 }
 
-static kString kOutputResourceFile(kProject *p, kString src)
+static kString kBuildCompileCommandLinePrefix(kProject *p, kStringBuilder<> *builder)
 {
-	imem pos = src.count;
-
-	for (; pos > 0; --pos)
-	{
-		if (src[pos - 1] == '\\' || src[pos - 1] == '/')
-			break;
-	}
-
-	char	path[K_MAX_PATH];
-
-	int		len = snprintf(path, kArrayCount(path), "%s/%s.aps", p->objdir.data, src.data + pos);
-
-	kString obj = kPushString(p, kString(path, len));
-	p->objects.Add(obj);
-
-	return obj;
-}
-
-int kBuildProject(kProject *p)
-{
-	kArenaSpec spec	   = {.flags = 0, .alignment = sizeof(umem), .capacity = kMegaByte * 6};
-
-	kContext  *context = kGetContext();
-
-	kArena	  *temp	   = kAllocArena(spec, &context->allocator);
-
-	kPrepareForBuild(p);
-
-	kAssert(p->kind == kBuildKind_EXE);
-
-	kStringBuilder builder;
-	builder.Write("clang++ -Wall -march=native -std=c++20 -DUNICODE -Wno-unused-function ");
+	builder->Write("clang++ -Wall -march=native -std=c++20 -DUNICODE -Wno-unused-function ");
 
 	if (p->flags & kBuild_DebugSymbols)
 	{
-		builder.Write("-g -gcodeview ");
+		builder->Write("-g -gcodeview ");
 	}
 
 	if (p->flags & kBuild_Optimization)
 	{
-		builder.Write("-O3 -funroll-loops -fprefetch-loop-arrays ");
+		builder->Write("-O3 -funroll-loops -fprefetch-loop-arrays ");
 	}
 	else
 	{
-		builder.Write("-fstandalone-debug -fno-limit-debug-info ");
+		builder->Write("-fstandalone-debug -fno-limit-debug-info ");
 	}
 
 	for (kString flag : p->extras)
 	{
-		builder.Write(flag);
-		builder.Write(" ");
+		builder->Write(flag);
+		builder->Write(" ");
 	}
 
 	for (kString inc : p->incdirs)
 	{
-		builder.Write("-I ");
-		builder.Write(inc);
-		builder.Write(" ");
+		builder->Write("-I ");
+		builder->Write(inc);
+		builder->Write(" ");
 	}
 
 	for (kPair define : p->defines)
 	{
-		builder.Write("-D");
-		builder.Write(define.key);
+		builder->Write("-D");
+		builder->Write(define.key);
 
 		if (define.value.count)
 		{
-			builder.Write("=");
-			builder.Write(define.value);
+			builder->Write("=");
+			builder->Write(define.value);
 		}
 
-		builder.Write(" ");
+		builder->Write(" ");
 	}
 
-	builder.Write("-c -o ");
+	builder->Write("-c -o ");
 
-	kString compile = builder.ToString(temp);
+	kString cmd = builder->ToString();
 
-	builder.Reset();
+	builder->Reset();
 
-	for (kString src : p->sources)
-	{
-		kString	   obj	  = kOutputSourceFile(p, src);
+	return cmd;
+}
 
-		kTempBlock tblock = kBeginTemporaryMemory(temp, 0);
+static kString kBuildResourceCompileCommandLinePrefix(kProject *p, kStringBuilder<> *builder)
+{
+	builder->Write("llvm-rc -Fo ");
+	kString cmd = builder->ToString();
+	builder->Reset();
+	return cmd;
+}
 
-		builder.Write(compile);
-		builder.Write('"');
-		builder.Write(obj);
-		builder.Write('"');
-		builder.Write(' ');
-		builder.Write('"');
-		builder.Write(src);
-		builder.Write('"');
+static kString kBuildLinkerCommandLine(kProject *p, kStringBuilder<> *builder)
+{
+	if (p->kind != kBuildKind_LIB)
+		builder->Write("lld-link ");
+	else
+		builder->Write("lld-lib ");
 
-		kString cmd = builder.ToString(temp);
-		builder.Reset();
+	if (p->kind == kBuildKind_DLL)
+		builder->Write("/DLL ");
 
-		kLogTrace("CMD: %s\n", cmd.data);
+	builder->Write("/OUT:");
+	builder->Write('"');
+	builder->Write(p->outdir);
+	builder->Write('/');
+	builder->Write(p->name);
 
-		int rc = kExecuteProcess(cmd);
+	if (p->kind == kBuildKind_EXE)
+		builder->Write(".exe");
+	else if (p->kind == kBuildKind_DLL)
+		builder->Write(".dll");
+	else
+		builder->Write(".lib");
 
-		if (rc)
-		{
-			kDiscardProject(p);
-			return rc;
-		}
+	builder->Write('"');
 
-		kEndTemporaryMemory(&tblock, 0);
-	}
+	builder->Write(" /NXCOMPAT ");
+	builder->Write("/PDB:");
+	builder->Write('"');
+	builder->Write(p->outdir);
+	builder->Write('/');
+	builder->Write(p->name);
+	builder->Write(".pdb");
+	builder->Write('"');
 
-	for (kString res : p->resources)
-	{
-		kString	   obj	  = kOutputResourceFile(p, res);
-		kTempBlock tblock = kBeginTemporaryMemory(temp, 0);
-
-		builder.Write("llvm-rc -Fo ");
-		builder.Write('"');
-		builder.Write(obj);
-		builder.Write('"');
-		builder.Write(' ');
-		builder.Write('"');
-		builder.Write(res);
-		builder.Write('"');
-
-		kString cmd = builder.ToString(temp);
-		builder.Reset();
-
-		kLogTrace("CMD: %s\n", cmd.data);
-
-		int rc = kExecuteProcess(cmd);
-
-		if (rc)
-		{
-			kDiscardProject(p);
-			return rc;
-		}
-
-		kEndTemporaryMemory(&tblock, 0);
-	}
-
-	builder.Write("lld-link /OUT:");
-	builder.Write('"');
-	builder.Write(p->outdir);
-	builder.Write('/');
-	builder.Write(p->name);
-	builder.Write(".exe");
-	builder.Write('"');
-
-	builder.Write(" /NXCOMPAT ");
-	builder.Write("/PDB:");
-	builder.Write('"');
-	builder.Write(p->outdir);
-	builder.Write('/');
-	builder.Write(p->name);
-	builder.Write(".pdb");
-	builder.Write('"');
-
-	builder.Write(" /DYNAMICBASE ");
+	builder->Write(" /DYNAMICBASE ");
 
 	for (kString dir : p->libdirs)
 	{
-		builder.Write("/LIBPATH:");
-		builder.Write('"');
-		builder.Write(dir);
-		builder.Write('"');
-		builder.Write(' ');
+		builder->Write("/LIBPATH:");
+		builder->Write('"');
+		builder->Write(dir);
+		builder->Write('"');
+		builder->Write(' ');
 	}
 
 	if (p->flags & kBuild_Optimization)
@@ -489,64 +454,128 @@ int kBuildProject(kProject *p)
 
 	for (kString lib : p->libraries)
 	{
-		builder.Write('"');
-		builder.Write(lib);
-		builder.Write('"');
-		builder.Write(' ');
+		builder->Write('"');
+		builder->Write(lib);
+		builder->Write('"');
+		builder->Write(' ');
 	}
 
-	builder.Write("/DEBUG ");
+	builder->Write("/DEBUG ");
 
 	if (p->arch == kBuildArch_x64)
 	{
-		builder.Write("/MACHINE:X64 ");
+		builder->Write("/MACHINE:X64 ");
 	}
 	else
 	{
-		builder.Write("/MACHINE:X86 ");
+		builder->Write("/MACHINE:X86 ");
 	}
 
 	if (p->manifest.count)
 	{
-		builder.Write("/ManifestFile:");
-		builder.Write('"');
-		builder.Write(p->manifest);
-		builder.Write('"');
-		builder.Write(' ');
+		builder->Write("/ManifestFile:");
+		builder->Write('"');
+		builder->Write(p->manifest);
+		builder->Write('"');
+		builder->Write(' ');
 	}
 
-	builder.Write("/NOLOGO /ERRORREPORT:PROMPT ");
+	builder->Write("/NOLOGO /ERRORREPORT:PROMPT ");
 
 	if (p->flags & kBuild_WindowsSystem)
 	{
-		builder.Write("/SUBSYSTEM:WINDOWS ");
+		builder->Write("/SUBSYSTEM:WINDOWS ");
 	}
 	else
 	{
-		builder.Write("/SUBSYSTEM:CONSOLE ");
+		builder->Write("/SUBSYSTEM:CONSOLE ");
 	}
 
 	for (kString obj : p->objects)
 	{
-		builder.Write('"');
-		builder.Write(obj);
-		builder.Write('"');
-		builder.Write(' ');
+		builder->Write('"');
+		builder->Write(obj);
+		builder->Write('"');
+		builder->Write(' ');
 	}
 
-	kString cmd = builder.ToString(temp);
+	kString cmd = builder->ToString();
+	builder->Reset();
+	return cmd;
+}
 
-	kLogTrace("CMD: %s\n", cmd.data);
+static int kExecuteCommand(kProject *p, kStringBuilder<> *builder, kString command, kString path)
+{
+	kString out = kPrepareOutputFile(p, path);
 
-	int rc = kExecuteProcess(cmd);
+	builder->Write(command);
+	builder->Write(' ');
 
-	if (rc)
+	builder->Write('"');
+	builder->Write(out);
+	builder->Write('"');
+	builder->Write(' ');
+
+	builder->Write('"');
+	builder->Write(path);
+	builder->Write('"');
+
+	kString exec = builder->ToString();
+
+	kLogTrace("CMD: %s\n", exec.data);
+	int rc = kExecuteProcess(exec);
+	kFree(exec.data, exec.count);
+
+	builder->Reset();
+
+	return rc;
+}
+
+int kBuildProject(kProject *p)
+{
+	kPrepareForBuild(p);
+
+	kStringBuilder builder;
+
+	kString		   compile	= kBuildCompileCommandLinePrefix(p, &builder);
+	kString		   resource = kBuildResourceCompileCommandLinePrefix(p, &builder);
+
+	kDefer
 	{
+		kFree(compile.data, compile.count);
+		kFree(resource.data, resource.count);
+		kFreeStringBuilder(&builder);
 		kDiscardProject(p);
-		return rc;
+	};
+
+	kLogTrace(">> Compiling %s...\n", p->name.data);
+
+	for (kString src : p->sources)
+	{
+		int rc = kExecuteCommand(p, &builder, compile, src);
+		if (rc)
+		{
+			return rc;
+		}
 	}
 
-	kDiscardProject(p);
+	for (kString res : p->resources)
+	{
+		int rc = kExecuteCommand(p, &builder, resource, res);
+		if (rc)
+		{
+			return rc;
+		}
+	}
 
-	return 0;
+	kString link = kBuildLinkerCommandLine(p, &builder);
+
+	kDefer
+	{
+		kFree(link.data, link.count);
+	};
+
+	kLogTrace(">> Linking...\n", p->name.data);
+
+	return kExecuteProcess(link);
 }

@@ -59,22 +59,23 @@ void Main(int argc, const char **argv)
 
 	kConfigureProject(project, kBuild_DebugSymbols, kBuildKind_EXE, kBuildArch_x64);
 
-	kSetBuildDirectory(project, "build/example", "build/example/obj");
-	kSetTemporaryDirectory(project, "build/example/gens");
+	kSetBuildDirectory(project, "build", "build/objs");
 
-	umem size = 0;
-	u8 *bytes = kReadEntireFile("C:/Users/zeroa/Downloads/Untitled.png", &size);
-	kEmbedBinaryData(project, kSlice<u8>(bytes, size), "UntitledImage");
+	//kSetBuildDirectory(project, "build/example", "build/example/obj");
+	//kSetTemporaryDirectory(project, "build/example/gens");
 
-	//kEmbedFile(project, "C:/Users/zeroa/Downloads/Untitled.png", "UntitledImage");
-	kAddString(project, Code);
+	//umem size = 0;
+	//u8 *bytes = kReadEntireFile("C:/Users/zeroa/Downloads/Untitled.png", &size);
+	//kEmbedBinaryData(project, kSlice<u8>(bytes, size), "UntitledImage");
+
+	////kEmbedFile(project, "C:/Users/zeroa/Downloads/Untitled.png", "UntitledImage");
+	//kAddString(project, Code);
+
+	kAddFilesFromDirectory(project, "Code");
+	kAddManifestFile(project, "Code/kWindows.manifest");
 
 	kBuildProject(project);
-
-	kExecuteProcess("build/example/example.exe");
-
-	//kAddFilesFromDirectory(project, "Code");
-	//kAddManifestFile(project, "Code/kWindows.manifest");
+	//kExecuteProcess("build/example/example.exe");
 
 
 	kMediaUserEvents user = {.update = Update};

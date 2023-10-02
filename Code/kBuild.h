@@ -42,5 +42,6 @@ void	  kAddFilesFromDirectory(kProject *p, kString path, bool recurse = false);
 bool	  kAddString(kProject *p, const kString src);
 bool	  kEmbedBinaryData(kProject *p, const kSlice<u8> buff, kString name);
 bool	  kEmbedFile(kProject *p, kString path, kString name);
+bool	  kAddUnityFiles(kProject *p, kSlice<kString> files);
 void	  kDiscardProject(kProject *p);
 int		  kBuildProject(kProject *p);
