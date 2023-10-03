@@ -1402,6 +1402,8 @@ static int kWinRunEventLoop(void)
 		if (kIsWindowClosed())
 			break;
 
+		kCommitFrame();
+
 		media.swap_chain.present(media.window.native->swap_chain);
 
 		u64 new_counter = kGetPerformanceCounter();
