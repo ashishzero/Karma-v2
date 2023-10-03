@@ -148,6 +148,14 @@
 #endif
 #endif
 
+#if K_PLATFORM_WINDOWS == 1
+#define K_EXPORT __declspec(dllexport)
+#define K_IMPORT __declspec(dllimport)
+#else
+#define K_EXPORT 
+#define K_IMPORT 
+#endif
+
 #if defined(K_COMPILER_GCC)
 #define inproc static inline
 #else

@@ -19,8 +19,11 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Build.cpp" />
     <ClCompile Include="Code\kBuild.cpp" />
     <ClCompile Include="Code\kContext.cpp" />
+    <ClCompile Include="Code\kMain.cpp" />
+    <ClCompile Include="Code\kPlatform.cpp" />
     <ClCompile Include="Code\kRender.cpp" />
     <ClCompile Include="Code\kRenderApi.cpp" />
     <ClCompile Include="Code\Main.cpp" />
@@ -33,6 +36,7 @@
     <ClInclude Include="Code\kContext.h" />
     <ClCompile Include="Code\kCommon.cpp" />
     <ClCompile Include="Code\kMath.cpp" />
+    <ClInclude Include="Code\kPlatform.h" />
     <ClInclude Include="Code\kRender.h" />
     <ClInclude Include="Code\kRenderApi.h" />
     <ClInclude Include="Code\kStrings.h" />
@@ -56,6 +60,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include=".clang-format" />
+    <None Include="Prebuild.bat" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
@@ -178,6 +183,9 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <Manifest>
+      <AdditionalManifestFiles>Code\kWindows.manifest %(AdditionalManifestFiles)</AdditionalManifestFiles>
+    </Manifest>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

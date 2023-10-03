@@ -1,6 +1,7 @@
 #include "kBuild.h"
-#include "kMedia.h"
+#include "kPlatform.h"
 #include "kStrings.h"
+#include "kArray.h"
 
 #include <stdio.h>
 
@@ -318,14 +319,14 @@ static kString kPrepareOutputFile(kProject *p, kString src)
 	imem		ppos = kInvFindChar(src, '.', src.count);
 	imem		spos = kInvFindChar(src, '/', ppos >= 0 ? ppos : src.count);
 	kString		ex	 = kSubRight(src, ppos);
-	kString		name = kSubString(src, spos + 1, ppos - spos);
+	kString		name = kSubString(src, spos + 1, ppos - spos - 1);
 
 	const char *out	 = ".obj";
 	if (ex == ".rc")
 		out = ".aps";
 
 	char path[K_MAX_PATH];
-	int	 len = snprintf(path, kArrayCount(path), "%s/%.*s.%s", p->objdir.data, (int)name.count, name.data, out);
+	int	 len = snprintf(path, kArrayCount(path), "%s/%.*s%s", p->objdir.data, (int)name.count, name.data, out);
 
 	kAddObjectFile(p, kString(path, len));
 
@@ -334,6 +335,8 @@ static kString kPrepareOutputFile(kProject *p, kString src)
 
 static kString kBuildCompileCommandLinePrefix(kProject *p, kStringBuilder<> *builder)
 {
+	kAddIncludeDirectory(p, p->dir);
+
 	builder->Write("clang++ -Wall -march=native -std=c++20 -DUNICODE -Wno-unused-function ");
 
 	if (p->flags & kBuild_DebugSymbols)
@@ -343,7 +346,7 @@ static kString kBuildCompileCommandLinePrefix(kProject *p, kStringBuilder<> *bui
 
 	if (p->flags & kBuild_Optimization)
 	{
-		builder->Write("-O3 -funroll-loops -fprefetch-loop-arrays ");
+		builder->Write("-O3 -funroll-loops ");
 	}
 	else
 	{
@@ -576,6 +579,65 @@ int kBuildProject(kProject *p)
 	};
 
 	kLogTrace(">> Linking...\n", p->name.data);
+	kLogTrace("CMD: %s\n", link.data);
 
-	return kExecuteProcess(link);
+	int rc = kExecuteProcess(link);
+
+	kLogTrace("Finished.\n\n", link.data);
+
+	return rc;
 }
+
+//
+//
+//
+
+void kprivateBootstrapBuild(int argc, const char **argv, kString bootpath, const kString build)
+{
+	bool	rebuild	 = false;
+
+	if (kGetFileAttributes(bootpath))
+	{
+		u64 src = kGetFileLastModifiedTime(build);
+		u64 dll = kGetFileLastModifiedTime(bootpath);
+		rebuild = src > dll;
+	}
+	else
+	{
+		rebuild = true;
+	}
+
+	if (rebuild)
+	{
+		kLogTrace("Bootstraping %.*s...\n", (int)bootpath.count, bootpath.data);
+
+		kProject *bootstrap = kCreateProject("bootstrap");
+		kConfigureProject(bootstrap, kBuild_Optimization, kBuildKind_DLL, kBuildArch_x64);
+		kSetBuildDirectory(bootstrap, "build", "build/objs");
+		kAddIncludeDirectory(bootstrap, "Code");
+		kAddFile(bootstrap, build);
+		kBuildProject(bootstrap);
+
+		kLogTrace("Bootstrap done.\n\n");
+	}
+
+	kModule mod = kLoadModule(bootpath);
+	if (!mod)
+	{
+		kLogError("Failed to load Prebuild DLL: %.*s\n", (int)bootpath.count, bootpath.data);
+		return;
+	}
+
+	kProjectBuildProc exec = (kProjectBuildProc)kGetProcAddress(mod, "kExecBuild");
+	exec(argc, argv);
+
+	kFreeModule(mod);
+}
+
+//
+//
+//
+
+#include "kCommon.cpp"
+#include "kContext.cpp"
+#include "kPlatform.cpp"

@@ -1,5 +1,5 @@
 #pragma once
-#include "kArray.h"
+#include "kCommon.h"
 
 enum kBuildKind
 {
@@ -23,6 +23,9 @@ enum kBuildFlags
 };
 
 struct kProject;
+typedef void (*kProjectBuildProc)(int, const char **);
+
+#define K_BUILD_PROC K_EXPORT extern "C"
 
 kProject *kCreateProject(kString name);
 void	  kConfigureProject(kProject *p, uint flags, kBuildKind kind, kBuildArch arch);
@@ -45,3 +48,7 @@ bool	  kEmbedFile(kProject *p, kString path, kString name);
 bool	  kAddUnityFiles(kProject *p, kSlice<kString> files);
 void	  kDiscardProject(kProject *p);
 int		  kBuildProject(kProject *p);
+
+void	  kprivateBootstrapBuild(int argc, const char **argv, kString bootpath, const kString build);
+
+#define kBootstrapBuild(argc, argv, bootpath) kprivateBootstrapBuild(argc, argv, bootpath, __FILE__)
