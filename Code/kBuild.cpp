@@ -31,8 +31,15 @@ struct kProject
 	kArray<kString> resources;
 	kArray<kString> objects;
 	kArray<kString> libraries;
-	uint			generation;
 };
+
+#if defined(K_EXPORT_SYMBOLS)
+K_EXPORT kAtomic FileGeneration = {};
+#elif defined(K_IMPORT_SYMBOLS)
+K_IMPORT kAtomic FileGeneration;
+#else
+static kAtomic FileGeneration = {};
+#endif
 
 //
 //
@@ -75,7 +82,7 @@ static void kPrepareForBuild(kProject *p)
 
 static kString kGetNextGenFileName(kProject *p)
 {
-	uint gen = ++p->generation;
+	int	 gen = kAtomicInc(&FileGeneration);
 
 	char path[K_MAX_PATH];
 	int	 len = snprintf(path, K_MAX_PATH, "%s/%u.cpp", p->gendir.data, gen);
@@ -102,9 +109,9 @@ kProject *kCreateProject(kString name)
 	project->arena	   = arena;
 	project->name	   = kPushString(project, name);
 	project->dir	   = ".";
-	project->outdir	   = "build";
-	project->objdir	   = "build/objs";
-	project->gendir	   = "build/gens";
+	project->outdir	   = "Build";
+	project->objdir	   = "Build/Objects";
+	project->gendir	   = "Build/Generated";
 
 	return project;
 }
@@ -337,7 +344,16 @@ static kString kBuildCompileCommandLinePrefix(kProject *p, kStringBuilder<> *bui
 {
 	kAddIncludeDirectory(p, p->dir);
 
-	builder->Write("clang++ -Wall -march=native -std=c++20 -DUNICODE -Wno-unused-function ");
+	builder->Write("clang++ -Wall -std=c++20 -DUNICODE -Wno-unused-function ");
+
+	if (p->arch == kBuildArch_x64)
+	{
+		builder->Write("-m64 ");
+	}
+	else if (p->arch == kBuildArch_x86)
+	{
+		builder->Write("-m32 ");
+	}
 
 	if (p->flags & kBuild_DebugSymbols)
 	{
@@ -587,57 +603,3 @@ int kBuildProject(kProject *p)
 
 	return rc;
 }
-
-//
-//
-//
-
-void kprivateBootstrapBuild(int argc, const char **argv, kString bootpath, const kString build)
-{
-	bool	rebuild	 = false;
-
-	if (kGetFileAttributes(bootpath))
-	{
-		u64 src = kGetFileLastModifiedTime(build);
-		u64 dll = kGetFileLastModifiedTime(bootpath);
-		rebuild = src > dll;
-	}
-	else
-	{
-		rebuild = true;
-	}
-
-	if (rebuild)
-	{
-		kLogTrace("Bootstraping %.*s...\n", (int)bootpath.count, bootpath.data);
-
-		kProject *bootstrap = kCreateProject("bootstrap");
-		kConfigureProject(bootstrap, kBuild_Optimization, kBuildKind_DLL, kBuildArch_x64);
-		kSetBuildDirectory(bootstrap, "build", "build/objs");
-		kAddIncludeDirectory(bootstrap, "Code");
-		kAddFile(bootstrap, build);
-		kBuildProject(bootstrap);
-
-		kLogTrace("Bootstrap done.\n\n");
-	}
-
-	kModule mod = kLoadModule(bootpath);
-	if (!mod)
-	{
-		kLogError("Failed to load Prebuild DLL: %.*s\n", (int)bootpath.count, bootpath.data);
-		return;
-	}
-
-	kProjectBuildProc exec = (kProjectBuildProc)kGetProcAddress(mod, "kExecBuild");
-	exec(argc, argv);
-
-	kFreeModule(mod);
-}
-
-//
-//
-//
-
-#include "kCommon.cpp"
-#include "kContext.cpp"
-#include "kPlatform.cpp"

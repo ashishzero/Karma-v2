@@ -2,3 +2,4 @@
 build/
 *.vcxproj.user
 Code/kResource.aps
+kBuild.exe

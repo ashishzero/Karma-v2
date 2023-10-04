@@ -48,7 +48,3 @@ bool	  kEmbedFile(kProject *p, kString path, kString name);
 bool	  kAddUnityFiles(kProject *p, kSlice<kString> files);
 void	  kDiscardProject(kProject *p);
 int		  kBuildProject(kProject *p);
-
-void	  kprivateBootstrapBuild(int argc, const char **argv, kString bootpath, const kString build);
-
-#define kBootstrapBuild(argc, argv, bootpath) kprivateBootstrapBuild(argc, argv, bootpath, __FILE__)

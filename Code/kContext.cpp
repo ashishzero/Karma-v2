@@ -6,13 +6,23 @@
 #include <stdarg.h>
 #include <math.h>
 
+#if defined(K_EXPORT_SYMBOLS)
+K_EXPORT kContext context = {.allocator = {.proc = kDefaultHeapAllocator},
+							 .random	= {.state = 0x853c49e6748fea9bULL, .inc = 0xda3e39cb94b95bdbULL},
+							 .assertion = kDefaultHandleAssertion,
+							 .logger	= {.proc = kDefaultHandleLog},
+							 .fatal		= kDefaultFatalError};
+#elif defined(K_IMPORT_SYMBOLS)
+K_IMPORT kContext context;
+#else
 static kContext context = {.allocator = {.proc = kDefaultHeapAllocator},
 						   .random	  = {.state = 0x853c49e6748fea9bULL, .inc = 0xda3e39cb94b95bdbULL},
 						   .assertion = kDefaultHandleAssertion,
 						   .logger	  = {.proc = kDefaultHandleLog},
 						   .fatal	  = kDefaultFatalError};
+#endif
 
-void			kHandleAssertion(const char *file, int line, const char *proc, const char *desc)
+void kHandleAssertion(const char *file, int line, const char *proc, const char *desc)
 {
 	context.assertion(file, line, proc, desc);
 	kTriggerBreakpoint();

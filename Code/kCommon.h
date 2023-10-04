@@ -156,6 +156,14 @@
 #define K_IMPORT 
 #endif
 
+#if defined(K_EXPORT_SYMBOLS)
+#define K_API K_EXPORT
+#elif defined(K_IMPORT_SYMBOLS)
+#define K_API K_IMPORT
+#else
+#define K_API 
+#endif
+
 #if defined(K_COMPILER_GCC)
 #define inproc static inline
 #else

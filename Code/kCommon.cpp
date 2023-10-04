@@ -533,7 +533,7 @@ imem kFindChar(kString str, u32 key, imem pos)
 
 imem kInvFindString(kString str, kString key, imem pos)
 {
-	imem index = kClamp(0LL, str.count - key.count, pos);
+	imem index = kClamp((imem)0, str.count - key.count, pos);
 	while (index >= 0)
 	{
 		kString sub = kString(str.data + index, key.count);
