@@ -1,0 +1,56 @@
+{
+  "configurations": [
+    {
+      "inheritEnvironments": [
+        "msvc_x64"
+      ],
+      "name": "x64-Debug",
+      "includePath": [
+        "${env.INCLUDE}",
+        "${workspaceRoot}\\**"
+      ],
+      "defines": [
+        "WIN64",
+        "_DEBUG",
+        "UNICODE",
+        "_UNICODE",
+        "K_BUILD_DEBUG"
+      ],
+      "intelliSenseMode": "windows-clang-x64"
+    },
+    {
+      "inheritEnvironments": [
+        "msvc_x64"
+      ],
+      "name": "x64-Release",
+      "includePath": [
+        "${env.INCLUDE}",
+        "${workspaceRoot}\\**"
+      ],
+      "defines": [
+        "WIN64",
+        "UNICODE",
+        "_UNICODE",
+        "K_BUILD_RELEASE"
+      ],
+      "intelliSenseMode": "windows-clang-x64"
+    },
+    {
+      "inheritEnvironments": [
+        "msvc_x64"
+      ],
+      "name": "x64-Developer",
+      "includePath": [
+        "${env.INCLUDE}",
+        "${workspaceRoot}\\**"
+      ],
+      "defines": [
+        "WIN64",
+        "UNICODE",
+        "_UNICODE",
+        "K_BUILD_DEVELOPER"
+      ],
+      "intelliSenseMode": "windows-clang-x64"
+    }
+  ]
+}

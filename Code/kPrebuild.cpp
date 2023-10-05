@@ -44,6 +44,7 @@ void Main(int argc, const char **argv)
 
 		kSetBuildDirectory(bootstrap, "Build/Prebuild", "Build/Objects");
 		kAddDefine(bootstrap, "K_IMPORT_SYMBOLS");
+		kAddDefine(bootstrap, "K_CONSOLE_APPLICATION");
 		kAddIncludeDirectory(bootstrap, "Code");
 		kAddLibrary(bootstrap, buildlib);
 

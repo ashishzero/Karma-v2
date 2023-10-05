@@ -199,30 +199,41 @@ static void kD3D11_Flush(void)
 
 static bool kD3D11_CreateGraphicsDevice(void)
 {
-	UINT flags = 0;
+	IDXGIAdapter1 *adapter		= nullptr;
+	UINT		   device_flags = 0;
+	UINT		   flags		= 0;
 
-	if (EnableDebugLayer)
-		flags |= DXGI_CREATE_FACTORY_DEBUG;
-
-	if (!d3d11.factory)
+	for (int i = 0; i < 2; ++i)
 	{
-		HRESULT hr = CreateDXGIFactory2(flags, IID_PPV_ARGS(&d3d11.factory));
-		if (FAILED(hr))
+		if (EnableDebugLayer)
+			flags |= DXGI_CREATE_FACTORY_DEBUG;
+
+		if (!d3d11.factory)
 		{
-			hr = CreateDXGIFactory1(IID_PPV_ARGS(&d3d11.factory));
+			HRESULT hr = CreateDXGIFactory2(flags, IID_PPV_ARGS(&d3d11.factory));
 			if (FAILED(hr))
 			{
-				kWinLogError(hr, "DirectX11", "Failed to create factory");
-				return false;
+				hr = CreateDXGIFactory1(IID_PPV_ARGS(&d3d11.factory));
+				if (FAILED(hr))
+				{
+					kWinLogError(hr, "DirectX11", "Failed to create factory");
+					return false;
+				}
 			}
 		}
+
+		device_flags = 0;
+		if (EnableDebugLayer)
+			device_flags |= D3D11_CREATE_DEVICE_DEBUG;
+
+		adapter = kD3D11_FindAdapter(d3d11.factory, device_flags);
+
+		if (EnableDebugLayer && !adapter)
+		{
+			EnableDebugLayer = false;
+			kLogWarning("DirectX11: Debug Layer SDK not present. Falling back to adaptor without debug layer");
+		}
 	}
-
-	UINT device_flags = 0;
-	if (EnableDebugLayer)
-		device_flags |= D3D11_CREATE_DEVICE_DEBUG;
-
-	IDXGIAdapter1 *adapter = kD3D11_FindAdapter(d3d11.factory, device_flags);
 
 	if (adapter == nullptr)
 	{

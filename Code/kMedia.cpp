@@ -1024,7 +1024,7 @@ static LRESULT kWinHandleEvents(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam
 		UINT	  rid_size = 0;
 		GetRawInputData(hri, RID_INPUT, 0, &rid_size, sizeof(RAWINPUTHEADER));
 
-		RAWINPUT *input = rid_size ? (RAWINPUT *)alloca(rid_size) : nullptr;
+		RAWINPUT *input = rid_size ? (RAWINPUT *)_alloca(rid_size) : nullptr;
 		if (!input)
 			break;
 

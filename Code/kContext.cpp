@@ -161,6 +161,8 @@ void kFatalError(const char *msg)
 #if K_PLATFORM_WINDOWS == 1
 
 #include "kWindowsCommon.h"
+#include <stdio.h>
+#include <wchar.h>
 
 void kDefaultHandleAssertion(const char *file, int line, const char *proc, const char *string)
 {
@@ -181,13 +183,13 @@ void kDefaultFatalError(const char *message)
 	FatalAppExitW(0, L"out of memory");
 }
 
+static const WORD ColorsMap[] = {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE,
+									FOREGROUND_RED | FOREGROUND_GREEN, FOREGROUND_RED};
+static_assert(kArrayCount(ColorsMap) == kLogLevel_Error + 1, "");
+
 void kDefaultHandleLog(void *data, kLogLevel level, const u8 *msg, imem msg_len)
 {
 	static kAtomic	  Guard		  = {0};
-
-	static const WORD ColorsMap[] = {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE,
-									 FOREGROUND_RED | FOREGROUND_GREEN, FOREGROUND_RED};
-	static_assert(kArrayCount(ColorsMap) == kLogLevel_Error + 1, "");
 
 	wchar_t buff[4096];
 
@@ -196,8 +198,8 @@ void kDefaultHandleLog(void *data, kLogLevel level, const u8 *msg, imem msg_len)
 
 	kAtomicLock(&Guard);
 
+#ifndef K_CONSOLE_APPLICATION
 	HANDLE handle = (level == kLogLevel_Error) ? GetStdHandle(STD_ERROR_HANDLE) : GetStdHandle(STD_OUTPUT_HANDLE);
-
 	if (handle != INVALID_HANDLE_VALUE)
 	{
 		CONSOLE_SCREEN_BUFFER_INFO buffer_info;
@@ -207,6 +209,10 @@ void kDefaultHandleLog(void *data, kLogLevel level, const u8 *msg, imem msg_len)
 		WriteConsoleW(handle, buff, len, &written, 0);
 		SetConsoleTextAttribute(handle, buffer_info.wAttributes);
 	}
+#else
+	FILE *out = (level == kLogLevel_Error) ? stderr : stdout;
+	fwprintf(out, L"%s", buff);
+#endif
 
 	if (IsDebuggerPresent())
 		OutputDebugStringW(buff);
