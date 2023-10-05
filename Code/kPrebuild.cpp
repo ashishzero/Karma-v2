@@ -15,7 +15,7 @@ void Main(int argc, const char **argv)
 	kString builddll = "Build/Prebuild/Bootstrap.dll";
 	kString buildlib = "Build/Prebuild/kBuild.lib";
 
-	kString files[]	 = {"Code/kCommon.cpp", "Code/kBuild.cpp", "Code/kContext.cpp", "Code/kPlatform.cpp", buildsrc};
+	kString files[]	 = {"Code/kCommon.cpp", "Code/kBuild.cpp", "Code/kContext.cpp", "Code/kCmdLineParser.cpp", "Code/kPlatform.cpp", buildsrc};
 
 	if (kGetFileAttributes(builddll))
 	{

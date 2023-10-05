@@ -1,9 +1,9 @@
 #include "kBuild.h"
 #include "kPlatform.h"
 #include "kContext.h"
-#include <stdio.h>
-
-#include <string.h>
+#include "kStrings.h"
+#include "kArray.h"
+#include "kCmdLineParser.h"
 
 enum BuildConfig
 {
@@ -12,66 +12,56 @@ enum BuildConfig
 	BuildConfig_Release,
 };
 
-enum BuildPlatform
-{
-	BuildPlatform_x64,
-	BuildPlatform_x86,
-};
-
-static const char *BuildPlatformStrings[] = {"x64", "x86"};
-static const char *BuildConfigStrings[]	  = {"debug", "developer", "release"};
+static kString ArchStrings[]   = {"x64", "x86"};
+static kString ConfigStrings[] = {"debug", "developer", "release"};
 
 struct BuildSettings
 {
-	BuildConfig	  config   = BuildConfig_Debug;
-	BuildPlatform platform = BuildPlatform_x64;
+	BuildConfig config	= BuildConfig_Debug;
+	kBuildArch	arch	= kBuildArch_x64;
+	uint		flags	= 0;
+	kString		outdir	= "";
+	kString		objdir	= "";
+	kString		tmpdir	= "";
+	kString		process = "";
+	bool		execute = false;
 };
 
-static const char *NextCommandLineArg(int *argc, const char ***argv)
-{
-	if (*argc)
-	{
-		const char *arg = **argv;
-		(*argc) -= 1;
-		(*argv) += 1;
-		return arg;
-	}
-	return nullptr;
-}
-
-// Build.exe -platform:x64 -config:debug
+// Build.exe -arch:x64 -config:debug
 static BuildSettings ParseBuildSettings(int argc, const char **argv)
 {
-	BuildSettings settings = {};
+	BuildSettings settings;
 
-	while (1)
+	bool		  help	   = false;
+
+	kCmdLineFlag("run", &settings.execute, "Runs the executable if build succeeds");
+	kCmdLineFlag("help", &help, "Prints usage and exits");
+	kCmdLineOptions("arch", 0, ArchStrings, (int *)&settings.arch, "Architecture for the build");
+	kCmdLineOptions("config", 0, ConfigStrings, (int *)&settings.config, "Configuration for the build");
+
+	kCmdLineParse(&argc, &argv);
+
+	if (help)
 	{
-		const char *arg = NextCommandLineArg(&argc, &argv);
-
-		if (!arg)
-			break;
-
-		if (strcmp(arg, "debug") == 0)
-		{
-			settings.config = BuildConfig_Debug;
-		}
-		else if (strcmp(arg, "developer") == 0)
-		{
-			settings.config = BuildConfig_Developer;
-		}
-		else if (strcmp(arg, "release") == 0)
-		{
-			settings.config = BuildConfig_Release;
-		}
-		else if (strcmp(arg, "x64") == 0)
-		{
-			settings.platform = BuildPlatform_x64;
-		}
-		else if (strcmp(arg, "x86") == 0)
-		{
-			settings.platform = BuildPlatform_x86;
-		}
+		kCmdLinePrintUsage();
+		kTerminate(0);
 	}
+
+	settings.flags = kBuild_DebugSymbols;
+
+	if (settings.config == BuildConfig_Release || settings.config == BuildConfig_Developer)
+	{
+		settings.flags |= kBuild_Optimization;
+	}
+
+	const char *base   = "Build";
+	const char *arch   = (char *)ArchStrings[settings.arch].data;
+	const char *config = (char *)ConfigStrings[settings.config].data;
+
+	settings.outdir	   = kFormatString("%s/Karma/%s-%s", base, arch, config);
+	settings.objdir	   = kFormatString("%s/Objects/Karma/%s-%s", base, arch, config);
+	settings.tmpdir	   = kFormatString("%s/Generated/Karma/%s-%s", base, arch, config);
+	settings.process   = kFormatString(kStrFmt "/Karma.exe", kStrArg(settings.outdir));
 
 	return settings;
 }
@@ -80,44 +70,39 @@ K_BUILD_PROC void kBuild(int argc, const char **argv)
 {
 	BuildSettings settings = ParseBuildSettings(argc, argv);
 
-	kLogTrace("== Build Configuration: %s | %s ==\n", BuildConfigStrings[settings.config],
-			  BuildPlatformStrings[settings.platform]);
-
-	uint	   flags = kBuild_DebugSymbols;
-	kBuildArch arch	 = kBuildArch_x64;
-
-	if (settings.platform == BuildPlatform_x64)
-	{
-		arch = kBuildArch_x64;
-	}
-	else if (settings.platform == BuildPlatform_x86)
-	{
-		arch = kBuildArch_x86;
-	}
-
-	if (settings.config == BuildConfig_Release || settings.config == BuildConfig_Developer)
-	{
-		flags |= kBuild_Optimization;
-	}
-
-	//
-	//
-	//
+	kLogTrace("== Build Configuration: %s | %s ==\n", ArchStrings[settings.arch].data, ConfigStrings[settings.config].data);
 
 	kProject *karma = kCreateProject("Karma");
 
-	kConfigureProject(karma, flags, kBuildKind_EXE, arch);
+	kConfigureProject(karma, settings.flags, kBuildKind_EXE, settings.arch);
 
-	kSetBuildDirectory(karma, "Build/Karma", "Build/Objects");
+	kSetBuildDirectory(karma, settings.outdir, settings.objdir);
+
 	kAddIncludeDirectory(karma, "Code");
+	kSetTemporaryDirectory(karma, settings.tmpdir);
 
-	kString files[] = {"Main.cpp",		  "Code/kCommon.cpp",	 "Code/kContext.cpp",
-					   "Code/kMath.cpp",  "Code/kRender.cpp",	 "Code/kPlatform.cpp",
-					   "Code/kMedia.cpp", "Code/kRenderApi.cpp", "Code/kMain.cpp"};
+	kBeginUnityBuild(karma);
+	kAddSourceFile(karma, "Main.cpp");
+	kAddSourceFile(karma, "Code/kCommon.cpp");
+	kAddSourceFile(karma, "Code/kContext.cpp");
+	kAddSourceFile(karma, "Code/kCmdLineParser.cpp");
+	kAddSourceFile(karma, "Code/kMath.cpp");
+	kAddSourceFile(karma, "Code/kRender.cpp");
+	kAddSourceFile(karma, "Code/kPlatform.cpp");
+	kAddSourceFile(karma, "Code/kMedia.cpp");
+	kAddSourceFile(karma, "Code/kRenderApi.cpp");
+	kAddSourceFile(karma, "Code/kMain.cpp");
+	kEndUnityBuild(karma);
 
-	kAddUnityFiles(karma, files);
 	kAddResourceFile(karma, "Code/kResource.rc");
 	kAddManifestFile(karma, "Code/kWindows.manifest");
 
 	kBuildProject(karma);
+
+	if (settings.execute)
+	{
+		kLogTrace("Launching process " kStrFmt "\n", kStrArg(settings.process));
+		int rc = kExecuteProcess(settings.process);
+		kLogTrace("\n\nProcess exited with code: %d\n\n", rc);
+	}
 }

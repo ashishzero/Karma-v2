@@ -10,8 +10,8 @@ enum kBuildKind
 
 enum kBuildArch
 {
-	kBuildArch_x86,
 	kBuildArch_x64,
+	kBuildArch_x86,
 };
 
 enum kBuildFlags
@@ -19,7 +19,8 @@ enum kBuildFlags
 	kBuild_Optimization	 = 0x1,
 	kBuild_DebugSymbols	 = 0x2,
 	kBuild_WindowsSystem = 0x4,
-	kBuild_Recurse		 = 0x100 // internal
+	kBuild_Recurse		 = 0x100, // internal
+	kBuild_Unity		 = 0x200, // internal
 };
 
 struct kProject;
@@ -34,7 +35,7 @@ void	  kSetBuildDirectory(kProject *p, kString out, kString obj = "");
 void	  kSetTemporaryDirectory(kProject *p, kString temp);
 void	  kAddIncludeDirectory(kProject *p, kString path);
 void	  kAddLibraryDirectory(kProject *p, kString path);
-void	  kAddDefine(kProject *p, kString key, kString value = "");
+void	  kAddDefine(kProject *p, kString key, kString val = "");
 void	  kAddLibrary(kProject *p, kString lib);
 void	  kAddManifestFile(kProject *p, kString path);
 void	  kAddSourceFile(kProject *p, kString path);
@@ -46,5 +47,7 @@ bool	  kAddString(kProject *p, const kString src);
 bool	  kEmbedBinaryData(kProject *p, const kSlice<u8> buff, kString name);
 bool	  kEmbedFile(kProject *p, kString path, kString name);
 bool	  kAddUnityFiles(kProject *p, kSlice<kString> files);
+void	  kBeginUnityBuild(kProject *p);
+void	  kEndUnityBuild(kProject *p);
 void	  kDiscardProject(kProject *p);
 int		  kBuildProject(kProject *p);

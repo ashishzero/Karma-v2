@@ -172,3 +172,23 @@ template <int N> void kFreeStringBuilder(kStringBuilder<N> *builder)
 	}
 	builder->free = nullptr;
 }
+
+inproc kString kFormatStringV(const char *fmt, va_list list)
+{
+	va_list args;
+	va_copy(args, list);
+	int	  len = 1 + vsnprintf(NULL, 0, fmt, args);
+	char *buf = (char *)kAlloc(len);
+	vsnprintf(buf, len, fmt, list);
+	va_end(args);
+	return kString(buf, len - 1);
+}
+
+inproc kString kFormatString(const char *fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	kString string = kFormatStringV(fmt, args);
+	va_end(args);
+	return string;
+}

@@ -477,7 +477,7 @@ bool kStringEquals(kString a, kString b)
 	return memcmp(a.data, b.data, a.count) == 0;
 }
 
-bool kStringStartsWith(kString str, kString sub)
+bool kStartsWith(kString str, kString sub)
 {
 	if (str.count < sub.count)
 		return false;
@@ -485,7 +485,7 @@ bool kStringStartsWith(kString str, kString sub)
 	return kStringEquals(left, sub);
 }
 
-bool kStringEndsWith(kString str, kString sub)
+bool kEndsWith(kString str, kString sub)
 {
 	if (str.count < sub.count)
 		return false;

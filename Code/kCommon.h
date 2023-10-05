@@ -152,8 +152,8 @@
 #define K_EXPORT __declspec(dllexport)
 #define K_IMPORT __declspec(dllimport)
 #else
-#define K_EXPORT 
-#define K_IMPORT 
+#define K_EXPORT
+#define K_IMPORT
 #endif
 
 #if defined(K_EXPORT_SYMBOLS)
@@ -161,7 +161,7 @@
 #elif defined(K_IMPORT_SYMBOLS)
 #define K_API K_IMPORT
 #else
-#define K_API 
+#define K_API
 #endif
 
 #if defined(K_COMPILER_GCC)
@@ -629,6 +629,8 @@ template <typename Item> struct kSlice
 	}
 };
 
+#define kStrFmt "%.*s"
+#define kStrArg(x) (int)((x).count), ((x).data)
 #define kArrFmt "{ %zd, %p }"
 #define kArrArg(x) ((x).count), ((x).data)
 #define kArrSizeInBytes(arr) ((arr).count * sizeof(*((arr).data)))
@@ -891,8 +893,8 @@ kString kSubLeft(const kString str, imem count);
 kString kSubRight(const kString str, imem index);
 
 bool	kStringEquals(kString a, kString b);
-bool	kStringStartsWith(kString str, kString sub);
-bool	kStringEndsWith(kString str, kString sub);
+bool	kStartsWith(kString str, kString sub);
+bool	kEndsWith(kString str, kString sub);
 
 kString kRemovePrefix(kString str, imem count);
 kString kRemoveSuffix(kString str, imem count);

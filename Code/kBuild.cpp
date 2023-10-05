@@ -31,15 +31,9 @@ struct kProject
 	kArray<kString> resources;
 	kArray<kString> objects;
 	kArray<kString> libraries;
+	kArray<kString> unity;
+	uint			generation;
 };
-
-#if defined(K_EXPORT_SYMBOLS)
-K_EXPORT kAtomic FileGeneration = {};
-#elif defined(K_IMPORT_SYMBOLS)
-K_IMPORT kAtomic FileGeneration;
-#else
-static kAtomic FileGeneration = {};
-#endif
 
 //
 //
@@ -82,10 +76,10 @@ static void kPrepareForBuild(kProject *p)
 
 static kString kGetNextGenFileName(kProject *p)
 {
-	int	 gen = kAtomicInc(&FileGeneration);
+	int	 gen = ++p->generation;
 
 	char path[K_MAX_PATH];
-	int	 len = snprintf(path, K_MAX_PATH, "%s/%u.cpp", p->gendir.data, gen);
+	int	 len = snprintf(path, K_MAX_PATH, "%s/.generated_%s_%u.cpp", p->gendir.data, p->name.data, gen);
 
 	return kPushString(p, kString((u8 *)path, len));
 }
@@ -151,11 +145,11 @@ void kAddLibraryDirectory(kProject *p, kString path)
 	p->libdirs.Add(path);
 }
 
-void kAddDefine(kProject *p, kString key, kString value)
+void kAddDefine(kProject *p, kString key, kString val)
 {
-	key	  = kPushString(p, key);
-	value = kPushString(p, value);
-	p->defines.Add({key, value});
+	key = kPushString(p, key);
+	val = kPushString(p, val);
+	p->defines.Add({key, val});
 }
 
 void kAddLibrary(kProject *p, kString lib)
@@ -172,7 +166,11 @@ void kAddManifestFile(kProject *p, kString path)
 void kAddSourceFile(kProject *p, kString path)
 {
 	kString source = kPushString(p, path);
-	p->sources.Add(source);
+
+	if ((p->flags & kBuild_Unity) == 0)
+		p->sources.Add(source);
+	else
+		p->unity.Add(source);
 }
 
 void kAddResourceFile(kProject *p, kString path)
@@ -299,6 +297,22 @@ bool kAddUnityFiles(kProject *p, kSlice<kString> files)
 	kFree(unity.data, unity.count);
 
 	return r;
+}
+
+void kBeginUnityBuild(kProject *p)
+{
+	p->flags |= kBuild_Unity;
+}
+
+void kEndUnityBuild(kProject *p)
+{
+	p->flags &= ~kBuild_Unity;
+
+	if (p->unity.count)
+	{
+		kAddUnityFiles(p, p->unity);
+		p->unity.Reset();
+	}
 }
 
 void kDiscardProject(kProject *p)
