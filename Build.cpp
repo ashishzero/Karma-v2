@@ -27,7 +27,6 @@ struct BuildSettings
 	bool		execute = false;
 };
 
-// Build.exe -arch:x64 -config:debug
 static BuildSettings ParseBuildSettings(int argc, const char **argv)
 {
 	BuildSettings settings;
@@ -77,6 +76,13 @@ K_BUILD_PROC void kBuild(int argc, const char **argv)
 	kConfigureProject(karma, settings.flags, kBuildKind_EXE, settings.arch);
 
 	kSetBuildDirectory(karma, settings.outdir, settings.objdir);
+
+	if (settings.config == BuildConfig_Debug)
+		kAddDefine(karma, "K_BUILD_DEBUG");
+	else if (settings.config == BuildConfig_Developer)
+		kAddDefine(karma, "K_BUILD_DEVELOPER");
+	else
+		kAddDefine(karma, "K_BUILD_RELEASE");
 
 	kAddIncludeDirectory(karma, "Code");
 	kSetTemporaryDirectory(karma, settings.tmpdir);
