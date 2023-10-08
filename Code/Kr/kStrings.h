@@ -68,52 +68,52 @@ template <int N = K_STRING_BUILDER_DEFAULT_BUCKET_SIZE> struct kStringBuilder
 		return Write((u8 *)&value, 1);
 	}
 
-	imem Write(u8 value)
+	imem Write(u8 value, const char *fmt = "%u")
 	{
 		u8	buffer[32];
-		int len = snprintf((char *)buffer, kArrayCount(buffer), "%u", (u32)value);
+		int len = snprintf((char *)buffer, kArrayCount(buffer), fmt, (u32)value);
 		return Write(buffer, len);
 	}
 
-	imem Write(i32 value)
+	imem Write(i32 value, const char *fmt = "%d")
 	{
 		u8	buffer[128];
-		int len = snprintf((char *)buffer, kArrayCount(buffer), "%d", value);
+		int len = snprintf((char *)buffer, kArrayCount(buffer), fmt, value);
 		return Write(buffer, len);
 	}
 
-	imem Write(u32 value)
+	imem Write(u32 value, const char *fmt = "%u")
 	{
 		u8	buffer[128];
-		int len = snprintf((char *)buffer, kArrayCount(buffer), "%u", value);
+		int len = snprintf((char *)buffer, kArrayCount(buffer), fmt, value);
 		return Write(buffer, len);
 	}
 
-	imem Write(i64 value)
+	imem Write(i64 value, const char *fmt = "%lld")
 	{
 		u8	buffer[128];
-		int len = snprintf((char *)buffer, kArrayCount(buffer), "%lld", (long long)value);
+		int len = snprintf((char *)buffer, kArrayCount(buffer), fmt, (long long)value);
 		return Write(buffer, len);
 	}
 
-	imem Write(u64 value)
+	imem Write(u64 value, const char *fmt = "%llu")
 	{
 		u8	buffer[128];
-		int len = snprintf((char *)buffer, kArrayCount(buffer), "%llu", (unsigned long long)value);
+		int len = snprintf((char *)buffer, kArrayCount(buffer), fmt, (unsigned long long)value);
 		return Write(buffer, len);
 	}
 
-	imem Write(float value)
+	imem Write(float value, const char *fmt = "%f")
 	{
 		u8	buffer[128];
-		int len = snprintf((char *)buffer, kArrayCount(buffer), "%f", value);
+		int len = snprintf((char *)buffer, kArrayCount(buffer), fmt, value);
 		return Write(buffer, len);
 	}
 
-	imem Write(double value)
+	imem Write(double value, const char *fmt = "%lf")
 	{
 		u8	buffer[128];
-		int len = snprintf((char *)buffer, kArrayCount(buffer), "%lf", value);
+		int len = snprintf((char *)buffer, kArrayCount(buffer), fmt, value);
 		return Write(buffer, len);
 	}
 

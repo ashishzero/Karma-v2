@@ -1,4 +1,4 @@
-#include "kCmdLineParser.h"
+#include "kCmdLine.h"
 #include "kArray.h"
 
 #include <stdio.h>

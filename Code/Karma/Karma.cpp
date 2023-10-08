@@ -1,6 +1,4 @@
 #include "kMedia.h"
-#include "kArray.h"
-#include "kCmdLineParser.h"
 
 void Update(float dt)
 {

@@ -48,4 +48,8 @@ END
 
 #endif
 
-IDI_KICON               ICON                    "kIcon.ico"
+#ifndef K_ICON_PATH
+#define K_ICON_PATH "kIcon.ico"
+#endif
+
+IDI_KICON               ICON                    K_ICON_PATH
