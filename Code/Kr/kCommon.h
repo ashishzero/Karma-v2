@@ -460,7 +460,7 @@ template <typename T> struct kVec4T
 		struct
 		{
 			kVec3T<T> _beg;
-			kVec3T<T> yzw;
+			T		  yzw;
 		};
 	};
 

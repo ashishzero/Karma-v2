@@ -10,7 +10,6 @@
 typedef struct kRenderShader2D
 {
 	u8			   modes[kRenderMode2D_Count];
-	kBlendSpec	   blend;
 	kTextureFilter filter;
 } kRenderShader2D;
 
@@ -135,6 +134,9 @@ static void kResetFrame(void)
 
 	for (u32 i = 0; i < K_MAX_TEXTURE_SLOTS; ++i)
 		render.context2d.textures[i].count = 1;
+
+	kSetRenderMode(kRenderMode2D_Depth, 1);
+	kSetRenderMode(kRenderMode2D_Blend, 1);
 }
 
 //
@@ -186,6 +188,12 @@ void kCreateRenderContext(kRenderBackend backend, const kRenderSpec &spec)
 		render.context2d.textures[i].Reserve(spec.textures);
 
 	render.context2d.builder.Reserve(spec.builder);
+
+	render.context2d.rects.Add(kRect{});
+	render.context2d.transforms.Add(kIdentity());
+
+	render.context2d.textures[0].Add(render.builtin.texture);
+	render.context2d.textures[1].Add(render.builtin.texture);
 
 	kResetFrame();
 }
@@ -243,12 +251,16 @@ void kBeginRenderPass(kTexture texture, kTexture depth_stencil, uint flags, kVec
 	viewport.n				 = 0;
 	viewport.f				 = 1;
 
+	ctx->state.render_target = texture;
+	ctx->state.depth_stenil	 = depth_stencil;
 	ctx->state.viewport		 = viewport;
 	ctx->state.clear.color	 = color;
 	ctx->state.clear.depth	 = depth;
 	ctx->state.clear.stencil = 0;
 	ctx->state.flags		 = flags;
 	ctx->state.command		 = (u32)ctx->commands.count;
+
+	kPushRectEx(0, 0, (float)w, (float)h);
 }
 
 void kBeginDefaultRenderPass(uint flags, kVec4 color, float depth)
@@ -260,6 +272,7 @@ void kBeginDefaultRenderPass(uint flags, kVec4 color, float depth)
 
 void kEndRenderPass(void)
 {
+	kPopRect();
 	kFlushRenderCommand();
 
 	kRenderContext2D *ctx = kGetRenderContext2D();
@@ -332,7 +345,7 @@ void kFlushRenderCommand(void)
 
 	memcpy(command->modes, ctx->state.shader.modes, sizeof(ctx->state.shader.modes));
 
-	command->blend		  = ctx->state.shader.blend;
+	command->filter		  = ctx->state.shader.filter;
 	command->params.data  = ctx->params.data + ctx->state.count;
 	command->params.count = ctx->params.count - ctx->state.param;
 	ctx->state.param	  = (u32)ctx->params.count;
@@ -348,36 +361,6 @@ void kSetRenderMode(kRenderMode2D mode, u8 value)
 	kFlushRenderCommand();
 
 	ctx->state.shader.modes[mode] = value;
-}
-
-void kBlendFunc(const kBlendSpec &spec)
-{
-	kRenderContext2D *ctx = kGetRenderContext2D();
-
-	if (memcmp(&spec, &ctx->state.shader.blend, sizeof(spec)) == 0)
-		return;
-
-	kFlushRenderCommand();
-
-	ctx->state.shader.blend = spec;
-}
-
-void kBlendFunc(kBlend src_color, kBlend dst_color, kBlendOp op_color, kBlend src_alpha, kBlend dst_alpha,
-				kBlendOp op_alpha)
-{
-	kBlendSpec spec;
-	spec.color.src	= src_color;
-	spec.color.dest = dst_color;
-	spec.color.op	= op_color;
-	spec.alpha.src	= src_alpha;
-	spec.alpha.dest = dst_alpha;
-	spec.alpha.op	= op_alpha;
-	kBlendFunc(spec);
-}
-
-void kBlendFunc(kBlend src, kBlend dst, kBlendOp op)
-{
-	kBlendFunc(src, dst, op, src, dst, op);
 }
 
 void kSetTextureFilter(kTextureFilter filter)
@@ -484,7 +467,7 @@ void kPushRectEx(float x, float y, float w, float h)
 	kPushRect(rect);
 }
 
-void PopRect(void)
+void kPopRect(void)
 {
 	kRenderContext2D *ctx	= kGetRenderContext2D();
 	imem			  count = ctx->rects.count;

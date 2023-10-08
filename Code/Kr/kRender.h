@@ -53,10 +53,6 @@ void kLineThickness(float thickness);
 void kFlushRenderCommand(void);
 
 void kSetRenderMode(kRenderMode2D mode, u8 value);
-void kBlendFunc(const kBlendSpec &spec);
-void kBlendFunc(kBlend src_color, kBlend dst_color, kBlendOp op_color, kBlend src_alpha, kBlend dst_alpha,
-				kBlendOp op_alpha);
-void kBlendFunc(kBlend src, kBlend dst, kBlendOp op);
 void kSetTextureFilter(kTextureFilter filter);
 
 void kFlushRenderParam(void);
@@ -69,7 +65,7 @@ void kSetRect(kRect rect);
 void kSetRectEx(float x, float y, float w, float h);
 void kPushRect(kRect rect);
 void kPushRectEx(float x, float y, float w, float h);
-void PopRect(void);
+void kPopRect(void);
 
 void kSetTransform(const kMat4 &transform);
 void kPushTransform(const kMat4 &transform);

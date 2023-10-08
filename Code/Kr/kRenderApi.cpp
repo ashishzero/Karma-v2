@@ -113,6 +113,7 @@ typedef struct kPlatformRender2D
 	ID3D11InputLayout		*input;
 	ID3D11RasterizerState	*rasterizer;
 	ID3D11DepthStencilState *depth;
+	ID3D11BlendState		*blend;
 	ID3D11SamplerState		*samplers[kTextureFilter_Count];
 } kPlatformRender2D;
 
@@ -232,13 +233,13 @@ static bool kD3D11_CreateGraphicsDevice(void)
 		if (EnableDebugLayer && !adapter)
 		{
 			EnableDebugLayer = false;
-			kLogWarning("DirectX11: Debug Layer SDK not present. Falling back to adaptor without debug layer");
+			kLogWarning("DirectX11: Debug Layer SDK not present. Falling back to adaptor without debug layer\n");
 		}
 	}
 
 	if (adapter == nullptr)
 	{
-		kLogError("DirectX11: Supported adaptor not found!");
+		kLogError("DirectX11: Supported adaptor not found!\n");
 		return false;
 	}
 
@@ -302,12 +303,15 @@ static void kD3D11_DestroySwapChainBuffers(kSwapChain swap_chain)
 
 static void kD3D11_CreateSwapChainBuffers(kSwapChain swap_chain)
 {
-	kPlatformSwapChain *r  = swap_chain.resource;
+	kPlatformSwapChain *r = swap_chain.resource;
 
-	HRESULT				hr = r->native->GetBuffer(0, IID_PPV_ARGS(&r->texture.texture2d));
+	r->texture.state	  = kResourceState_Unready;
+
+	HRESULT hr			  = r->native->GetBuffer(0, IID_PPV_ARGS(&r->texture.texture2d));
 
 	if (FAILED(hr))
 	{
+		r->texture.state = kResourceState_Error;
 		kWinLogError(hr, "DirectX11", "Failed to get buffer from swapchain");
 		return;
 	}
@@ -321,8 +325,12 @@ static void kD3D11_CreateSwapChainBuffers(kSwapChain swap_chain)
 
 	if (FAILED(hr))
 	{
+		r->texture.state = kResourceState_Error;
 		kWinLogError(hr, "DirectX11", "Failed to create render target view");
+		return;
 	}
+
+	r->texture.state = kResourceState_Ready;
 }
 
 static void kD3D11_ResizeSwapChainBuffers(kSwapChain swap_chain, uint w, uint h)
@@ -381,7 +389,7 @@ static kSwapChain kD3D11_CreateSwapChain(void *_window)
 
 	if (!r)
 	{
-		kLogError("DirectX12: Failed RemoveAllocate memory for create swap chain");
+		kLogError("DirectX12: Failed RemoveAllocate memory for create swap chain\n");
 		swapchain1->Release();
 		return nullptr;
 	}
@@ -531,7 +539,7 @@ static kTexture kD3D11_CreateTexture(const kTextureSpec &spec)
 
 	if (!r)
 	{
-		kLogError("DirectX11: Failed to allocate memory for texture");
+		kLogError("DirectX11: Failed to allocate memory for texture\n");
 		return nullptr;
 	}
 
@@ -622,15 +630,6 @@ static void kD3D11_ResizeTexture(kTexture texture, u32 w, u32 h)
 //
 //
 
-static ID3D11BlendState *kD3D11_GetBlendState(void)
-{
-	kUnimplemented();
-}
-
-//
-//
-//
-
 #include "Generated/kShaders.h"
 
 static void kD3D11_ExecuteCommands(const kRenderData2D &data)
@@ -644,6 +643,7 @@ static void kD3D11_ExecuteCommands(const kRenderData2D &data)
 	if (vertex_size > d3d11.resource.render2d.vertex_sz)
 	{
 		kRelease(&d3d11.resource.render2d.vertex);
+		d3d11.resource.render2d.vertex_sz  = 0;
 
 		D3D11_BUFFER_DESC vertex_buff_desc = {};
 		vertex_buff_desc.ByteWidth		   = vertex_size;
@@ -657,11 +657,14 @@ static void kD3D11_ExecuteCommands(const kRenderData2D &data)
 			kWinLogError(hr, "DirectX11", "Failed to allocate vertex buffer for render context 2d");
 			return;
 		}
+
+		d3d11.resource.render2d.vertex_sz = vertex_size;
 	}
 
 	if (index_size > d3d11.resource.render2d.index_sz)
 	{
 		kRelease(&d3d11.resource.render2d.index);
+		d3d11.resource.render2d.index_sz = 0;
 
 		D3D11_BUFFER_DESC index_buff_desc = {};
 		index_buff_desc.ByteWidth		  = index_size;
@@ -675,6 +678,8 @@ static void kD3D11_ExecuteCommands(const kRenderData2D &data)
 			kWinLogError(hr, "DirectX11", "Failed to allocate index buffer for render context 2d");
 			return;
 		}
+
+		d3d11.resource.render2d.index_sz = index_size;
 	}
 
 	/*-------------------------------------------------------------- */
@@ -683,7 +688,7 @@ static void kD3D11_ExecuteCommands(const kRenderData2D &data)
 	{
 		D3D11_BUFFER_DESC const_buff_desc = {};
 		const_buff_desc.ByteWidth		  = sizeof(kMat4);
-		const_buff_desc.Usage			  = D3D11_USAGE_DEFAULT;
+		const_buff_desc.Usage			  = D3D11_USAGE_DYNAMIC;
 		const_buff_desc.BindFlags		  = D3D11_BIND_CONSTANT_BUFFER;
 		const_buff_desc.CPUAccessFlags	  = D3D11_CPU_ACCESS_WRITE;
 
@@ -767,7 +772,11 @@ static void kD3D11_ExecuteCommands(const kRenderData2D &data)
 		sampler.AddressU		   = D3D11_TEXTURE_ADDRESS_WRAP;
 		sampler.AddressV		   = D3D11_TEXTURE_ADDRESS_WRAP;
 		sampler.AddressW		   = D3D11_TEXTURE_ADDRESS_WRAP;
+		sampler.MipLODBias		   = 0.0f;
+		sampler.MaxAnisotropy	   = 1;
 		sampler.ComparisonFunc	   = D3D11_COMPARISON_NEVER;
+		sampler.MinLOD			   = -FLT_MAX;
+		sampler.MaxLOD			   = FLT_MAX;
 
 		HRESULT hr				   = d3d11.device->CreateSamplerState(&sampler, &d3d11.resource.render2d.samplers[0]);
 		if (FAILED(hr))
@@ -784,7 +793,11 @@ static void kD3D11_ExecuteCommands(const kRenderData2D &data)
 		sampler.AddressU		   = D3D11_TEXTURE_ADDRESS_WRAP;
 		sampler.AddressV		   = D3D11_TEXTURE_ADDRESS_WRAP;
 		sampler.AddressW		   = D3D11_TEXTURE_ADDRESS_WRAP;
+		sampler.MipLODBias		   = 0.0f;
+		sampler.MaxAnisotropy	   = 1;
 		sampler.ComparisonFunc	   = D3D11_COMPARISON_NEVER;
+		sampler.MinLOD			   = -FLT_MAX;
+		sampler.MaxLOD			   = FLT_MAX;
 
 		HRESULT hr				   = d3d11.device->CreateSamplerState(&sampler, &d3d11.resource.render2d.samplers[1]);
 		if (FAILED(hr))
@@ -807,6 +820,28 @@ static void kD3D11_ExecuteCommands(const kRenderData2D &data)
 		if (FAILED(hr))
 		{
 			kWinLogError(hr, "DirectX11", "Failed to create depth stencil state for render context 2d");
+			return;
+		}
+	}
+
+	/*-------------------------------------------------------------- */
+
+	if (!d3d11.resource.render2d.blend)
+	{
+		D3D11_BLEND_DESC blend						= {};
+		blend.RenderTarget[0].BlendEnable			= TRUE;
+		blend.RenderTarget[0].SrcBlend				= D3D11_BLEND_SRC_ALPHA;
+		blend.RenderTarget[0].DestBlend				= D3D11_BLEND_INV_SRC_ALPHA;
+		blend.RenderTarget[0].BlendOp				= D3D11_BLEND_OP_ADD;
+		blend.RenderTarget[0].SrcBlendAlpha			= D3D11_BLEND_SRC_ALPHA;
+		blend.RenderTarget[0].DestBlendAlpha		= D3D11_BLEND_INV_SRC_ALPHA;
+		blend.RenderTarget[0].BlendOpAlpha			= D3D11_BLEND_OP_ADD;
+		blend.RenderTarget[0].RenderTargetWriteMask = 0xf;
+
+		HRESULT hr = d3d11.device->CreateBlendState(&blend, &d3d11.resource.render2d.blend);
+		if (FAILED(hr))
+		{
+			kWinLogError(hr, "DirectX11", "Failed to create blend state for render context 2d");
 			return;
 		}
 	}
@@ -859,6 +894,7 @@ static void kD3D11_ExecuteCommands(const kRenderData2D &data)
 	dc->PSSetShader(d3d11.resource.render2d.ps, nullptr, 0);
 	dc->IASetInputLayout(d3d11.resource.render2d.input);
 	dc->RSSetState(d3d11.resource.render2d.rasterizer);
+	dc->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	/*-------------------------------------------------------------- */
 
@@ -895,7 +931,7 @@ static void kD3D11_ExecuteCommands(const kRenderData2D &data)
 
 		D3D11_VIEWPORT viewport;
 		viewport.TopLeftX = pass.viewport.x;
-		viewport.TopLeftY = render_target->height - pass.viewport.y;
+		viewport.TopLeftY = render_target->height - (pass.viewport.y + pass.viewport.h);
 		viewport.Width	  = pass.viewport.w;
 		viewport.Height	  = pass.viewport.h;
 		viewport.MinDepth = pass.viewport.n;
@@ -907,9 +943,10 @@ static void kD3D11_ExecuteCommands(const kRenderData2D &data)
 		{
 			if (cmd.modes[kRenderMode2D_Blend])
 			{
-				ID3D11BlendState *blend = kD3D11_GetBlendState();
-				dc->OMSetBlendState(blend, 0, 0xffffffff);
+				dc->OMSetBlendState(d3d11.resource.render2d.blend, 0, 0xffffffff);
 			}
+
+			dc->OMSetBlendState(d3d11.resource.render2d.blend, 0, 0xffffffff);
 
 			if (cmd.modes[kRenderMode2D_Depth])
 			{
@@ -932,6 +969,8 @@ static void kD3D11_ExecuteCommands(const kRenderData2D &data)
 
 				dc->Unmap(cb, 0);
 
+				dc->VSSetConstantBuffers(0, 1, &cb);
+
 				/*-------------------------------------------------------------- */
 
 				kPlatformTexture *r1 = param.textures[0].resource;
@@ -944,7 +983,6 @@ static void kD3D11_ExecuteCommands(const kRenderData2D &data)
 				ps_resources[1] = r2->shader_resource_view;
 
 				dc->PSSetShaderResources(0, kArrayCount(ps_resources), ps_resources);
-
 				dc->PSSetSamplers(0, 1, &d3d11.resource.render2d.samplers[cmd.filter]);
 
 				/*-------------------------------------------------------------- */
@@ -963,6 +1001,7 @@ static void kD3D11_ExecuteCommands(const kRenderData2D &data)
 			}
 		}
 
+		dc->PSSetSamplers(0, 0, 0);
 		dc->PSSetShaderResources(0, 0, nullptr);
 	}
 

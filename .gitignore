@@ -1,5 +1,10 @@
 .vs/
-build/
+Build/
+
+*.sln
+*.vcxproj
+*.vcxproj.filters
 *.vcxproj.user
+
 Code/kResource.aps
-kBuild.exe
+Code/Kr/Generated

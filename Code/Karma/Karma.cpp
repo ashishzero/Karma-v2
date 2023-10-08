@@ -1,4 +1,5 @@
 #include "kMedia.h"
+#include "kRender.h"
 
 void Update(float dt)
 {
@@ -12,29 +13,20 @@ void Update(float dt)
 		kToggleWindowFullscreen();
 	}
 
-	if (kKeyPressed(kKey_H))
-	{
-		if (kIsCursorEnabled())
-		{
-			kDisableCursor();
-		}
-		else
-		{
-			kEnableCursor();
-		}
-	}
+	u32 w, h;
+	kGetWindowSize(&w, &h);
 
-	if (kKeyPressed(kKey_M))
-	{
-		if (kIsWindowMaximized())
-		{
-			kRestoreWindow();
-		}
-		else
-		{
-			kMaximizeWindow();
-		}
-	}
+	float aspect_ratio = (float)w / (float)h;
+
+	kBeginDefaultRenderPass();
+
+	kBeginCamera(aspect_ratio, 600);
+
+	kDrawRectCentered(kVec2(0), kVec2(200.0f), kVec4(1, 1, 0, 1));
+
+	kEndCamera();
+
+	kEndRenderPass();
 }
 
 void Main(int argc, const char **argv)
