@@ -1704,12 +1704,12 @@ static bool kLoadBuiltinFont(void)
 
 	kTextureSpec spec = {};
 	spec.num_samples  = 1;
-	spec.format		  = kFormat_R8_UNORM;
+	spec.format		  = kFormat_RGBA8_UNORM;
 	spec.bind_flags	  = kBind_ShaderResource;
 	spec.usage		  = kUsage_Default;
 	spec.width		  = kFontAtlastWidth;
 	spec.height		  = kFontAtlastHeight;
-	spec.pitch		  = kFontAtlastWidth;
+	spec.pitch		  = kFontAtlastWidth * kFontAtlastChannels;
 	spec.pixels		  = (u8 *)kFontAtlastPixels;
 
 	font->texture	  = render.backend.create_texture(spec);

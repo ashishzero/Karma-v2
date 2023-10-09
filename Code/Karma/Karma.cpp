@@ -22,11 +22,7 @@ void Update(float dt)
 
 	kBeginCameraRect(0, (float)w, 0, (float)h);
 
-	kString text = "Karma";
-
-	//float r = 0.5f * kCalculateText(text, 50);
-	
-	kDrawText("Karma", kVec2(200), kVec4(1, 1, 0, 1), 256);
+	kDrawText("Karma-2023", kVec2(200), kVec4(1, 1, 0, 1), 256);
 
 	kEndCamera();
 

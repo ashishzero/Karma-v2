@@ -46,12 +46,18 @@ float4 QuadPsMain(kVertexOutput input) : SV_Target
 
 ////////////////////////////////////////////////
 
+float Median(float r, float g, float b)
+{
+	return max(min(r, g), min(max(r, g), b));
+}
+
 float4 SignedDistPsMain(kVertexOutput input) : SV_Target
 {
-	float  sampled = SrcTexture.Sample(Sampler, input.tex).x;
+	float3 sampled = SrcTexture.Sample(Sampler, input.tex).rgb;
+	float sd       = Median(sampled.r, sampled.g, sampled.b);
 	float4 masked  = MaskTexture.Sample(Sampler, input.tex);
-	float  aaf	   = fwidth(sampled);
-	float  alpha   = smoothstep(0.5 - aaf, 0.5 + aaf, sampled);
+	float  aaf	   = fwidth(sd);
+	float  alpha   = smoothstep(0.5 - aaf, 0.5 + aaf, sd);
 	float4 color   = float4(1.0, 1.0, 1.0, alpha) * masked * input.col;
 	return color;
 }
