@@ -26,7 +26,7 @@ void Update(float dt)
 
 	//float r = 0.5f * kCalculateText(text, 50);
 	
-	kDrawText("Karma", kVec2(200), kVec4(1, 1, 0, 1), 64);
+	kDrawText("Karma", kVec2(200), kVec4(1, 1, 0, 1), 256);
 
 	kEndCamera();
 

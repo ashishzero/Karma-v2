@@ -2,14 +2,15 @@
 #include <stdint.h>
 
 // File: JetBrainsMono-2.304\fonts\ttf\JetBrainsMono-Regular.ttf
-// Generated Date: 2023-10-10 00:34:32
+// Generated Date: 2023-10-10 01:55:11
 
-static constexpr int kFontAtlastWidth  = 488;
-static constexpr int kFontAtlastHeight = 488;
-static constexpr int kFontHeight       = 32;
-static constexpr int kFontMapStartCp   = 32;
-static constexpr int kFontMapStopCp    = 255;
-static constexpr int kFontGlyphCount   = 192;
+static constexpr int kFontAtlastWidth    = 488;
+static constexpr int kFontAtlastHeight   = 488;
+static constexpr int kFontAtlastChannels = 1;
+static constexpr int kFontHeight         = 32;
+static constexpr int kFontMapStartCp     = 32;
+static constexpr int kFontMapStopCp      = 255;
+static constexpr int kFontGlyphCount     = 192;
 
 static constexpr uint8_t kFontAtlastPixels[] = {
 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
