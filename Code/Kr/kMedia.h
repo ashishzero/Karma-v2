@@ -236,51 +236,51 @@ void kFallbackUserUpdateProc(float dt);
 //
 //
 
-kSlice<kEvent> kGetEvents(void);
+kSpan<kEvent> kGetEvents(void);
 
-void		  *kGetUserEventData(void);
-void		   kSetUserEventData(void *);
-void		   kGetUserEvents(kMediaUserEvents *user);
-void		   kSetUserEvents(const kMediaUserEvents &user);
+void		 *kGetUserEventData(void);
+void		  kSetUserEventData(void *);
+void		  kGetUserEvents(kMediaUserEvents *user);
+void		  kSetUserEvents(const kMediaUserEvents &user);
 
-bool		   kIsKeyDown(kKey key);
-bool		   kKeyPressed(kKey key);
-bool		   kKeyReleased(kKey key);
-u8			   kKeyHits(kKey key);
-uint		   kGetKeyModFlags(void);
+bool		  kIsKeyDown(kKey key);
+bool		  kKeyPressed(kKey key);
+bool		  kKeyReleased(kKey key);
+u8			  kKeyHits(kKey key);
+uint		  kGetKeyModFlags(void);
 
-bool		   kIsButtonDown(kButton button);
-bool		   kButtonPressed(kButton button);
-bool		   kButtonReleased(kButton button);
+bool		  kIsButtonDown(kButton button);
+bool		  kButtonPressed(kButton button);
+bool		  kButtonReleased(kButton button);
 
-kVec2i		   kGetCursorPosition(void);
-kVec2i		   kGetCursorDelta(void);
-float		   kGetWheelHorizontal(void);
-float		   kGetWheelVertical(void);
+kVec2i		  kGetCursorPosition(void);
+kVec2i		  kGetCursorDelta(void);
+float		  kGetWheelHorizontal(void);
+float		  kGetWheelVertical(void);
 
-bool		   kIsWindowClosed(void);
-bool		   kIsWindowResized(void);
-void		   kIgnoreWindowCloseEvent(void);
-bool		   kIsWindowFocused(void);
-bool		   kIsWindowFullscreen(void);
-bool		   kIsWindowMaximized(void);
-void		   kGetWindowSize(u32 *w, u32 *h);
-float		   kGetWindowDpiScale(void);
+bool		  kIsWindowClosed(void);
+bool		  kIsWindowResized(void);
+void		  kIgnoreWindowCloseEvent(void);
+bool		  kIsWindowFocused(void);
+bool		  kIsWindowFullscreen(void);
+bool		  kIsWindowMaximized(void);
+void		  kGetWindowSize(u32 *w, u32 *h);
+float		  kGetWindowDpiScale(void);
 
-bool		   kIsCursorEnabled(void);
-bool		   kIsCursorHovered(void);
+bool		  kIsCursorEnabled(void);
+bool		  kIsCursorHovered(void);
 
-void		   kGetKeyboardState(kKeyboardState *keyboard);
-void		   kGetKeyState(kState *state, kKey key);
-void		   kGetMouseState(kMouseState *mouse);
-void		   kGetButtonState(kState *state, kButton button);
-void		   kGetWindowState(kWindowState *state);
+void		  kGetKeyboardState(kKeyboardState *keyboard);
+void		  kGetKeyState(kState *state, kKey key);
+void		  kGetMouseState(kMouseState *mouse);
+void		  kGetButtonState(kState *state, kButton button);
+void		  kGetWindowState(kWindowState *state);
 
-void		   kSetKeyboardState(const kKeyboardState &keyboard);
-void		   kSetKeyState(const kState &state, kKey key);
-void		   kSetMouseState(const kMouseState &mouse);
-void		   kSetButtonState(const kState &state, kButton button);
-void		   kSetWindowState(const kWindowState &state);
+void		  kSetKeyboardState(const kKeyboardState &keyboard);
+void		  kSetKeyState(const kState &state, kKey key);
+void		  kSetMouseState(const kMouseState &mouse);
+void		  kSetButtonState(const kState &state, kButton button);
+void		  kSetWindowState(const kWindowState &state);
 
 //
 //

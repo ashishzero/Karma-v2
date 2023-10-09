@@ -12,14 +12,14 @@ template <typename T> struct kArray
 	kArray() : count(0), allocated(0), data(nullptr)
 	{}
 
-	operator kSlice<T>()
+	operator kSpan<T>()
 	{
-		return kSlice<T>(data, count);
+		return kSpan<T>(data, count);
 	}
 
-	operator const kSlice<T>() const
+	operator const kSpan<T>() const
 	{
-		return kSlice<T>(data, count);
+		return kSpan<T>(data, count);
 	}
 
 	T &operator[](ptrdiff_t i)
@@ -207,7 +207,7 @@ template <typename T> struct kArray
 		return true;
 	}
 
-	bool CopyArray(kSlice<T> src)
+	bool CopyArray(kSpan<T> src)
 	{
 		if (src.count)
 		{
@@ -256,7 +256,7 @@ template <typename T> void kFree(kArray<T> *arr)
 	kFree(arr->data, arr->allocated * sizeof(T));
 }
 
-template <typename T> void kFree(kSlice<T> *arr)
+template <typename T> void kFree(kSpan<T> *arr)
 {
 	kFree(arr->data, arr->count * sizeof(T));
 }
@@ -266,7 +266,7 @@ template <typename T> void kFree(kSlice<T> *arr)
 //
 
 template <typename T, typename SearchFunc, typename... Args>
-imem Find(kSlice<T> arr, SearchFunc func, const Args &...args)
+imem Find(kSpan<T> arr, SearchFunc func, const Args &...args)
 {
 	for (imem index = 0; index < arr.count; ++index)
 	{
@@ -278,7 +278,7 @@ imem Find(kSlice<T> arr, SearchFunc func, const Args &...args)
 	return -1;
 }
 
-template <typename T> imem Find(kSlice<T> arr, const T &v)
+template <typename T> imem Find(kSpan<T> arr, const T &v)
 {
 	for (imem index = 0; index < arr.count; ++index)
 	{

@@ -20,9 +20,13 @@ void Update(float dt)
 
 	kBeginDefaultRenderPass();
 
-	kBeginCamera(aspect_ratio, 600);
+	kBeginCameraRect(0, (float)w, 0, (float)h);
 
-	kDrawRectCentered(kVec2(0), kVec2(200.0f), kVec4(1, 1, 0, 1));
+	kString text = "Karma";
+
+	//float r = 0.5f * kCalculateText(text, 50);
+	
+	kDrawText("Karma", kVec2(200), kVec4(1, 1, 0, 1), 64);
 
 	kEndCamera();
 

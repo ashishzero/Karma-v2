@@ -7,27 +7,21 @@
 //
 //
 
-typedef struct kRenderShader2D
-{
-	u8			   modes[kRenderMode2D_Count];
-	kTextureFilter filter;
-} kRenderShader2D;
-
 typedef struct kRenderState2D
 {
-	i32				vertex;
-	u32				index;
-	u32				count;
-	u32				next;
-	u32				param;
-	u32				command;
-	u32				pass;
-	kTexture		render_target;
-	kTexture		depth_stenil;
-	kViewport		viewport;
-	u32				flags;
-	kRenderClear2D	clear;
-	kRenderShader2D shader;
+	i32			   vertex;
+	u32			   index;
+	u32			   count;
+	u32			   next;
+	u32			   param;
+	u32			   command;
+	u32			   pass;
+	kTexture	   render_target;
+	kTexture	   depth_stenil;
+	kViewport	   viewport;
+	u32			   flags;
+	kRenderClear2D clear;
+	kTextureFilter filter;
 } kRenderState2D;
 
 typedef struct kRenderContext2D
@@ -44,6 +38,7 @@ typedef struct kRenderContext2D
 	kArray<kRect>			 rects;
 	kArray<kMat4>			 transforms;
 	kArray<kTexture>		 textures[K_MAX_TEXTURE_SLOTS];
+	kArray<kRenderShader2D>	 shaders;
 
 	kArray<kVec2>			 builder;
 } kRenderContext2D;
@@ -65,6 +60,16 @@ static kRenderContext render;
 
 static float		  Sines[K_MAX_CIRCLE_SEGMENTS];
 static float		  Cosines[K_MAX_CIRCLE_SEGMENTS];
+
+static float		  FallbackFontHeight = 24.0f;
+static float		  FallbackFontWidth	 = 0.7f * FallbackFontHeight;
+
+static const kGlyph	  FallbackGlyph		 = {
+	   kRect{kVec2(0), kVec2(0)},
+	   kVec2(0.0f),
+	   kVec2(FallbackFontWidth, FallbackFontHeight),
+	   FallbackFontWidth + 2.0f,
+};
 
 //
 //
@@ -135,15 +140,16 @@ static void kResetFrame(void)
 	for (u32 i = 0; i < K_MAX_TEXTURE_SLOTS; ++i)
 		render.context2d.textures[i].count = 1;
 
-	kSetRenderMode(kRenderMode2D_Depth, 1);
-	kSetRenderMode(kRenderMode2D_Blend, 1);
+	render.context2d.shaders.count = 1;
 }
 
 //
 //
 //
 
-void kCreateRenderContext(kRenderBackend backend, const kRenderSpec &spec)
+static bool kLoadBuiltinFont(void);
+
+void		kCreateRenderContext(kRenderBackend backend, const kRenderSpec &spec)
 {
 	render.backend = backend;
 
@@ -173,6 +179,17 @@ void kCreateRenderContext(kRenderBackend backend, const kRenderSpec &spec)
 		render.builtin.texture = render.backend.create_texture(spec);
 	}
 
+	if (!kLoadBuiltinFont())
+	{
+		render.builtin.font.texture	 = render.builtin.texture;
+		render.builtin.font.map		 = nullptr;
+		render.builtin.font.glyphs	 = nullptr;
+		render.builtin.font.fallback = (kGlyph *)&FallbackGlyph;
+		render.builtin.font.start	 = 0;
+		render.builtin.font.stop	 = 0;
+		render.builtin.font.count	 = 0;
+	}
+
 	render.context2d.thickness = spec.thickness;
 
 	render.context2d.vertices.Reserve(spec.vertices);
@@ -194,6 +211,11 @@ void kCreateRenderContext(kRenderBackend backend, const kRenderSpec &spec)
 
 	render.context2d.textures[0].Add(render.builtin.texture);
 	render.context2d.textures[1].Add(render.builtin.texture);
+
+	kRenderShader2D shader = {};
+	shader.blend		   = kBlendMode2D_Alpha;
+	shader.render		   = kRenderMode2D_Normal;
+	render.context2d.shaders.Add(shader);
 
 	kResetFrame();
 }
@@ -342,36 +364,78 @@ void kFlushRenderCommand(void)
 		return;
 
 	kRenderCommand2D *command = ctx->commands.Add();
-
-	memcpy(command->modes, ctx->state.shader.modes, sizeof(ctx->state.shader.modes));
-
-	command->filter		  = ctx->state.shader.filter;
-	command->params.data  = ctx->params.data + ctx->state.count;
-	command->params.count = ctx->params.count - ctx->state.param;
-	ctx->state.param	  = (u32)ctx->params.count;
+	command->shader			  = ctx->shaders.Last();
+	command->filter			  = ctx->state.filter;
+	command->params.data	  = ctx->params.data + ctx->state.param;
+	command->params.count	  = ctx->params.count - ctx->state.param;
+	ctx->state.param		  = (u32)ctx->params.count;
 }
 
-void kSetRenderMode(kRenderMode2D mode, u8 value)
+void kSetRenderMode(kRenderMode2D mode)
 {
-	kRenderContext2D *ctx = kGetRenderContext2D();
+	kRenderContext2D *ctx  = kGetRenderContext2D();
+	kRenderShader2D	 *prev = &ctx->shaders.Last();
+	if (prev->render != mode)
+	{
+		kFlushRenderCommand();
+	}
+	prev->render = mode;
+}
 
-	if (ctx->state.shader.modes[mode] == value)
-		return;
+void kBeginRenderMode(kRenderMode2D mode)
+{
+	kRenderContext2D *ctx  = kGetRenderContext2D();
+	kRenderShader2D	  last = ctx->shaders.Last();
+	ctx->shaders.Add(last);
+	kSetRenderMode(mode);
+}
 
-	kFlushRenderCommand();
+void kEndRenderMode(void)
+{
+	kRenderContext2D *ctx	= kGetRenderContext2D();
+	imem			  count = ctx->shaders.count;
+	kAssert(count > 1);
+	kSetRenderMode(ctx->shaders.data[count - 2].render);
+	ctx->shaders.Pop();
+}
 
-	ctx->state.shader.modes[mode] = value;
+void kSetBlendMode(kBlendMode2D mode)
+{
+	kRenderContext2D *ctx  = kGetRenderContext2D();
+	kRenderShader2D	 *prev = &ctx->shaders.Last();
+	if (prev->blend != mode)
+	{
+		kFlushRenderCommand();
+	}
+	prev->blend = mode;
+}
+
+void kBeginBlendMode(kBlendMode2D mode)
+{
+	kRenderContext2D *ctx  = kGetRenderContext2D();
+	kRenderShader2D	  last = ctx->shaders.Last();
+	ctx->shaders.Add(last);
+	kSetBlendMode(mode);
+}
+
+void kEndBlendMode(void)
+{
+	kRenderContext2D *ctx	= kGetRenderContext2D();
+	imem			  count = ctx->shaders.count;
+	kAssert(count > 1);
+	kSetBlendMode(ctx->shaders.data[count - 2].blend);
+	ctx->shaders.Pop();
 }
 
 void kSetTextureFilter(kTextureFilter filter)
 {
 	kRenderContext2D *ctx = kGetRenderContext2D();
-	if (filter == ctx->state.shader.filter)
+	if (filter == ctx->state.filter)
 		return;
 
 	kFlushRenderCommand();
 
-	ctx->state.shader.filter = filter;
+	ctx->state.filter = filter;
 }
 
 void kFlushRenderParam(void)
@@ -394,6 +458,7 @@ void kFlushRenderParam(void)
 
 	ctx->state.vertex = (i32)ctx->vertices.count;
 	ctx->state.index  = (u32)ctx->indices.count;
+	ctx->state.next	  = 0;
 	ctx->state.count  = 0;
 }
 
@@ -1099,7 +1164,7 @@ void kDrawPathStroked(kVec4 color, bool closed, float z)
 		kPathTo(path[0]);
 	}
 
-	kSlice<kVec2> normals = kSlice<kVec2>(path.Extend(path.count - 1), path.count - 1);
+	kSpan<kVec2> normals = kSpan<kVec2>(path.Extend(path.count - 1), path.count - 1);
 
 	for (imem index = 0; index < normals.count; ++index)
 	{
@@ -1549,9 +1614,10 @@ void kDrawRoundedRectOutline(kVec2 pos, kVec2 dim, kVec4 color, float radius)
 
 kGlyph *kFindFontGlyph(kFont *font, u32 codepoint)
 {
-	if (codepoint < font->largest)
+	if (codepoint >= font->start && codepoint <= font->stop)
 	{
-		u16 pos = font->map[codepoint];
+		u32 index = codepoint - font->start;
+		u16 pos	  = font->map[index];
 		return &font->glyphs[pos];
 	}
 	return font->fallback;
@@ -1585,6 +1651,7 @@ float kCalculateText(kString text, float height)
 
 void kDrawText(kString text, kVec3 pos, kFont *font, kVec4 color, float height)
 {
+	kBeginRenderMode(font->mode);
 	kPushTexture(font->texture, 0);
 
 	u32 codepoint;
@@ -1596,15 +1663,16 @@ void kDrawText(kString text, kVec3 pos, kFont *font, kVec4 color, float height)
 		int len = kUTF8ToCodepoint(ptr, end, &codepoint);
 		ptr += len;
 
-		auto  info	   = kFindFontGlyph(font, codepoint);
+		kGlyph *glyph	 = kFindFontGlyph(font, codepoint);
 
-		kVec3 draw_pos = pos;
-		draw_pos.xy += height * kVec2(info->bearing.x, -info->bearing.y);
-		kDrawRect(draw_pos, height * info->size, info->rect, color);
-		pos.x += height * info->advance;
+		kVec3	draw_pos = pos;
+		draw_pos.xy += height * kVec2(glyph->bearing.x, glyph->bearing.y);
+		kDrawRect(draw_pos, height * glyph->size, glyph->rect, color);
+		pos.x += height * glyph->advance;
 	}
 
 	kPopTexture(0);
+	kEndRenderMode();
 }
 
 void kDrawText(kString text, kVec2 pos, kFont *font, kVec4 color, float height)
@@ -1622,4 +1690,41 @@ void kDrawText(kString text, kVec2 pos, kVec4 color, float height)
 {
 	kFont *font = &render.builtin.font;
 	kDrawText(text, pos, font, color, height);
+}
+
+//
+//
+//
+
+#include "Font/kFont.h"
+
+static bool kLoadBuiltinFont(void)
+{
+	kFont		*font = &render.builtin.font;
+
+	kTextureSpec spec = {};
+	spec.num_samples  = 1;
+	spec.format		  = kFormat_R8_UNORM;
+	spec.bind_flags	  = kBind_ShaderResource;
+	spec.usage		  = kUsage_Default;
+	spec.width		  = kFontAtlastWidth;
+	spec.height		  = kFontAtlastHeight;
+	spec.pitch		  = kFontAtlastWidth;
+	spec.pixels		  = (u8 *)kFontAtlastPixels;
+
+	font->texture	  = render.backend.create_texture(spec);
+	if (!font->texture)
+	{
+		return false;
+	}
+
+	font->mode	   = kRenderMode2D_SignedDist;
+	font->map	   = (u16 *)kFontGlyphMap;
+	font->glyphs   = (kGlyph *)kFontGlyphs;
+	font->fallback = (kGlyph *)&font->glyphs[kFontGlyphCount - 1];
+	font->start	   = kFontMapStartCp;
+	font->stop	   = kFontMapStopCp;
+	font->count	   = kFontGlyphCount;
+
+	return true;
 }

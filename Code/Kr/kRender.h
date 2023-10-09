@@ -4,6 +4,26 @@
 
 #define K_MAX_CIRCLE_SEGMENTS 512
 
+typedef struct kGlyph
+{
+	kRect rect;
+	kVec2 bearing;
+	kVec2 size;
+	float advance;
+} kGlyph;
+
+typedef struct kFont
+{
+	kTexture	  texture;
+	kRenderMode2D mode;
+	u16			 *map;
+	kGlyph		 *glyphs;
+	kGlyph		 *fallback;
+	u32			  start;
+	u32			  stop;
+	u32			  count;
+} kFont;
+
 //
 //
 //
@@ -52,7 +72,14 @@ void kLineThickness(float thickness);
 
 void kFlushRenderCommand(void);
 
-void kSetRenderMode(kRenderMode2D mode, u8 value);
+void kSetRenderMode(kRenderMode2D mode);
+void kBeginRenderMode(kRenderMode2D mode);
+void kEndRenderMode(void);
+
+void kSetBlendMode(kBlendMode2D mode);
+void kBeginBlendMode(kBlendMode2D mode);
+void kEndBlendMode(void);
+
 void kSetTextureFilter(kTextureFilter filter);
 
 void kFlushRenderParam(void);

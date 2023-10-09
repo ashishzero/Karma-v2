@@ -31,6 +31,21 @@ typedef struct kRect
 {
 	kVec2 min;
 	kVec2 max;
+
+	kRect()
+	{}
+
+	kRect(float minx, float miny, float maxx, float maxy)
+	{
+		min = kVec2(minx, miny);
+		max = kVec2(maxx, maxy);
+	}
+
+	kRect(kVec2 rmin, kVec2 rmax)
+	{
+		min = rmin;
+		max = rmax;
+	}
 } kRect;
 
 typedef struct kViewport
@@ -39,24 +54,6 @@ typedef struct kViewport
 	float w, h;
 	float n, f;
 } kViewport;
-
-typedef struct kGlyph
-{
-	kRect rect;
-	kVec2 bearing;
-	kVec2 size;
-	float advance;
-} kGlyph;
-
-typedef struct kFont
-{
-	kTexture texture;
-	u16		*map;
-	kGlyph	*glyphs;
-	kGlyph	*fallback;
-	u32		 largest;
-	u32		 count;
-} kFont;
 
 typedef struct kRenderParam2D
 {
@@ -70,10 +67,23 @@ typedef struct kRenderParam2D
 
 typedef enum kRenderMode2D
 {
-	kRenderMode2D_Blend,
-	kRenderMode2D_Depth,
+	kRenderMode2D_Normal,
+	kRenderMode2D_SignedDist,
 	kRenderMode2D_Count,
 } kRenderMode2D;
+
+typedef enum kBlendMode2D
+{
+	kBlendMode2D_None,
+	kBlendMode2D_Alpha,
+	kBlendMode2D_Count,
+} kBlendMode2D;
+
+typedef struct kRenderShader2D
+{
+	kRenderMode2D render;
+	kBlendMode2D  blend;
+} kRenderShader2D;
 
 typedef enum kTextureFilter
 {
@@ -84,9 +94,9 @@ typedef enum kTextureFilter
 
 typedef struct kRenderCommand2D
 {
-	u8					   modes[kRenderMode2D_Count];
 	kTextureFilter		   filter;
-	kSlice<kRenderParam2D> params;
+	kRenderShader2D		   shader;
+	kSpan<kRenderParam2D> params;
 } kRenderCommand2D;
 
 enum kRenderPassFlags
@@ -110,14 +120,14 @@ typedef struct kRenderPass2D
 	kViewport				 viewport;
 	u32						 flags;
 	kRenderClear2D			 clear;
-	kSlice<kRenderCommand2D> commands;
+	kSpan<kRenderCommand2D> commands;
 } kRenderPass2D;
 
 typedef struct kRenderData2D
 {
-	kSlice<kRenderPass2D> passes;
-	kSlice<kVertex2D>	  vertices;
-	kSlice<kIndex2D>	  indices;
+	kSpan<kRenderPass2D> passes;
+	kSpan<kVertex2D>	  vertices;
+	kSpan<kIndex2D>	  indices;
 } kRenderData2D;
 
 //
@@ -177,7 +187,7 @@ typedef struct kTextureSpec
 	u32		width;
 	u32		height;
 	u32		pitch;
-	u8	   *pixels;
+	u8 *	pixels;
 	u32		bind_flags;
 	kUsage	usage;
 	u32		num_samples;

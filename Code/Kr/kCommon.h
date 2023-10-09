@@ -574,16 +574,16 @@ typedef union kQuat {
 //
 //
 
-template <typename Item> struct kSlice
+template <typename Item> struct kSpan
 {
 	imem  count;
 	Item *data;
 
-	inline kSlice() : count(0), data(nullptr)
+	inline kSpan() : count(0), data(nullptr)
 	{}
-	inline kSlice(const Item *p, imem n) : count(n), data((Item *)p)
+	inline kSpan(const Item *p, imem n) : count(n), data((Item *)p)
 	{}
-	template <imem _Count> constexpr kSlice(const Item (&a)[_Count]) : count(_Count), data((Item *)a)
+	template <imem _Count> constexpr kSpan(const Item (&a)[_Count]) : count(_Count), data((Item *)a)
 	{}
 	inline Item &operator[](imem index) const
 	{
@@ -683,9 +683,9 @@ struct kString
 
 	kString() : count(0), data(0)
 	{}
-	kString(kSlice<u8> av) : count(av.count), data(av.data)
+	kString(kSpan<u8> av) : count(av.count), data(av.data)
 	{}
-	kString(kSlice<char> av) : count(av.count), data((u8 *)av.data)
+	kString(kSpan<char> av) : count(av.count), data((u8 *)av.data)
 	{}
 	template <imem _Length> constexpr kString(const char (&a)[_Length]) : count(_Length - 1), data((u8 *)a)
 	{}
@@ -719,9 +719,9 @@ struct kString
 	{
 		return data + count;
 	}
-	operator kSlice<u8>()
+	operator kSpan<u8>()
 	{
-		return kSlice<u8>(data, count);
+		return kSpan<u8>(data, count);
 	}
 };
 

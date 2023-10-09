@@ -4,7 +4,7 @@
 #include <string.h>
 #include <stdio.h>
 
-constexpr int K_STRING_BUILDER_DEFAULT_BUCKET_SIZE = 16 * 1024;
+constexpr int K_STRING_BUILDER_DEFAULT_BUCKET_SIZE = 4 * 1024;
 
 template <int N> struct kStringsBucket
 {

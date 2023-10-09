@@ -27,7 +27,7 @@ struct kArg
 	kArgType		type;
 	void		   *dst;
 	kArgDefault		def;
-	kSlice<kString> opts;
+	kSpan<kString> opts;
 };
 
 static kArray<kArg> cmd_args;
@@ -36,7 +36,7 @@ static kArray<kArg> cmd_args;
 //
 //
 
-static void kCmdLineArg(kString key, kString desc, kSlice<kString> opts, kArgType type, void *dst, kArgDefault def)
+static void kCmdLineArg(kString key, kString desc, kSpan<kString> opts, kArgType type, void *dst, kArgDefault def)
 {
 	kArg *arg = cmd_args.Add();
 	arg->key  = key;
@@ -70,7 +70,7 @@ void kCmdLineString(kString key, kString def, kString *val, kString desc)
 	kCmdLineArg(key, desc, {}, kArgType_String, val, arg);
 }
 
-void kCmdLineOptions(kString key, int def, kSlice<kString> opts, int *val, kString desc)
+void kCmdLineOptions(kString key, int def, kSpan<kString> opts, int *val, kString desc)
 {
 	kAssert(def < opts.count);
 	kArgDefault arg = {.num = def};

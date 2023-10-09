@@ -117,21 +117,21 @@ void kTerminate(uint code);
 //
 //
 
-kFile kOpenFile(kString mb_filepath, kFileAccess paccess, kFileShareMode pshare, kFileMethod method);
-void  kCloseFile(kFile handle);
-umem  kReadFile(kFile handle, u8 *buffer, umem size);
-umem  kWriteFile(kFile handle, u8 *buff, umem size);
-umem  kGetFileSize(kFile handle);
-u8	 *kReadEntireFile(kString filepath, umem *file_size);
-bool  kWriteEntireFile(kString filepath, u8 *buffer, umem size);
-uint  kGetFileAttributes(kString mb_filepath);
-u64	  kGetFileLastModifiedTime(kString mb_filepath);
-bool  kSetWorkingDirectory(kString mb_path);
-int	  kGetWorkingDirectory(u8 *mb_path, int len);
-bool  kSearchPath(kString exe);
-bool  kCreateDirectories(kString mb_path);
-int	  kGetUserPath(u8 *mb_path, int len);
-bool  kVisitDirectories(kString mb_path, kDirectoryVisitorProc visitor, void *data);
+kFile	kOpenFile(kString mb_filepath, kFileAccess paccess, kFileShareMode pshare, kFileMethod method);
+void	kCloseFile(kFile handle);
+umem	kReadFile(kFile handle, u8 *buffer, umem size);
+umem	kWriteFile(kFile handle, u8 *buff, umem size);
+umem	kGetFileSize(kFile handle);
+kString kReadEntireFile(kString filepath);
+bool	kWriteEntireFile(kString filepath, u8 *buffer, umem size);
+uint	kGetFileAttributes(kString mb_filepath);
+u64		kGetFileLastModifiedTime(kString mb_filepath);
+bool	kSetWorkingDirectory(kString mb_path);
+int		kGetWorkingDirectory(u8 *mb_path, int len);
+bool	kSearchPath(kString exe);
+bool	kCreateDirectories(kString mb_path);
+int		kGetUserPath(u8 *mb_path, int len);
+bool	kVisitDirectories(kString mb_path, kDirectoryVisitorProc visitor, void *data);
 
 //
 //

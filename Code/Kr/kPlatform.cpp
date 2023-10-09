@@ -150,20 +150,19 @@ umem kGetFileSize(kFile handle)
 	return size.QuadPart;
 }
 
-u8 *kReadEntireFile(kString path, umem *out_size)
+kString kReadEntireFile(kString path)
 {
-	*out_size	 = 0;
 	kFile handle = kOpenFile(path, kFileAccess_Read, kFileShareMode_Read, kFileMethod_OpenExisting);
 	if (handle.resource)
 	{
 		umem size = kGetFileSize(handle);
 		u8	*buff = (u8 *)kAlloc(size);
 		if (buff)
-			*out_size = kReadFile(handle, buff, size);
+			size = kReadFile(handle, buff, size);
 		kCloseFile(handle);
-		return buff;
+		return kString(buff, size);
 	}
-	return 0;
+	return "";
 }
 
 bool kWriteEntireFile(kString path, u8 *buffer, umem size)

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<StepFilter xmlns="http://schemas.microsoft.com/vstudio/debugger/natstepfilter/2010">
+	<Function>
+		<Name>(kVec2T|kVec2T|kVec4T|kMat2T|kMat3T|kMat4T|kQuatT|kRectT).*::.+</Name>
+		<Action>NoStepInto</Action>
+	</Function>
+	<Function>
+		<Name>(kString)::.+</Name>
+		<Action>NoStepInto</Action>
+	</Function>
+	<Function>
+		<Name>(kSpan|kArray).*::.+</Name>
+		<Action>NoStepInto</Action>
+	</Function>
+</StepFilter>

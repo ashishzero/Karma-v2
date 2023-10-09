@@ -49,7 +49,7 @@ void kFallbackUserReleaseProc(void)
 void kFallbackUserUpdateProc(float dt)
 {}
 
-kSlice<kEvent> kGetEvents(void)
+kSpan<kEvent> kGetEvents(void)
 {
 	return media.events;
 }
