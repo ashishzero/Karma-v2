@@ -9,66 +9,84 @@
 
 typedef struct kRenderState2D
 {
-	i32			   vertex;
-	u32			   index;
-	u32			   count;
-	u32			   next;
-	u32			   param;
-	u32			   command;
-	u32			   pass;
-	kTexture	   render_target;
-	kTexture	   depth_stenil;
-	kViewport	   viewport;
-	u32			   flags;
-	kRenderClear2D clear;
-	kTextureFilter filter;
+	i32             vertex;
+	u32             index;
+	u32             count;
+	u32             next;
+	u32             param;
+	u32             command;
+	u32             pass;
+	kTexture        render_target;
+	kTexture        depth_stenil;
+	kViewport       viewport;
+	u32             flags;
+	kRenderClear2D  clear;
+	kResolveTexture resolve;
+	kTextureFilter  filter;
 } kRenderState2D;
 
 typedef struct kRenderContext2D
 {
-	kRenderState2D			 state;
+	kRenderState2D           state;
 
-	kArray<kVertex2D>		 vertices;
-	kArray<kIndex2D>		 indices;
-	kArray<kRenderParam2D>	 params;
+	kArray<kVertex2D>        vertices;
+	kArray<kIndex2D>         indices;
+	kArray<kRenderParam2D>   params;
 	kArray<kRenderCommand2D> commands;
-	kArray<kRenderPass2D>	 passes;
+	kArray<kRenderPass2D>    passes;
 
-	float					 thickness;
-	kArray<kRect>			 rects;
-	kArray<kMat4>			 transforms;
-	kArray<kTexture>		 textures[K_MAX_TEXTURE_SLOTS];
-	kArray<kRenderShader2D>	 shaders;
+	float                    thickness;
+	kArray<kRect>            rects;
+	kArray<kMat4>            transforms;
+	kArray<kTexture>         textures[K_MAX_TEXTURE_SLOTS];
+	kArray<kRenderShader2D>  shaders;
 
-	kArray<kVec2>			 builder;
+	kArray<kVec2>            builder;
 } kRenderContext2D;
+
+typedef struct kRenderContextTarget
+{
+	u32      multisamples;
+	kTexture msaa;
+	kTexture msaa_resolved;
+} kRenderContextTarget;
 
 typedef struct kRenderContextBuiltin
 {
-	kTexture texture;
-	kFont	 font;
+	kTexture             texture;
+	kFont                font;
+	kRenderContextTarget target;
 } kRenderContextBuiltin;
+
+typedef struct kRenderContextFrame
+{
+	kRenderFeatures features;
+	kTexture        target;
+	kTexture        resolve;
+} kRenderContextFrame;
 
 typedef struct kRenderContext
 {
-	kRenderContext2D	  context2d;
+	kRenderContextFrame   frame;
+	kRenderContext2D      context2d;
 	kRenderContextBuiltin builtin;
-	kRenderBackend		  backend;
+	kRenderBackend        backend;
+	kRenderFeatures       req_features;
 } kRenderContext;
 
 static kRenderContext render;
 
-static float		  Sines[K_MAX_CIRCLE_SEGMENTS];
-static float		  Cosines[K_MAX_CIRCLE_SEGMENTS];
+static float          Sines[K_MAX_CIRCLE_SEGMENTS];
+static float          Cosines[K_MAX_CIRCLE_SEGMENTS];
 
-static float		  FallbackFontHeight = 24.0f;
-static float		  FallbackFontWidth	 = 0.7f * FallbackFontHeight;
+static int            FallbackFontHeight = 32;
+static int            FallbackFontWidth  = (3 * FallbackFontHeight) / 2;
 
-static const kGlyph	  FallbackGlyph		 = {
-	   kRect{kVec2(0), kVec2(0)},
-	   kVec2(0.0f),
-	   kVec2(FallbackFontWidth, FallbackFontHeight),
-	   FallbackFontWidth + 2.0f,
+static const kGlyph   FallbackGlyph      = {
+    kRect{kVec2(0), kVec2(0)},
+    kVec2i(0),
+    kVec2i(FallbackFontWidth, FallbackFontHeight),
+    kVec2i(FallbackFontWidth + 2, FallbackFontHeight + 2),
 };
 
 //
@@ -96,99 +114,184 @@ static float kWrapTurns(float turns)
 static float kSinLookup(int index, int segments)
 {
 	float lookup = ((float)index / (float)segments) * (K_MAX_CIRCLE_SEGMENTS - 1);
-	int	  a		 = (int)lookup;
-	int	  b		 = (int)(a + 1) & (K_MAX_CIRCLE_SEGMENTS - 1);
+	int   a      = (int)lookup;
+	int   b      = (int)(a + 1) & (K_MAX_CIRCLE_SEGMENTS - 1);
 	return kLerp(Sines[a], Sines[b], lookup - a);
 }
 
 static float kCosLookup(int index, int segments)
 {
 	float lookup = ((float)index / (float)segments) * (K_MAX_CIRCLE_SEGMENTS - 1);
-	int	  a		 = (int)lookup;
-	int	  b		 = (int)(a + 1) & (K_MAX_CIRCLE_SEGMENTS - 1);
+	int   a      = (int)lookup;
+	int   b      = (int)(a + 1) & (K_MAX_CIRCLE_SEGMENTS - 1);
 	return kLerp(Cosines[a], Cosines[b], lookup - a);
 }
 
 static float kSinLookup(float turns)
 {
 	float lookup = turns * (K_MAX_CIRCLE_SEGMENTS - 1);
-	int	  a		 = (int)lookup;
-	int	  b		 = (int)(a + 1) & (K_MAX_CIRCLE_SEGMENTS - 1);
+	int   a      = (int)lookup;
+	int   b      = (int)(a + 1) & (K_MAX_CIRCLE_SEGMENTS - 1);
 	return kLerp(Sines[a], Sines[b], lookup - a);
 }
 
 static float kCosLookup(float turns)
 {
 	float lookup = turns * (K_MAX_CIRCLE_SEGMENTS - 1);
-	int	  a		 = (int)lookup;
-	int	  b		 = (int)(a + 1) & (K_MAX_CIRCLE_SEGMENTS - 1);
+	int   a      = (int)lookup;
+	int   b      = (int)(a + 1) & (K_MAX_CIRCLE_SEGMENTS - 1);
 	return kLerp(Cosines[a], Cosines[b], lookup - a);
 }
 
-static void kResetFrame(void)
+//
+//
+//
+
+static void kDestroyRenderTargetMSAA(kRenderContextTarget *target)
 {
-	memset(&render.context2d.state, 0, sizeof(render.context2d.state));
+	if (target->msaa)
+	{
+		render.backend.destroy_texture(target->msaa);
+		target->msaa = nullptr;
+	}
 
-	render.context2d.vertices.count	  = 0;
-	render.context2d.indices.count	  = 0;
-	render.context2d.params.count	  = 0;
-	render.context2d.commands.count	  = 0;
-	render.context2d.passes.count	  = 0;
-	render.context2d.rects.count	  = 1;
-	render.context2d.transforms.count = 1;
+	if (target->msaa_resolved)
+	{
+		render.backend.destroy_texture(target->msaa_resolved);
+		target->msaa_resolved = nullptr;
+	}
 
-	for (u32 i = 0; i < K_MAX_TEXTURE_SLOTS; ++i)
-		render.context2d.textures[i].count = 1;
-
-	render.context2d.shaders.count = 1;
+	target->multisamples = 0;
 }
 
+static void kRecreateRenderTargetMSAA(kRenderContextTarget *target, u32 w, u32 h, u32 multisamples)
+{
+	kAssert(w && h && multisamples);
+
+	if (target->msaa && target->msaa_resolved)
+	{
+		u32 cw, ch;
+		render.backend.texture_size(target->msaa, &cw, &ch);
+
+		if (target->multisamples == multisamples && cw == w && ch == h)
+			return;
+	}
+
+	kDestroyRenderTargetMSAA(target);
+
+	kTextureSpec spec     = {};
+	spec.format           = kFormat_RGBA16_FLOAT;
+	spec.width            = w;
+	spec.height           = h;
+	spec.bind_flags       = kBind_RenderTarget;
+	spec.num_samples      = multisamples;
+	spec.usage            = kUsage_Default;
+
+	kTextureSpec resolved = spec;
+	resolved.num_samples  = 1;
+	resolved.bind_flags   = kBind_ShaderResource;
+
+	target->multisamples  = multisamples;
+	target->msaa          = render.backend.create_texture(spec);
+	target->msaa_resolved = render.backend.create_texture(resolved);
+}
+
+static void kResizeSwapChainTargetMSAA(kSwapChain swap_chain, u32 w, u32 h, void *data)
+{
+	if (w && h)
+	{
+		if (!render.builtin.target.multisamples)
+			render.builtin.target.multisamples = 1;
+		kRecreateRenderTargetMSAA(&render.builtin.target, w, h, render.builtin.target.multisamples);
+	}
+}
+
+static void kDestroySwapChainRenderTargetMSAA(void)
+{
+	kDestroyRenderTargetMSAA(&render.builtin.target);
+}
+
+static void kRecreateSwapChainRenderTargetMSAA(void)
+{
+	u32        w, h;
+	kSwapChain swap_chain = render.backend.window_swap_chain();
+	kTexture   target     = render.backend.swap_chain_target(swap_chain);
+	render.backend.texture_size(target, &w, &h);
+	kResizeSwapChainTargetMSAA(swap_chain, w, h, 0);
+	render.backend.swap_chain_resize_cb(swap_chain, kResizeSwapChainTargetMSAA, 0);
+}
+
+static void kCreateBuiltinResources(void);
+static void kDestroyBuiltinResources(void);
+
 //
 //
 //
 
-static bool kLoadBuiltinFont(void);
+void kSetRenderFeatures(uint flags)
+{
+	render.req_features.flags = flags;
+}
 
-void		kCreateRenderContext(kRenderBackend backend, const kRenderSpec &spec)
+bool kIsRenderFeatureEnabled(uint flags)
+{
+	return (render.req_features.flags & flags);
+}
+
+void kEnableRenderFeatures(uint flags)
+{
+	render.req_features.flags |= flags;
+}
+
+void kDisableRenderFeatures(uint flags)
+{
+	render.req_features.flags &= ~flags;
+}
+
+u32 kGetMSAASampleCount(void)
+{
+	return render.req_features.msaa.samples;
+}
+
+void kSetMSAASampleCount(u32 count)
+{
+	render.req_features.msaa.samples = count;
+}
+
+void kGetRenderFeatures(kRenderFeatures *features)
+{
+	*features = render.req_features;
+}
+
+void kSetRenderFeatures(const kRenderFeatures &features)
+{
+	render.req_features = features;
+}
+
+void kCreateRenderContext(kRenderBackend backend, const kRenderFeatures &features, const kRenderSpec &spec)
 {
 	render.backend = backend;
 
 	for (u32 i = 0; i < K_MAX_CIRCLE_SEGMENTS; ++i)
 	{
 		float theta = ((float)i / (float)(K_MAX_CIRCLE_SEGMENTS - 1));
-		Cosines[i]	= kCos(theta);
-		Sines[i]	= kSin(theta);
+		Cosines[i]  = kCos(theta);
+		Sines[i]    = kSin(theta);
 	}
 
 	Cosines[K_MAX_CIRCLE_SEGMENTS - 1] = 1;
 	Sines[K_MAX_CIRCLE_SEGMENTS - 1]   = 0;
 
+	kSetRenderFeatures(features);
+	render.req_features = features;
+
+	if (kIsRenderFeatureEnabled(kRenderFeature_MSAA))
 	{
-		u8			 pixels[]  = {0xff, 0xff, 0xff, 0xff};
-
-		kTextureSpec spec	   = {};
-		spec.width			   = 1;
-		spec.height			   = 1;
-		spec.num_samples	   = 1;
-		spec.pitch			   = 1 * sizeof(u32);
-		spec.format			   = kFormat_RGBA8_UNORM;
-		spec.bind_flags		   = kBind_ShaderResource;
-		spec.usage			   = kUsage_Default;
-		spec.pixels			   = pixels;
-
-		render.builtin.texture = render.backend.create_texture(spec);
+		if (!render.frame.features.msaa.samples)
+			render.frame.features.msaa.samples = 1;
 	}
 
-	if (!kLoadBuiltinFont())
-	{
-		render.builtin.font.texture	 = render.builtin.texture;
-		render.builtin.font.map		 = nullptr;
-		render.builtin.font.glyphs	 = nullptr;
-		render.builtin.font.fallback = (kGlyph *)&FallbackGlyph;
-		render.builtin.font.start	 = 0;
-		render.builtin.font.stop	 = 0;
-		render.builtin.font.count	 = 0;
-	}
+	kCreateBuiltinResources();
 
 	render.context2d.thickness = spec.thickness;
 
@@ -213,16 +316,15 @@ void		kCreateRenderContext(kRenderBackend backend, const kRenderSpec &spec)
 	render.context2d.textures[1].Add(render.builtin.texture);
 
 	kRenderShader2D shader = {};
-	shader.blend		   = kBlendMode2D_Alpha;
-	shader.render		   = kRenderMode2D_Normal;
+	shader.blend           = kBlendMode_Alpha;
 	render.context2d.shaders.Add(shader);
 
-	kResetFrame();
+	kBeginFrame();
 }
 
 void kDestroyRenderContext(void)
 {
-	render.backend.destroy_texture(render.builtin.texture);
+	kDestroyBuiltinResources();
 
 	kFree(&render.context2d.vertices);
 	kFree(&render.context2d.indices);
@@ -241,13 +343,66 @@ void kDestroyRenderContext(void)
 	memset(&render, 0, sizeof(render));
 }
 
-void kCommitFrame(void)
+void kBeginFrame(void)
 {
+	memset(&render.context2d.state, 0, sizeof(render.context2d.state));
+
+	render.context2d.vertices.count   = 0;
+	render.context2d.indices.count    = 0;
+	render.context2d.params.count     = 0;
+	render.context2d.commands.count   = 0;
+	render.context2d.passes.count     = 0;
+	render.context2d.rects.count      = 1;
+	render.context2d.transforms.count = 1;
+
+	for (u32 i = 0; i < K_MAX_TEXTURE_SLOTS; ++i)
+		render.context2d.textures[i].count = 1;
+
+	render.context2d.shaders.count = 1;
+
+	if (render.req_features.flags & kRenderFeature_MSAA)
+	{
+		if (render.req_features.msaa.samples != render.builtin.target.multisamples)
+		{
+			render.builtin.target.multisamples = render.req_features.msaa.samples;
+			kRecreateSwapChainRenderTargetMSAA();
+		}
+		render.frame.target  = render.builtin.target.msaa;
+		render.frame.resolve = render.builtin.target.msaa_resolved;
+	}
+	else
+	{
+		if (render.frame.features.flags & kRenderFeature_MSAA)
+		{
+			kDestroySwapChainRenderTargetMSAA();
+		}
+		kSwapChain swap_chain = render.backend.window_swap_chain();
+		render.frame.target   = render.backend.swap_chain_target(swap_chain);
+		render.frame.resolve  = nullptr;
+	}
+
+	render.frame.features = render.req_features;
+}
+
+void kEndFrame(void)
+{
+	if (render.frame.features.flags & kRenderFeature_MSAA)
+	{
+		kSwapChain swap_chain = render.backend.window_swap_chain();
+		kTexture   target     = render.backend.swap_chain_target(swap_chain);
+
+		// TODO: Optimize
+		kBeginRenderPass(target);
+		kBeginBlendMode(kBlendMode_None);
+		kPushTexture(render.frame.resolve, 0);
+		kDrawRect(kVec2(-1), kVec2(2), kRect(0, 1, 1, 0), kVec4(1));
+		kEndBlendMode();
+		kEndRenderPass();
+	}
+
 	kRenderData2D data;
 	kGetRenderData2D(&data);
 	render.backend.execute_commands(data);
-
-	kResetFrame();
 }
 
 void kGetRenderData2D(kRenderData2D *data)
@@ -257,7 +412,8 @@ void kGetRenderData2D(kRenderData2D *data)
 	data->indices  = render.context2d.indices;
 }
 
-void kBeginRenderPass(kTexture texture, kTexture depth_stencil, uint flags, kVec4 color, float depth)
+void kBeginRenderPass(kTexture texture, kTexture depth_stencil, uint flags, kVec4 color, float depth,
+                      kResolveTexture *resolve)
 {
 	kRenderContext2D *ctx = kGetRenderContext2D();
 	kAssert(ctx->state.render_target == 0 && ctx->state.depth_stenil == 0);
@@ -266,30 +422,41 @@ void kBeginRenderPass(kTexture texture, kTexture depth_stencil, uint flags, kVec
 	render.backend.texture_size(texture, &w, &h);
 
 	kViewport viewport;
-	viewport.x				 = 0;
-	viewport.y				 = 0;
-	viewport.w				 = (float)w;
-	viewport.h				 = (float)h;
-	viewport.n				 = 0;
-	viewport.f				 = 1;
+	viewport.x               = 0;
+	viewport.y               = 0;
+	viewport.w               = (float)w;
+	viewport.h               = (float)h;
+	viewport.n               = 0;
+	viewport.f               = 1;
 
 	ctx->state.render_target = texture;
-	ctx->state.depth_stenil	 = depth_stencil;
-	ctx->state.viewport		 = viewport;
-	ctx->state.clear.color	 = color;
-	ctx->state.clear.depth	 = depth;
+	ctx->state.depth_stenil  = depth_stencil;
+	ctx->state.viewport      = viewport;
+	ctx->state.clear.color   = color;
+	ctx->state.clear.depth   = depth;
 	ctx->state.clear.stencil = 0;
-	ctx->state.flags		 = flags;
-	ctx->state.command		 = (u32)ctx->commands.count;
+	ctx->state.flags         = flags;
+	ctx->state.command       = (u32)ctx->commands.count;
+
+	if (resolve)
+	{
+		ctx->state.resolve = *resolve;
+	}
+	else
+	{
+		ctx->state.resolve = {};
+	}
 
 	kPushRectEx(0, 0, (float)w, (float)h);
 }
 
 void kBeginDefaultRenderPass(uint flags, kVec4 color, float depth)
 {
-	kSwapChain swap_chain = render.backend.window_swap_chain();
-	kTexture   target	  = render.backend.swap_chain_target(swap_chain);
-	kBeginRenderPass(target, nullptr, flags, color, depth);
+	kResolveTexture resolve;
+	resolve.target  = render.frame.resolve;
+	resolve.format  = kFormat_RGBA16_FLOAT;
+	kTexture target = render.frame.target;
+	kBeginRenderPass(target, nullptr, flags, color, depth, &resolve);
 }
 
 void kEndRenderPass(void)
@@ -301,26 +468,28 @@ void kEndRenderPass(void)
 
 	if (ctx->state.command != ctx->commands.count)
 	{
-		kRenderPass2D *pass	 = ctx->passes.Add();
-		pass->render_target	 = ctx->state.render_target;
-		pass->depth_stencil	 = ctx->state.depth_stenil;
-		pass->viewport		 = ctx->state.viewport;
-		pass->flags			 = ctx->state.flags;
-		pass->clear			 = ctx->state.clear;
-		pass->commands.data	 = ctx->commands.data + ctx->state.command;
+		kRenderPass2D *pass  = ctx->passes.Add();
+		pass->rt             = ctx->state.render_target;
+		pass->ds             = ctx->state.depth_stenil;
+		pass->viewport       = ctx->state.viewport;
+		pass->flags          = ctx->state.flags;
+		pass->clear          = ctx->state.clear;
+		pass->commands.data  = ctx->commands.data + ctx->state.command;
 		pass->commands.count = ctx->commands.count - ctx->state.command;
-		ctx->state.command	 = (u32)ctx->commands.count;
+		pass->resolve        = ctx->state.resolve;
+		ctx->state.command   = (u32)ctx->commands.count;
 	}
 
 	ctx->state.render_target = nullptr;
-	ctx->state.depth_stenil	 = nullptr;
-	ctx->state.flags		 = 0;
+	ctx->state.depth_stenil  = nullptr;
+	ctx->state.flags         = 0;
+	ctx->state.resolve       = {};
 }
 
 void kBeginCameraRect(float left, float right, float bottom, float top)
 {
 	kRenderContext2D *ctx  = kGetRenderContext2D();
-	kMat4			  proj = kOrthographicLH(left, right, top, bottom, -1, 1);
+	kMat4             proj = kOrthographicLH(left, right, top, bottom, -1, 1);
 	ctx->transforms.Add();
 	kSetTransform(proj);
 }
@@ -329,8 +498,8 @@ void kBeginCamera(float aspect_ratio, float height)
 {
 	float width = aspect_ratio * height;
 
-	float arx	= aspect_ratio;
-	float ary	= 1;
+	float arx   = aspect_ratio;
+	float ary   = 1;
 
 	if (width < height)
 	{
@@ -351,7 +520,7 @@ void kEndCamera(void)
 void kLineThickness(float thickness)
 {
 	kRenderContext2D *ctx = kGetRenderContext2D();
-	ctx->thickness		  = thickness;
+	ctx->thickness        = thickness;
 }
 
 void kFlushRenderCommand(void)
@@ -364,45 +533,17 @@ void kFlushRenderCommand(void)
 		return;
 
 	kRenderCommand2D *command = ctx->commands.Add();
-	command->shader			  = ctx->shaders.Last();
-	command->filter			  = ctx->state.filter;
-	command->params.data	  = ctx->params.data + ctx->state.param;
-	command->params.count	  = ctx->params.count - ctx->state.param;
-	ctx->state.param		  = (u32)ctx->params.count;
+	command->shader           = ctx->shaders.Last();
+	command->filter           = ctx->state.filter;
+	command->params.data      = ctx->params.data + ctx->state.param;
+	command->params.count     = ctx->params.count - ctx->state.param;
+	ctx->state.param          = (u32)ctx->params.count;
 }
 
-void kSetRenderMode(kRenderMode2D mode)
+void kSetBlendMode(kBlendMode mode)
 {
 	kRenderContext2D *ctx  = kGetRenderContext2D();
-	kRenderShader2D	 *prev = &ctx->shaders.Last();
-	if (prev->render != mode)
-	{
-		kFlushRenderCommand();
-	}
-	prev->render = mode;
-}
-
-void kBeginRenderMode(kRenderMode2D mode)
-{
-	kRenderContext2D *ctx  = kGetRenderContext2D();
-	kRenderShader2D	  last = ctx->shaders.Last();
-	ctx->shaders.Add(last);
-	kSetRenderMode(mode);
-}
-
-void kEndRenderMode(void)
-{
-	kRenderContext2D *ctx	= kGetRenderContext2D();
-	imem			  count = ctx->shaders.count;
-	kAssert(count > 1);
-	kSetRenderMode(ctx->shaders.data[count - 2].render);
-	ctx->shaders.Pop();
-}
-
-void kSetBlendMode(kBlendMode2D mode)
-{
-	kRenderContext2D *ctx  = kGetRenderContext2D();
-	kRenderShader2D	 *prev = &ctx->shaders.Last();
+	kRenderShader2D  *prev = &ctx->shaders.Last();
 	if (prev->blend != mode)
 	{
 		kFlushRenderCommand();
@@ -410,18 +551,18 @@ void kSetBlendMode(kBlendMode2D mode)
 	prev->blend = mode;
 }
 
-void kBeginBlendMode(kBlendMode2D mode)
+void kBeginBlendMode(kBlendMode mode)
 {
 	kRenderContext2D *ctx  = kGetRenderContext2D();
-	kRenderShader2D	  last = ctx->shaders.Last();
+	kRenderShader2D   last = ctx->shaders.Last();
 	ctx->shaders.Add(last);
 	kSetBlendMode(mode);
 }
 
 void kEndBlendMode(void)
 {
-	kRenderContext2D *ctx	= kGetRenderContext2D();
-	imem			  count = ctx->shaders.count;
+	kRenderContext2D *ctx   = kGetRenderContext2D();
+	imem              count = ctx->shaders.count;
 	kAssert(count > 1);
 	kSetBlendMode(ctx->shaders.data[count - 2].blend);
 	ctx->shaders.Pop();
@@ -451,14 +592,14 @@ void kFlushRenderParam(void)
 		param->textures[i] = ctx->textures[i].Last();
 
 	param->transform  = ctx->transforms.Last();
-	param->rect		  = ctx->rects.Last();
-	param->vertex	  = ctx->state.vertex;
-	param->index	  = ctx->state.index;
-	param->count	  = ctx->state.count;
+	param->rect       = ctx->rects.Last();
+	param->vertex     = ctx->state.vertex;
+	param->index      = ctx->state.index;
+	param->count      = ctx->state.count;
 
 	ctx->state.vertex = (i32)ctx->vertices.count;
 	ctx->state.index  = (u32)ctx->indices.count;
-	ctx->state.next	  = 0;
+	ctx->state.next   = 0;
 	ctx->state.count  = 0;
 }
 
@@ -466,7 +607,7 @@ void kSetTexture(kTexture texture, uint idx)
 {
 	kAssert(idx < K_MAX_TEXTURE_SLOTS);
 	kRenderContext2D *ctx  = kGetRenderContext2D();
-	kTexture		 *prev = &ctx->textures[idx].Last();
+	kTexture         *prev = &ctx->textures[idx].Last();
 	if (*prev != texture)
 	{
 		kFlushRenderParam();
@@ -478,7 +619,7 @@ void kPushTexture(kTexture texture, uint idx)
 {
 	kAssert(idx < K_MAX_TEXTURE_SLOTS);
 	kRenderContext2D *ctx  = kGetRenderContext2D();
-	kTexture		  last = ctx->textures[idx].Last();
+	kTexture          last = ctx->textures[idx].Last();
 	ctx->textures[idx].Add(last);
 	kSetTexture(texture, idx);
 }
@@ -486,8 +627,8 @@ void kPushTexture(kTexture texture, uint idx)
 void kPopTexture(uint idx)
 {
 	kAssert(idx < K_MAX_TEXTURE_SLOTS);
-	kRenderContext2D *ctx	= kGetRenderContext2D();
-	imem			  count = ctx->textures[idx].count;
+	kRenderContext2D *ctx   = kGetRenderContext2D();
+	imem              count = ctx->textures[idx].count;
 	kAssert(count > 1);
 	kSetTexture(ctx->textures[idx].data[count - 2], idx);
 	ctx->textures[idx].Pop();
@@ -496,7 +637,7 @@ void kPopTexture(uint idx)
 void kSetRect(kRect rect)
 {
 	kRenderContext2D *ctx  = kGetRenderContext2D();
-	kRect			 *prev = &ctx->rects.Last();
+	kRect            *prev = &ctx->rects.Last();
 	if (memcmp(prev, &rect, sizeof(rect)) != 0)
 	{
 		kFlushRenderParam();
@@ -517,7 +658,7 @@ void kSetRectEx(float x, float y, float w, float h)
 void kPushRect(kRect rect)
 {
 	kRenderContext2D *ctx  = kGetRenderContext2D();
-	kRect			  last = ctx->rects.Last();
+	kRect             last = ctx->rects.Last();
 	ctx->rects.Add(last);
 	kSetRect(rect);
 }
@@ -534,8 +675,8 @@ void kPushRectEx(float x, float y, float w, float h)
 
 void kPopRect(void)
 {
-	kRenderContext2D *ctx	= kGetRenderContext2D();
-	imem			  count = ctx->rects.count;
+	kRenderContext2D *ctx   = kGetRenderContext2D();
+	imem              count = ctx->rects.count;
 	kAssert(count > 1);
 	kSetRect(ctx->rects.data[count - 2]);
 	ctx->rects.Pop();
@@ -544,7 +685,7 @@ void kPopRect(void)
 void kSetTransform(const kMat4 &transform)
 {
 	kRenderContext2D *ctx  = kGetRenderContext2D();
-	kMat4			 *prev = &ctx->transforms.Last();
+	kMat4            *prev = &ctx->transforms.Last();
 	if (memcmp(prev, &transform, sizeof(kMat4)) != 0)
 	{
 		kFlushRenderParam();
@@ -555,7 +696,7 @@ void kSetTransform(const kMat4 &transform)
 void kPushTransform(const kMat4 &transform)
 {
 	kRenderContext2D *ctx  = kGetRenderContext2D();
-	kMat4			  last = ctx->transforms.Last();
+	kMat4             last = ctx->transforms.Last();
 	ctx->transforms.Add(last);
 	kMat4 t = last * transform;
 	kSetTransform(t);
@@ -575,8 +716,8 @@ void kPushTransform(kVec2 pos, float angle)
 
 void kPopTransform(void)
 {
-	kRenderContext2D *ctx	= kGetRenderContext2D();
-	imem			  count = ctx->transforms.count;
+	kRenderContext2D *ctx   = kGetRenderContext2D();
+	imem              count = ctx->transforms.count;
 	kAssert(count > 1);
 	kSetTransform(ctx->transforms.data[count - 2]);
 	ctx->transforms.Pop();
@@ -600,20 +741,20 @@ static void kCommitPrimitive(u32 vertex, u32 index)
 void kDrawTriangle(kVec3 va, kVec3 vb, kVec3 vc, kVec2 ta, kVec2 tb, kVec2 tc, kVec4 ca, kVec4 cb, kVec4 cc)
 {
 	kVertex2D *vtx = render.context2d.vertices.Extend(3);
-	vtx[0].pos	   = va;
-	vtx[0].tex	   = ta;
-	vtx[0].col	   = ca;
-	vtx[1].pos	   = vb;
-	vtx[1].tex	   = tb;
-	vtx[1].col	   = cb;
-	vtx[2].pos	   = vc;
-	vtx[2].tex	   = tc;
-	vtx[2].col	   = cc;
+	vtx[0].pos     = va;
+	vtx[0].tex     = ta;
+	vtx[0].col     = ca;
+	vtx[1].pos     = vb;
+	vtx[1].tex     = tb;
+	vtx[1].col     = cb;
+	vtx[2].pos     = vc;
+	vtx[2].tex     = tc;
+	vtx[2].col     = cc;
 
 	kIndex2D *idx  = render.context2d.indices.Extend(3);
-	idx[0]		   = render.context2d.state.next + 0;
-	idx[1]		   = render.context2d.state.next + 1;
-	idx[2]		   = render.context2d.state.next + 2;
+	idx[0]         = render.context2d.state.next + 0;
+	idx[1]         = render.context2d.state.next + 1;
+	idx[2]         = render.context2d.state.next + 2;
 
 	kCommitPrimitive(3, 3);
 }
@@ -641,26 +782,26 @@ void kDrawTriangle(kVec2 a, kVec2 b, kVec2 c, kVec4 color)
 void kDrawQuad(kVec3 va, kVec3 vb, kVec3 vc, kVec3 vd, kVec2 ta, kVec2 tb, kVec2 tc, kVec2 td, kVec4 color)
 {
 	kVertex2D *vtx = render.context2d.vertices.Extend(4);
-	vtx[0].pos	   = va;
-	vtx[0].tex	   = ta;
-	vtx[0].col	   = color;
-	vtx[1].pos	   = vb;
-	vtx[1].tex	   = tb;
-	vtx[1].col	   = color;
-	vtx[2].pos	   = vc;
-	vtx[2].tex	   = tc;
-	vtx[2].col	   = color;
-	vtx[3].pos	   = vd;
-	vtx[3].tex	   = td;
-	vtx[3].col	   = color;
+	vtx[0].pos     = va;
+	vtx[0].tex     = ta;
+	vtx[0].col     = color;
+	vtx[1].pos     = vb;
+	vtx[1].tex     = tb;
+	vtx[1].col     = color;
+	vtx[2].pos     = vc;
+	vtx[2].tex     = tc;
+	vtx[2].col     = color;
+	vtx[3].pos     = vd;
+	vtx[3].tex     = td;
+	vtx[3].col     = color;
 
 	kIndex2D *idx  = render.context2d.indices.Extend(6);
-	idx[0]		   = render.context2d.state.next + 0;
-	idx[1]		   = render.context2d.state.next + 1;
-	idx[2]		   = render.context2d.state.next + 2;
-	idx[3]		   = render.context2d.state.next + 0;
-	idx[4]		   = render.context2d.state.next + 2;
-	idx[5]		   = render.context2d.state.next + 3;
+	idx[0]         = render.context2d.state.next + 0;
+	idx[1]         = render.context2d.state.next + 1;
+	idx[2]         = render.context2d.state.next + 2;
+	idx[3]         = render.context2d.state.next + 0;
+	idx[4]         = render.context2d.state.next + 2;
+	idx[5]         = render.context2d.state.next + 3;
 
 	kCommitPrimitive(4, 6);
 }
@@ -736,27 +877,27 @@ void kDrawRectRotated(kVec3 pos, kVec2 dim, float angle, kVec2 uv_a, kVec2 uv_b,
 {
 	kVec2 center = 0.5f * (2.0f * pos.xy + dim);
 
-	kVec2 a		 = pos.xy;
-	kVec2 b		 = kVec2(pos.x, pos.y + dim.y);
-	kVec2 c		 = pos.xy + dim;
-	kVec2 d		 = kVec2(pos.x + dim.x, pos.y);
+	kVec2 a      = pos.xy;
+	kVec2 b      = kVec2(pos.x, pos.y + dim.y);
+	kVec2 c      = pos.xy + dim;
+	kVec2 d      = kVec2(pos.x + dim.x, pos.y);
 
-	auto  t0	 = a - center;
-	auto  t1	 = b - center;
-	auto  t2	 = c - center;
-	auto  t3	 = d - center;
+	auto  t0     = a - center;
+	auto  t1     = b - center;
+	auto  t2     = c - center;
+	auto  t3     = d - center;
 
-	float cv	 = kCos(angle);
-	float sv	 = kSin(angle);
+	float cv     = kCos(angle);
+	float sv     = kSin(angle);
 
-	a.x			 = t0.x * cv - t0.y * sv;
-	a.y			 = t0.x * sv + t0.y * cv;
-	b.x			 = t1.x * cv - t1.y * sv;
-	b.y			 = t1.x * sv + t1.y * cv;
-	c.x			 = t2.x * cv - t2.y * sv;
-	c.y			 = t2.x * sv + t2.y * cv;
-	d.x			 = t3.x * cv - t3.y * sv;
-	d.y			 = t3.x * sv + t3.y * cv;
+	a.x          = t0.x * cv - t0.y * sv;
+	a.y          = t0.x * sv + t0.y * cv;
+	b.x          = t1.x * cv - t1.y * sv;
+	b.y          = t1.x * sv + t1.y * cv;
+	c.x          = t2.x * cv - t2.y * sv;
+	c.y          = t2.x * sv + t2.y * cv;
+	d.x          = t3.x * cv - t3.y * sv;
+	d.y          = t3.x * sv + t3.y * cv;
 
 	a += center;
 	b += center;
@@ -805,10 +946,10 @@ void kDrawRectCentered(kVec3 pos, kVec2 dim, kVec2 uv_a, kVec2 uv_b, kVec2 uv_c,
 	c.xy = pos.xy + half_dim;
 	d.xy = kVec2(pos.x + half_dim.x, pos.y - half_dim.y);
 
-	a.z	 = pos.z;
-	b.z	 = pos.z;
-	c.z	 = pos.z;
-	d.z	 = pos.z;
+	a.z  = pos.z;
+	b.z  = pos.z;
+	c.z  = pos.z;
+	d.z  = pos.z;
 
 	kDrawQuad(a, b, c, d, uv_a, uv_b, uv_c, uv_d, color);
 }
@@ -843,16 +984,16 @@ void kDrawRectCentered(kVec2 pos, kVec2 dim, kRect rect, kVec4 color)
 }
 
 void kDrawRectCenteredRotated(kVec3 pos, kVec2 dim, float angle, kVec2 uv_a, kVec2 uv_b, kVec2 uv_c, kVec2 uv_d,
-							  kVec4 color)
+                              kVec4 color)
 {
 	kVec2 center   = pos.xy;
 
 	kVec2 half_dim = 0.5f * dim;
 	kVec2 a, b, c, d;
-	a		 = pos.xy - half_dim;
-	b		 = kVec2(pos.x - half_dim.x, pos.y + half_dim.y);
-	c		 = pos.xy + half_dim;
-	d		 = kVec2(pos.x + half_dim.x, pos.y - half_dim.y);
+	a        = pos.xy - half_dim;
+	b        = kVec2(pos.x - half_dim.x, pos.y + half_dim.y);
+	c        = pos.xy + half_dim;
+	d        = kVec2(pos.x + half_dim.x, pos.y - half_dim.y);
 
 	auto  t0 = a - center;
 	auto  t1 = b - center;
@@ -862,14 +1003,14 @@ void kDrawRectCenteredRotated(kVec3 pos, kVec2 dim, float angle, kVec2 uv_a, kVe
 	float cv = kCos(angle);
 	float sv = kSin(angle);
 
-	a.x		 = t0.x * cv - t0.y * sv;
-	a.y		 = t0.x * sv + t0.y * cv;
-	b.x		 = t1.x * cv - t1.y * sv;
-	b.y		 = t1.x * sv + t1.y * cv;
-	c.x		 = t2.x * cv - t2.y * sv;
-	c.y		 = t2.x * sv + t2.y * cv;
-	d.x		 = t3.x * cv - t3.y * sv;
-	d.y		 = t3.x * sv + t3.y * cv;
+	a.x      = t0.x * cv - t0.y * sv;
+	a.y      = t0.x * sv + t0.y * cv;
+	b.x      = t1.x * cv - t1.y * sv;
+	b.y      = t1.x * sv + t1.y * cv;
+	c.x      = t2.x * cv - t2.y * sv;
+	c.y      = t2.x * sv + t2.y * cv;
+	d.x      = t3.x * cv - t3.y * sv;
+	d.y      = t3.x * sv + t3.y * cv;
 
 	a += center;
 	b += center;
@@ -880,7 +1021,7 @@ void kDrawRectCenteredRotated(kVec3 pos, kVec2 dim, float angle, kVec2 uv_a, kVe
 }
 
 void kDrawRectCenteredRotated(kVec2 pos, kVec2 dim, float angle, kVec2 uv_a, kVec2 uv_b, kVec2 uv_c, kVec2 uv_d,
-							  kVec4 color)
+                              kVec4 color)
 {
 	kDrawRectCenteredRotated(kVec3(pos, 0), dim, angle, uv_a, uv_b, uv_c, uv_d, color);
 }
@@ -911,10 +1052,10 @@ void kDrawRectCenteredRotated(kVec2 pos, kVec2 dim, float angle, kRect rect, kVe
 
 void kDrawEllipse(kVec3 pos, float radius_a, float radius_b, kVec4 color)
 {
-	int	  segments = (int)kCeil(2 * K_PI * kSquareRoot(0.5f * (radius_a * radius_a + radius_b * radius_b)));
+	int   segments = (int)kCeil(2 * K_PI * kSquareRoot(0.5f * (radius_a * radius_a + radius_b * radius_b)));
 
-	float px	   = Cosines[0] * radius_a;
-	float py	   = Sines[0] * radius_b;
+	float px       = Cosines[0] * radius_a;
+	float py       = Sines[0] * radius_b;
 
 	float npx, npy;
 	for (int index = 1; index <= segments; ++index)
@@ -992,7 +1133,7 @@ void kDrawPie(kVec2 pos, float radius, float theta_a, float theta_b, kVec4 color
 }
 
 void kDrawPiePart(kVec3 pos, float radius_a_min, float radius_b_min, float radius_a_max, float radius_b_max,
-				  float theta_a, float theta_b, kVec4 color)
+                  float theta_a, float theta_b, kVec4 color)
 {
 	theta_a = kWrapTurns(theta_a);
 	theta_b = kWrapTurns(theta_b);
@@ -1005,8 +1146,8 @@ void kDrawPiePart(kVec3 pos, float radius_a_min, float radius_b_min, float radiu
 	}
 
 	float segments = kCeil(2 * K_PI * kSquareRoot(0.5f * (radius_a_max * radius_a_max + radius_b_max * radius_b_max)) /
-						   (theta_b - theta_a));
-	float dt	   = 1.0f / segments;
+	                       (theta_b - theta_a));
+	float dt       = 1.0f / segments;
 
 	float min_px   = kCosLookup(theta_a) * radius_a_min;
 	float min_py   = kSinLookup(theta_a) * radius_b_min;
@@ -1023,7 +1164,7 @@ void kDrawPiePart(kVec3 pos, float radius_a_min, float radius_b_min, float radiu
 		max_npy = kSinLookup(theta_a) * radius_b_max;
 
 		kDrawQuad(pos + kVec3(min_npx, min_npy, 0), pos + kVec3(max_npx, max_npy, 0), pos + kVec3(max_px, max_py, 0),
-				  pos + kVec3(min_px, min_py, 0), color);
+		          pos + kVec3(min_px, min_py, 0), color);
 
 		min_px = min_npx;
 		min_py = min_npy;
@@ -1033,7 +1174,7 @@ void kDrawPiePart(kVec3 pos, float radius_a_min, float radius_b_min, float radiu
 }
 
 void kDrawPiePart(kVec2 pos, float radius_a_min, float radius_b_min, float radius_a_max, float radius_b_max,
-				  float theta_a, float theta_b, kVec4 color)
+                  float theta_a, float theta_b, kVec4 color)
 {
 	kDrawPiePart(kVec3(pos, 0), radius_a_min, radius_b_min, radius_a_max, radius_b_max, theta_a, theta_b, color);
 }
@@ -1054,9 +1195,9 @@ void kDrawLine(kVec3 a, kVec3 b, kVec4 color)
 		return;
 
 	float thickness = render.context2d.thickness * 0.5f;
-	float dx		= b.x - a.x;
-	float dy		= b.y - a.y;
-	float ilen		= 1.0f / kSquareRoot(dx * dx + dy * dy);
+	float dx        = b.x - a.x;
+	float dy        = b.y - a.y;
+	float ilen      = 1.0f / kSquareRoot(dx * dx + dy * dy);
 	dx *= (thickness * ilen);
 	dy *= (thickness * ilen);
 
@@ -1112,16 +1253,16 @@ void kArcTo(kVec2 position, float radius_a, float radius_b, float theta_a, float
 
 void kBezierQuadraticTo(kVec2 a, kVec2 b, kVec2 c)
 {
-	imem index	  = render.context2d.builder.count;
-	int	 segments = (int)kCeil(kLength(a) + kLength(b) + kLength(c));
+	imem index    = render.context2d.builder.count;
+	int  segments = (int)kCeil(kLength(a) + kLength(b) + kLength(c));
 	if (render.context2d.builder.Resize(render.context2d.builder.count + segments + 1))
 		kBuildBezierQuadratic(a, b, c, &render.context2d.builder[index], segments);
 }
 
 void kBezierCubicTo(kVec2 a, kVec2 b, kVec2 c, kVec2 d)
 {
-	imem index	  = render.context2d.builder.count;
-	int	 segments = (int)kCeil(kLength(a) + kLength(b) + kLength(c));
+	imem index    = render.context2d.builder.count;
+	int  segments = (int)kCeil(kLength(a) + kLength(b) + kLength(c));
 	if (render.context2d.builder.Resize(render.context2d.builder.count + segments + 1))
 		kBuildBezierCubic(a, b, c, d, &render.context2d.builder[index], segments);
 }
@@ -1131,7 +1272,7 @@ static inline kVec2 kLineLineIntersect(kVec2 p1, kVec2 q1, kVec2 p2, kVec2 q2)
 	kVec2 d1 = p1 - q1;
 	kVec2 d2 = p2 - q2;
 
-	float d	 = d1.x * d2.y - d1.y * d2.x;
+	float d  = d1.x * d2.y - d1.y * d2.x;
 	float n2 = -d1.x * (p1.y - p2.y) + d1.y * (p1.x - p2.x);
 
 	if (d != 0)
@@ -1168,7 +1309,7 @@ void kDrawPathStroked(kVec4 color, bool closed, float z)
 
 	for (imem index = 0; index < normals.count; ++index)
 	{
-		kVec2 v		   = kNormalize(path[index + 1] - path[index]);
+		kVec2 v        = kNormalize(path[index + 1] - path[index]);
 		normals[index] = v;
 	}
 
@@ -1184,44 +1325,44 @@ void kDrawPathStroked(kVec4 color, bool closed, float z)
 
 	if (closed)
 	{
-		a		= path.Last();
-		b		= path[0];
-		c		= path[1];
+		a       = path.Last();
+		b       = path[0];
+		c       = path[1];
 
-		v1		= normals.Last();
-		v2		= normals[0];
+		v1      = normals.Last();
+		v2      = normals[0];
 
-		n1		= kVec2(-v1.y, v1.x);
-		n2		= kVec2(-v2.y, v2.x);
+		n1      = kVec2(-v1.y, v1.x);
+		n2      = kVec2(-v2.y, v2.x);
 
-		t1		= n1 * thickness;
-		t2		= n2 * thickness;
+		t1      = n1 * thickness;
+		t2      = n2 * thickness;
 
-		p1		= b + t1;
-		q1		= p1 + v1;
-		p2		= b + t2;
-		q2		= p2 + v2;
+		p1      = b + t1;
+		q1      = p1 + v1;
+		p2      = b + t2;
+		q2      = p2 + v2;
 		start_p = prev_p = kLineLineIntersect(p1, q1, p2, q2);
 
-		p1				 = b - t1;
-		q1				 = p1 + v1;
-		p2				 = b - t2;
-		q2				 = p2 + v2;
+		p1               = b - t1;
+		q1               = p1 + v1;
+		p2               = b - t2;
+		q2               = p2 + v2;
 		start_q = prev_q = kLineLineIntersect(p1, q1, p2, q2);
 	}
 	else
 	{
 		kVec2 v, t, n;
 
-		v		= normals[0];
-		n		= kVec2(-v.y, v.x);
-		t		= thickness * n;
-		prev_p	= path[0] + t;
-		prev_q	= path[0] - t;
+		v       = normals[0];
+		n       = kVec2(-v.y, v.x);
+		t       = thickness * n;
+		prev_p  = path[0] + t;
+		prev_q  = path[0] - t;
 
-		v		= normals.Last();
-		n		= kVec2(-v.y, v.x);
-		t		= thickness * n;
+		v       = normals.Last();
+		n       = kVec2(-v.y, v.x);
+		t       = thickness * n;
 		start_p = path.Last() + t;
 		start_q = path.Last() - t;
 	}
@@ -1306,7 +1447,7 @@ void kDrawPolygon(const kVec2 *vertices, u32 count, float z, kVec4 color)
 	for (u32 triangle_index = 0; triangle_index < triangle_count; ++triangle_index)
 	{
 		kDrawTriangle(kVec3(vertices[0], z), kVec3(vertices[triangle_index + 1], z),
-					  kVec3(vertices[triangle_index + 2], z), color);
+		              kVec3(vertices[triangle_index + 2], z), color);
 	}
 }
 
@@ -1373,10 +1514,10 @@ void kDrawRectCenteredOutline(kVec3 pos, kVec2 dim, kVec4 color)
 	c.xy = pos.xy + half_dim;
 	d.xy = kVec2(pos.x + half_dim.x, pos.y - half_dim.y);
 
-	a.z	 = pos.z;
-	b.z	 = pos.z;
-	c.z	 = pos.z;
-	d.z	 = pos.z;
+	a.z  = pos.z;
+	b.z  = pos.z;
+	c.z  = pos.z;
+	d.z  = pos.z;
 	kDrawQuadOutline(a, b, c, d, color);
 }
 
@@ -1387,7 +1528,7 @@ void kDrawRectCenteredOutline(kVec2 pos, kVec2 dim, kVec4 color)
 
 void kDrawEllipseOutline(kVec3 pos, float radius_a, float radius_b, kVec4 color)
 {
-	int	  segments = (int)kCeil(2 * K_PI * kSquareRoot(0.5f * (radius_a * radius_a + radius_b * radius_b)));
+	int   segments = (int)kCeil(2 * K_PI * kSquareRoot(0.5f * (radius_a * radius_a + radius_b * radius_b)));
 	float npx, npy;
 	for (int index = 0; index <= segments; ++index)
 	{
@@ -1614,22 +1755,22 @@ void kDrawRoundedRectOutline(kVec2 pos, kVec2 dim, kVec4 color, float radius)
 
 kGlyph *kFindFontGlyph(kFont *font, u32 codepoint)
 {
-	if (codepoint >= font->start && codepoint <= font->stop)
+	if (codepoint >= font->mincp && codepoint <= font->maxcp)
 	{
-		u32 index = codepoint - font->start;
-		u16 pos	  = font->map[index];
+		u32 index = codepoint - font->mincp;
+		u16 pos   = font->map[index];
 		return &font->glyphs[pos];
 	}
 	return font->fallback;
 }
 
-float kCalculateText(kString text, kFont *font, float height)
+float kCalculateText(kString text, kFont *font, float scale)
 {
 	float dist = 0;
 
-	u32	  codepoint;
-	u8	 *ptr = text.begin();
-	u8	 *end = text.end();
+	u32   codepoint;
+	u8   *ptr = text.begin();
+	u8   *end = text.end();
 
 	while (ptr < end)
 	{
@@ -1637,21 +1778,20 @@ float kCalculateText(kString text, kFont *font, float height)
 		ptr += len;
 
 		auto info = kFindFontGlyph(font, codepoint);
-		dist += height * info->advance;
+		dist += scale * (float)info->advance.x;
 	}
 
 	return dist;
 }
 
-float kCalculateText(kString text, float height)
+float kCalculateText(kString text, float scale)
 {
 	kFont *font = &render.builtin.font;
-	return kCalculateText(text, font, height);
+	return kCalculateText(text, font, scale);
 }
 
-void kDrawText(kString text, kVec3 pos, kFont *font, kVec4 color, float height)
+void kDrawText(kString text, kVec3 pos, kFont *font, kVec4 color, float scale)
 {
-	kBeginRenderMode(font->mode);
 	kPushTexture(font->texture, 0);
 
 	u32 codepoint;
@@ -1663,33 +1803,35 @@ void kDrawText(kString text, kVec3 pos, kFont *font, kVec4 color, float height)
 		int len = kUTF8ToCodepoint(ptr, end, &codepoint);
 		ptr += len;
 
-		kGlyph *glyph	 = kFindFontGlyph(font, codepoint);
+		kGlyph *glyph    = kFindFontGlyph(font, codepoint);
 
-		kVec3	draw_pos = pos;
-		draw_pos.xy += height * kVec2(glyph->bearing.x, glyph->bearing.y);
-		kDrawRect(draw_pos, height * glyph->size, glyph->rect, color);
-		pos.x += height * glyph->advance;
+		kVec2   bearing  = kVec2((float)glyph->bearing.x, (float)glyph->bearing.y);
+		kVec2   size     = kVec2((float)glyph->size.x, (float)glyph->size.y);
+
+		kVec3   draw_pos = pos;
+		draw_pos.xy += scale * bearing;
+		kDrawRect(draw_pos, scale * size, glyph->rect, color);
+		pos.x += scale * (float)glyph->advance.x;
 	}
 
 	kPopTexture(0);
-	kEndRenderMode();
 }
 
-void kDrawText(kString text, kVec2 pos, kFont *font, kVec4 color, float height)
+void kDrawText(kString text, kVec2 pos, kFont *font, kVec4 color, float scale)
 {
-	kDrawText(text, kVec3(pos, 0), font, color, height);
+	kDrawText(text, kVec3(pos, 0), font, color, scale);
 }
 
-void kDrawText(kString text, kVec3 pos, kVec4 color, float height)
-{
-	kFont *font = &render.builtin.font;
-	kDrawText(text, pos, font, color, height);
-}
-
-void kDrawText(kString text, kVec2 pos, kVec4 color, float height)
+void kDrawText(kString text, kVec3 pos, kVec4 color, float scale)
 {
 	kFont *font = &render.builtin.font;
-	kDrawText(text, pos, font, color, height);
+	kDrawText(text, pos, font, color, scale);
+}
+
+void kDrawText(kString text, kVec2 pos, kVec4 color, float scale)
+{
+	kFont *font = &render.builtin.font;
+	kDrawText(text, pos, font, color, scale);
 }
 
 //
@@ -1698,33 +1840,77 @@ void kDrawText(kString text, kVec2 pos, kVec4 color, float height)
 
 #include "Font/kFont.h"
 
-static bool kLoadBuiltinFont(void)
+static void kCreateBuiltinResources(void)
 {
-	kFont		*font = &render.builtin.font;
-
-	kTextureSpec spec = {};
-	spec.num_samples  = 1;
-	spec.format		  = kFormat_RGBA8_UNORM;
-	spec.bind_flags	  = kBind_ShaderResource;
-	spec.usage		  = kUsage_Default;
-	spec.width		  = kFontAtlastWidth;
-	spec.height		  = kFontAtlastHeight;
-	spec.pitch		  = kFontAtlastWidth * kFontAtlastChannels;
-	spec.pixels		  = (u8 *)kFontAtlastPixels;
-
-	font->texture	  = render.backend.create_texture(spec);
-	if (!font->texture)
 	{
-		return false;
+		u8           pixels[]  = {0xff, 0xff, 0xff, 0xff};
+
+		kTextureSpec spec      = {};
+		spec.width             = 1;
+		spec.height            = 1;
+		spec.num_samples       = 1;
+		spec.pitch             = 1 * sizeof(u32);
+		spec.format            = kFormat_RGBA8_UNORM;
+		spec.bind_flags        = kBind_ShaderResource;
+		spec.usage             = kUsage_Default;
+		spec.pixels            = pixels;
+
+		render.builtin.texture = render.backend.create_texture(spec);
 	}
 
-	font->mode	   = kRenderMode2D_SignedDist;
-	font->map	   = (u16 *)kFontGlyphMap;
-	font->glyphs   = (kGlyph *)kFontGlyphs;
-	font->fallback = (kGlyph *)&font->glyphs[kFontGlyphCount - 1];
-	font->start	   = kFontMapStartCp;
-	font->stop	   = kFontMapStopCp;
-	font->count	   = kFontGlyphCount;
+	{
+		kFont       *font = &render.builtin.font;
 
-	return true;
+		kTextureSpec spec = {};
+		spec.num_samples  = 1;
+		spec.format       = kFormat_RGBA8_UNORM;
+		spec.bind_flags   = kBind_ShaderResource;
+		spec.usage        = kUsage_Default;
+		spec.width        = kEmFontAtlasWidth;
+		spec.height       = kEmFontAtlasHeight;
+		spec.pitch        = kEmFontAtlasWidth * 4;
+		spec.pixels       = (u8 *)kEmFontAtlasPixels;
+
+		font->texture     = render.backend.create_texture(spec);
+		if (!font->texture)
+		{
+			font->texture  = render.builtin.texture;
+			font->map      = nullptr;
+			font->glyphs   = nullptr;
+			font->fallback = (kGlyph *)&FallbackGlyph;
+			font->height   = FallbackFontHeight;
+			font->mincp    = 0;
+			font->maxcp    = 0;
+			font->count    = 0;
+			return;
+		}
+
+		font->map      = (u16 *)kEmFontGlyphMap;
+		font->glyphs   = (kGlyph *)kEmFontGlyphs;
+		font->fallback = (kGlyph *)&font->glyphs[kEmFontGlyphCount - 1];
+		font->height   = kEmFontHeight;
+		font->mincp    = kEmFontMinCodepoint;
+		font->maxcp    = kEmFontMaxCodepoint;
+		font->count    = kEmFontGlyphCount;
+	}
+
+	if (render.frame.features.flags & kRenderFeature_MSAA)
+	{
+		kRecreateSwapChainRenderTargetMSAA();
+	}
+}
+
+static void kDestroyBuiltinResources(void)
+{
+	if (render.builtin.font.texture != render.builtin.texture)
+	{
+		render.backend.destroy_texture(render.builtin.font.texture);
+	}
+
+	if (render.builtin.texture)
+	{
+		render.backend.destroy_texture(render.builtin.texture);
+	}
+
+	kDestroySwapChainRenderTargetMSAA();
 }

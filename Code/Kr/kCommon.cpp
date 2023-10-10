@@ -82,12 +82,12 @@ void kArenaAllocator(kArena *arena, kAllocator *allocator)
 kArena *kAllocArena(const kArenaSpec &spec, kAllocator *allocator)
 {
 	umem max_size = kAlignUp(spec.capacity, 4 * 1024);
-	u8	*mem	  = (u8 *)kAlloc(allocator, max_size);
+	u8  *mem      = (u8 *)kAlloc(allocator, max_size);
 
 	if (!mem)
 		return (kArena *)&kFallbackArena;
 
-	kArena	stub  = {.mem = mem, .pos = 0, .cap = max_size, .alignment = spec.alignment, .flags = spec.flags};
+	kArena  stub  = {.mem = mem, .pos = 0, .cap = max_size, .alignment = spec.alignment, .flags = spec.flags};
 
 	kArena *arena = (kArena *)kPushSize(&stub, sizeof(kArena), kArena_Zero);
 
@@ -96,7 +96,7 @@ kArena *kAllocArena(const kArenaSpec &spec, kAllocator *allocator)
 		return (kArena *)&kFallbackArena;
 	}
 
-	*arena	   = stub;
+	*arena     = stub;
 	arena->pos = sizeof(kArena);
 
 	return arena;
@@ -141,7 +141,7 @@ bool kSetPosition(kArena *arena, umem pos, uint flags)
 	if (pos <= arena->cap)
 	{
 		arena->pos = pos;
-		ok		   = true;
+		ok         = true;
 	}
 	UnlockSyncFlaggedArena(arena, flags);
 	return ok;
@@ -150,9 +150,9 @@ bool kSetPosition(kArena *arena, umem pos, uint flags)
 bool kAlignPosition(kArena *arena, umem alignment, uint flags)
 {
 	LockSyncFlaggedArena(arena, flags);
-	u8	*mem	 = arena->mem + arena->pos;
-	u8	*aligned = kAlignPointer(mem, alignment);
-	umem pos	 = arena->pos + (aligned - mem);
+	u8  *mem     = arena->mem + arena->pos;
+	u8  *aligned = kAlignPointer(mem, alignment);
+	umem pos     = arena->pos + (aligned - mem);
 	if (kSetPosition(arena, pos, flags))
 	{
 		UnlockSyncFlaggedArena(arena, flags);
@@ -174,7 +174,7 @@ void *kPushSize(kArena *arena, umem size, uint flags)
 	LockSyncFlaggedArena(arena, flags);
 	if (kAlignPosition(arena, arena->alignment, flags))
 	{
-		u8	*mem = arena->mem + arena->pos;
+		u8  *mem = arena->mem + arena->pos;
 		umem pos = arena->pos + size;
 		if (kSetPosition(arena, pos, flags))
 		{
@@ -193,7 +193,7 @@ void *kPushSizeAligned(kArena *arena, umem size, u32 alignment, uint flags)
 	u32 saved = arena->alignment;
 	LockSyncFlaggedArena(arena, flags);
 	arena->alignment = alignment;
-	void *ptr		 = kPushSize(arena, size, 0);
+	void *ptr        = kPushSize(arena, size, 0);
 	arena->alignment = saved;
 	UnlockSyncFlaggedArena(arena, flags);
 	return ptr;
@@ -255,7 +255,7 @@ u32 kRandom(kRandomSource *random)
 	u64 oldstate   = random->state;
 	random->state  = oldstate * 6364136223846793005ULL + random->inc;
 	u32 xorshifted = (u32)(((oldstate >> 18u) ^ oldstate) >> 27u);
-	u32 rot		   = oldstate >> 59u;
+	u32 rot        = oldstate >> 59u;
 	return (xorshifted >> rot) | (xorshifted << ((rot & (~rot + 1u)) & 31));
 }
 
@@ -298,7 +298,7 @@ float kRandomFloat(kRandomSource *random)
 void kRandomSourceSeed(kRandomSource *random, u64 state, u64 seq)
 {
 	random->state = 0U;
-	random->inc	  = (seq << 1u) | 1u;
+	random->inc   = (seq << 1u) | 1u;
 	kRandom(random);
 	random->state += state;
 	kRandom(random);
@@ -315,20 +315,20 @@ int kCodepointToUTF8(u32 codepoint, u8 buffer[4])
 	if (codepoint < 0x0080)
 	{
 		buffer[0] = codepoint & 0x007f;
-		bytes	  = 1;
+		bytes     = 1;
 	}
 	else if (codepoint < 0x0800)
 	{
 		buffer[0] = ((codepoint >> 6) & 0x1f) | 0xc0;
 		buffer[1] = (codepoint & 0x3f) | 0x80;
-		bytes	  = 2;
+		bytes     = 2;
 	}
 	else if (codepoint < 0x10000)
 	{
 		buffer[0] = ((codepoint >> 12) & 0x0f) | 0xe0;
 		buffer[1] = ((codepoint >> 6) & 0x3f) | 0x80;
 		buffer[2] = (codepoint & 0x3f) | 0x80;
-		bytes	  = 3;
+		bytes     = 3;
 	}
 	else
 	{
@@ -336,7 +336,7 @@ int kCodepointToUTF8(u32 codepoint, u8 buffer[4])
 		buffer[1] = ((codepoint >> 12) & 0x3f) | 0x80;
 		buffer[2] = ((codepoint >> 6) & 0x3f) | 0x80;
 		buffer[3] = (codepoint & 0x3f) | 0x80;
-		bytes	  = 4;
+		bytes     = 4;
 	}
 
 	return bytes;
@@ -410,7 +410,7 @@ kString kCopyString(kString string, kAllocator *allocator)
 	u8 *data = (u8 *)kAlloc(allocator, string.count + 1);
 	memmove(data, string.data, string.count);
 	data[string.count] = 0;
-	kString result	   = kString(data, string.count);
+	kString result     = kString(data, string.count);
 	return result;
 }
 
@@ -452,7 +452,7 @@ kString kTrimString(kString str)
 kString kSubString(const kString str, imem index, imem count)
 {
 	kAssert(index <= str.count);
-	count		= (imem)kMin(str.count - index, count);
+	count       = (imem)kMin(str.count - index, count);
 	kString sub = kString(str.data + index, count);
 	return sub;
 }
@@ -465,8 +465,8 @@ kString kSubLeft(const kString str, imem count)
 kString kSubRight(const kString str, imem index)
 {
 	kAssert(index <= str.count);
-	imem	count = str.count - index;
-	kString sub	  = kString(str.data + index, count);
+	imem    count = str.count - index;
+	kString sub   = kString(str.data + index, count);
 	return sub;
 }
 
@@ -526,7 +526,7 @@ imem kFindString(kString str, const kString key, imem pos)
 
 imem kFindChar(kString str, u32 key, imem pos)
 {
-	u8	buffer[4];
+	u8  buffer[4];
 	int len = kCodepointToUTF8(key, buffer);
 	return kFindString(str, kString(buffer, len), pos);
 }
@@ -546,7 +546,7 @@ imem kInvFindString(kString str, kString key, imem pos)
 
 imem kInvFindChar(kString str, u32 key, imem pos)
 {
-	u8	buffer[4];
+	u8  buffer[4];
 	int len = kCodepointToUTF8(key, buffer);
 	return kInvFindString(str, kString(buffer, len), pos);
 }

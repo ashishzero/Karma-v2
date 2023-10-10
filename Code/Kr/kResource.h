@@ -1,2 +1,2 @@
 
-#define IDI_KICON                       101
+#define IDI_KICON 101

@@ -17,16 +17,16 @@ enum kArgType
 struct kArgDefault
 {
 	kString str;
-	int		num;
+	int     num;
 };
 
 struct kArg
 {
-	kString			key;
-	kString			desc;
-	kArgType		type;
-	void		   *dst;
-	kArgDefault		def;
+	kString        key;
+	kString        desc;
+	kArgType       type;
+	void          *dst;
+	kArgDefault    def;
 	kSpan<kString> opts;
 };
 
@@ -107,12 +107,14 @@ void kCmdLinePrintUsage(void)
 		if (arg.type == kArgType_Options && arg.opts.count)
 		{
 			printf("    Values : " kStrFmt, kStrArg(arg.opts[0]));
-			if (arg.def.num == 0) printf(" (default)");
+			if (arg.def.num == 0)
+				printf(" (default)");
 
 			for (imem i = 1; i < arg.opts.count; ++i)
 			{
 				printf(", " kStrFmt, kStrArg(arg.opts[i]));
-				if (arg.def.num == i) printf(" (default)");
+				if (arg.def.num == i)
+					printf(" (default)");
 			}
 			printf("\n");
 		}
@@ -151,31 +153,31 @@ static void kHandleBoolean(kArg *arg, kString value)
 	else
 	{
 		printf("  Error: Expected boolean but got \"" kStrFmt "\" for " kStrFmt ".\n", kStrArg(value),
-			   kStrArg(arg->key));
+		       kStrArg(arg->key));
 	}
 }
 
 static void kHandleNumber(kArg *arg, kString value)
 {
 	char *endptr = 0;
-	int	  number = strtol((char *)value.data, &endptr, 10);
+	int   number = strtol((char *)value.data, &endptr, 10);
 
 	if (endptr == (char *)value.data + value.count)
 	{
 		int *dst = (int *)arg->dst;
-		*dst	 = number;
+		*dst     = number;
 	}
 	else
 	{
 		printf("  Error: Expected number but got \"" kStrFmt "\" for " kStrFmt ".\n", kStrArg(value),
-			   kStrArg(arg->key));
+		       kStrArg(arg->key));
 	}
 }
 
 static void kHandleString(kArg *arg, kString value)
 {
 	kString *dst = (kString *)arg->dst;
-	*dst		 = value;
+	*dst         = value;
 }
 
 static void kHandleOptions(kArg *arg, kString value)
@@ -186,8 +188,8 @@ static void kHandleOptions(kArg *arg, kString value)
 		if (arg->opts[i] == value)
 		{
 			int *dst = (int *)arg->dst;
-			*dst	 = i;
-			valid	 = true;
+			*dst     = i;
+			valid    = true;
 			break;
 		}
 	}
@@ -231,27 +233,27 @@ void kCmdLineParse(int *argc, const char ***argv, bool ignore_invalids)
 		if (carg.type == kArgType_Flag)
 		{
 			bool *dst = (bool *)carg.dst;
-			*dst	  = false;
+			*dst      = false;
 		}
 		else if (carg.type == kArgType_Boolean)
 		{
 			bool *dst = (bool *)carg.dst;
-			*dst	  = carg.def.num;
+			*dst      = carg.def.num;
 		}
 		else if (carg.type == kArgType_Number)
 		{
 			int *dst = (int *)carg.dst;
-			*dst	 = carg.def.num;
+			*dst     = carg.def.num;
 		}
 		else if (carg.type == kArgType_String)
 		{
 			kString *dst = (kString *)carg.dst;
-			*dst		 = carg.def.str;
+			*dst         = carg.def.str;
 		}
 		else if (carg.type == kArgType_Options)
 		{
 			int *dst = (int *)carg.dst;
-			*dst	 = carg.def.num;
+			*dst     = carg.def.num;
 		}
 	}
 
@@ -259,8 +261,8 @@ void kCmdLineParse(int *argc, const char ***argv, bool ignore_invalids)
 
 	while (*argc)
 	{
-		kString arg		= kNextCmdLineArg(argc, argv);
-		bool	handled = false;
+		kString arg     = kNextCmdLineArg(argc, argv);
+		bool    handled = false;
 
 		if (kStartsWith(arg, "-"))
 		{
@@ -290,8 +292,8 @@ void kCmdLineParse(int *argc, const char ***argv, bool ignore_invalids)
 				if (carg.key == arg)
 				{
 					bool *dst = (bool *)carg.dst;
-					*dst	  = true;
-					handled	  = true;
+					*dst      = true;
+					handled   = true;
 					break;
 				}
 			}

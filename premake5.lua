@@ -12,7 +12,7 @@ project "Karma"
    targetdir ("%{wks.location}/Build/%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}")
    objdir ("%{wks.location}/Build/Objects/%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}/%{prj.name}")
 
-   files { ".clang-format" }
+   files { "Code/.clang-format" }
    files { "Code/Kr/**.h", "Code/Kr/**.cpp", "Code/Kr/**.ico" }
    files { "Code/Karma/**.h", "Code/Karma/**.cpp" }
 
@@ -37,7 +37,7 @@ project "Karma"
 
    filter "system:windows"
       systemversion "latest"
-      files { "Code/**.natvis", "Code/**.hlsl", "Code/**.rc", "Code/Kr/kWindows.manifest" }
+      files { "Code/**.natvis", "Code/**.hlsl", "Code/**.rc", "Code/Kr/kWindows.manifest", "Code/Kr/kNavFilter.natstepfilter" }
       defines { "_CRT_SECURE_NO_WARNINGS" }
       prebuildcommands { "\"%{wks.location}Build\\%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}\\Prebuild.exe\"" }
       filter { "files:**.hlsl" }
@@ -51,7 +51,7 @@ project "Prebuild"
    targetdir ("%{wks.location}/Build/%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}")
    objdir ("%{wks.location}/Build/Objects/%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}/%{prj.name}")
 
-   files { ".clang-format" }
+   files { "Code/.clang-format" }
    files { "Code/Kr/kPrebuild.h", "Code/Kr/kPrebuild.cpp" }
    files { "Code/Kr/kPlatform.h", "Code/Kr/kPlatform.cpp" }
    files { "Code/Kr/kCmdLine.h", "Code/Kr/kCmdLine.cpp" }
@@ -80,5 +80,5 @@ project "Prebuild"
 
    filter "system:windows"
       systemversion "latest"
-      files { "Code/**.natvis" }
+      files { "Code/**.natvis", "Code/Kr/kNavFilter.natstepfilter" }
       defines { "_CRT_SECURE_NO_WARNINGS" }

@@ -1,6 +1,6 @@
 #pragma once
 #include "kCommon.h"
-#include "kRenderApi.h"
+#include "kRenderShared.h"
 
 typedef enum kKey
 {
@@ -94,11 +94,11 @@ enum kKeyModFlags
 	kKeyMod_RightShift = 0x02,
 	kKeyMod_LeftCtrl   = 0x04,
 	kKeyMod_RightCtrl  = 0x08,
-	kKeyMod_LeftAlt	   = 0x10,
+	kKeyMod_LeftAlt    = 0x10,
 	kKeyMod_RightAlt   = 0x20,
-	kKeyMod_Ctrl	   = kKeyMod_LeftCtrl | kKeyMod_RightCtrl,
-	kKeyMod_Alt		   = kKeyMod_LeftAlt | kKeyMod_RightAlt,
-	kKeyMod_Shift	   = kKeyMod_LeftShift | kKeyMod_RightShift,
+	kKeyMod_Ctrl       = kKeyMod_LeftCtrl | kKeyMod_RightCtrl,
+	kKeyMod_Alt        = kKeyMod_LeftAlt | kKeyMod_RightAlt,
+	kKeyMod_Shift      = kKeyMod_LeftShift | kKeyMod_RightShift,
 };
 
 typedef enum kEventKind
@@ -144,7 +144,7 @@ typedef struct kButtonEvent
 typedef struct kKeyEvent
 {
 	kKey symbol;
-	int	 repeat;
+	int  repeat;
 } kKeyEvent;
 
 typedef struct kWheelEvent
@@ -163,20 +163,20 @@ typedef struct kEvent
 {
 	kEventKind kind;
 	union {
-		kResizedEvent	 resized;
+		kResizedEvent    resized;
 		kDpiChangedEvent dpi;
-		kCursorEvent	 cursor;
-		kButtonEvent	 button;
-		kKeyEvent		 key;
-		kWheelEvent		 wheel;
-		kTextEvent		 text;
+		kCursorEvent     cursor;
+		kButtonEvent     button;
+		kKeyEvent        key;
+		kWheelEvent      wheel;
+		kTextEvent       text;
 	};
 } kEvent;
 
 enum kStateFlags
 {
-	kPressed	   = 0x1,
-	kReleased	   = 0x2,
+	kPressed       = 0x1,
+	kReleased      = 0x2,
 	kDoubleClicked = 0x4,
 };
 
@@ -214,6 +214,11 @@ typedef struct kWindowState
 	u32 width;
 	u32 height;
 	u32 flags;
+	u8  focused;
+	u8  closed;
+	u8  resized;
+	u8  capture;
+	u8  hovered;
 } kWindowState;
 
 typedef struct kMediaUserEvents
@@ -237,57 +242,58 @@ void kFallbackUserUpdateProc(float dt);
 //
 
 kSpan<kEvent> kGetEvents(void);
+kArena *      kGetFrameArena(void);
 
-void		 *kGetUserEventData(void);
-void		  kSetUserEventData(void *);
-void		  kGetUserEvents(kMediaUserEvents *user);
-void		  kSetUserEvents(const kMediaUserEvents &user);
+void *        kGetUserEventData(void);
+void          kSetUserEventData(void *);
+void          kGetUserEvents(kMediaUserEvents *user);
+void          kSetUserEvents(const kMediaUserEvents &user);
 
-bool		  kIsKeyDown(kKey key);
-bool		  kKeyPressed(kKey key);
-bool		  kKeyReleased(kKey key);
-u8			  kKeyHits(kKey key);
-uint		  kGetKeyModFlags(void);
+bool          kIsKeyDown(kKey key);
+bool          kKeyPressed(kKey key);
+bool          kKeyReleased(kKey key);
+u8            kKeyHits(kKey key);
+uint          kGetKeyModFlags(void);
 
-bool		  kIsButtonDown(kButton button);
-bool		  kButtonPressed(kButton button);
-bool		  kButtonReleased(kButton button);
+bool          kIsButtonDown(kButton button);
+bool          kButtonPressed(kButton button);
+bool          kButtonReleased(kButton button);
 
-kVec2i		  kGetCursorPosition(void);
-kVec2i		  kGetCursorDelta(void);
-float		  kGetWheelHorizontal(void);
-float		  kGetWheelVertical(void);
+kVec2i        kGetCursorPosition(void);
+kVec2i        kGetCursorDelta(void);
+float         kGetWheelHorizontal(void);
+float         kGetWheelVertical(void);
 
-bool		  kIsWindowClosed(void);
-bool		  kIsWindowResized(void);
-void		  kIgnoreWindowCloseEvent(void);
-bool		  kIsWindowFocused(void);
-bool		  kIsWindowFullscreen(void);
-bool		  kIsWindowMaximized(void);
-void		  kGetWindowSize(u32 *w, u32 *h);
-float		  kGetWindowDpiScale(void);
+bool          kIsWindowClosed(void);
+bool          kIsWindowResized(void);
+void          kIgnoreWindowCloseEvent(void);
+bool          kIsWindowFocused(void);
+bool          kIsWindowFullscreen(void);
+bool          kIsWindowMaximized(void);
+void          kGetWindowSize(u32 *w, u32 *h);
+float         kGetWindowDpiScale(void);
 
-bool		  kIsCursorEnabled(void);
-bool		  kIsCursorHovered(void);
+bool          kIsCursorCaptured(void);
+bool          kIsCursorHovered(void);
 
-void		  kGetKeyboardState(kKeyboardState *keyboard);
-void		  kGetKeyState(kState *state, kKey key);
-void		  kGetMouseState(kMouseState *mouse);
-void		  kGetButtonState(kState *state, kButton button);
-void		  kGetWindowState(kWindowState *state);
+void          kGetKeyboardState(kKeyboardState *keyboard);
+void          kGetKeyState(kState *state, kKey key);
+void          kGetMouseState(kMouseState *mouse);
+void          kGetButtonState(kState *state, kButton button);
+void          kGetWindowState(kWindowState *state);
 
-void		  kSetKeyboardState(const kKeyboardState &keyboard);
-void		  kSetKeyState(const kState &state, kKey key);
-void		  kSetMouseState(const kMouseState &mouse);
-void		  kSetButtonState(const kState &state, kButton button);
-void		  kSetWindowState(const kWindowState &state);
+void          kSetKeyboardState(const kKeyboardState &keyboard);
+void          kSetKeyState(const kState &state, kKey key);
+void          kSetMouseState(const kMouseState &mouse);
+void          kSetButtonState(const kState &state, kButton button);
+void          kSetWindowState(const kWindowState &state);
 
 //
 //
 //
 
 void kClearInput(void);
-void kNextFrame(void);
+void kClearFrame(void);
 
 void kAddEvent(const kEvent &ev);
 void kAddKeyEvent(kKey key, bool down, bool repeat);
@@ -302,6 +308,10 @@ void kAddCursorLeaveEvent(void);
 void kAddWindowResizeEvent(u32 width, u32 height, bool fullscreen);
 void kAddWindowFocusEvent(bool focused);
 void kAddWindowCloseEvent(void);
+void kAddWindowMaximizeEvent(void);
+void kAddWindowRestoreEvent(void);
+void kAddWindowCursorCaptureEvent(void);
+void kAddWindowCursorReleaseEvent(void);
 void kAddWindowDpiChangedEvent(float scale);
 
 //
@@ -310,8 +320,8 @@ void kAddWindowDpiChangedEvent(float scale);
 
 void kResizeWindow(u32 w, u32 h);
 void kToggleWindowFullscreen(void);
-void kEnableCursor(void);
-void kDisableCursor(void);
+void kReleaseCursor(void);
+void kCaptureCursor(void);
 void kMaximizeWindow(void);
 void kRestoreWindow(void);
 void kMinimizeWindow(void);
@@ -324,17 +334,31 @@ void kCloseWindow(void);
 typedef struct kMediaWindowSpec
 {
 	kString title;
-	u32		width;
-	u32		height;
-	u32		flags;
+	u32     width;
+	u32     height;
+	u32     flags;
 } kMediaWindowSpec;
+
+typedef struct kMediaFrame
+{
+	umem arena_size;
+} kMediaFrame;
+
+typedef struct kMediaFeatures
+{
+	kRenderFeatures render;
+} kMediaFeatures;
 
 typedef struct kMediaSpec
 {
 	kMediaWindowSpec window;
+	kMediaFrame      frame;
+	kMediaFeatures   features;
 } kMediaSpec;
 
-static const kMediaSpec kDefaultSpec = {.window = {.flags = kWindow_Resizable}};
+static const kMediaSpec kDefaultSpec = {.window   = {.flags = kWindow_Resizable},
+                                        .frame    = {.arena_size = 32 * kMegaByte},
+                                        .features = {.render = kDefaultRenderFeatures}};
 
-int						kEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user);
-void					kBreakLoop(int status);
+int                     kEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user);
+void                    kBreakLoop(int status);

@@ -8,18 +8,18 @@
 
 #if defined(K_EXPORT_SYMBOLS)
 K_EXPORT kContext context = {.allocator = {.proc = kDefaultHeapAllocator},
-							 .random	= {.state = 0x853c49e6748fea9bULL, .inc = 0xda3e39cb94b95bdbULL},
-							 .assertion = kDefaultHandleAssertion,
-							 .logger	= {.proc = kDefaultHandleLog},
-							 .fatal		= kDefaultFatalError};
+                             .random    = {.state = 0x853c49e6748fea9bULL, .inc = 0xda3e39cb94b95bdbULL},
+                             .assertion = kDefaultHandleAssertion,
+                             .logger    = {.proc = kDefaultHandleLog},
+                             .fatal     = kDefaultFatalError};
 #elif defined(K_IMPORT_SYMBOLS)
 K_IMPORT kContext context;
 #else
 static kContext context = {.allocator = {.proc = kDefaultHeapAllocator},
-						   .random	  = {.state = 0x853c49e6748fea9bULL, .inc = 0xda3e39cb94b95bdbULL},
-						   .assertion = kDefaultHandleAssertion,
-						   .logger	  = {.proc = kDefaultHandleLog},
-						   .fatal	  = kDefaultFatalError};
+                           .random    = {.state = 0x853c49e6748fea9bULL, .inc = 0xda3e39cb94b95bdbULL},
+                           .assertion = kDefaultHandleAssertion,
+                           .logger    = {.proc = kDefaultHandleLog},
+                           .fatal     = kDefaultFatalError};
 #endif
 
 void kHandleAssertion(const char *file, int line, const char *proc, const char *desc)
@@ -35,6 +35,11 @@ void kHandleAssertion(const char *file, int line, const char *proc, const char *
 kContext *kGetContext(void)
 {
 	return &context;
+}
+
+kAllocator *kGetContextAllocator(void)
+{
+	return &context.allocator;
 }
 
 void *kAlloc(umem size)
@@ -97,7 +102,7 @@ void kLogPrintV(kLogLevel level, const char *fmt, va_list list)
 	if (level >= context.logger.level)
 	{
 		char buff[4096];
-		int	 len = vsnprintf(buff, kArrayCount(buff), fmt, list);
+		int  len = vsnprintf(buff, kArrayCount(buff), fmt, list);
 		context.logger.proc(context.logger.data, context.logger.level, (u8 *)buff, len);
 	}
 }
@@ -172,7 +177,7 @@ void kDefaultHandleAssertion(const char *file, int line, const char *proc, const
 
 void kDefaultFatalError(const char *message)
 {
-	int		 wlen = MultiByteToWideChar(CP_UTF8, 0, message, (int)strlen(message), NULL, 0);
+	int      wlen = MultiByteToWideChar(CP_UTF8, 0, message, (int)strlen(message), NULL, 0);
 	wchar_t *msg  = (wchar_t *)HeapAlloc(GetProcessHeap(), 0, ((imem)wlen + 1) * sizeof(wchar_t));
 	if (msg)
 	{
@@ -183,18 +188,18 @@ void kDefaultFatalError(const char *message)
 	FatalAppExitW(0, L"out of memory");
 }
 
-static const WORD ColorsMap[] = {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE,
-									FOREGROUND_RED | FOREGROUND_GREEN, FOREGROUND_RED};
+static const WORD ColorsMap[] = {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, FOREGROUND_RED | FOREGROUND_GREEN,
+                                 FOREGROUND_RED};
 static_assert(kArrayCount(ColorsMap) == kLogLevel_Error + 1, "");
 
 void kDefaultHandleLog(void *data, kLogLevel level, const u8 *msg, imem msg_len)
 {
-	static kAtomic	  Guard		  = {0};
+	static kAtomic Guard = {0};
 
-	wchar_t buff[4096];
+	wchar_t        buff[4096];
 
-	int		len = MultiByteToWideChar(CP_UTF8, 0, (char *)msg, (int)msg_len, buff, kArrayCount(buff) - 1);
-	buff[len]	= 0;
+	int            len = MultiByteToWideChar(CP_UTF8, 0, (char *)msg, (int)msg_len, buff, kArrayCount(buff) - 1);
+	buff[len]          = 0;
 
 	kAtomicLock(&Guard);
 

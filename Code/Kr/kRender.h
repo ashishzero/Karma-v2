@@ -1,66 +1,34 @@
 #pragma once
 #include "kMath.h"
-#include "kRenderApi.h"
+#include "kRenderShared.h"
 
 #define K_MAX_CIRCLE_SEGMENTS 512
 
-typedef struct kGlyph
-{
-	kRect rect;
-	kVec2 bearing;
-	kVec2 size;
-	float advance;
-} kGlyph;
-
-typedef struct kFont
-{
-	kTexture	  texture;
-	kRenderMode2D mode;
-	u16			 *map;
-	kGlyph		 *glyphs;
-	kGlyph		 *fallback;
-	u32			  start;
-	u32			  stop;
-	u32			  count;
-} kFont;
-
 //
 //
 //
 
-typedef struct kRenderSpec
-{
-	float thickness;
-	u32	  vertices;
-	u32	  indices;
-	u32	  params;
-	u32	  commands;
-	u32	  passes;
-	u32	  rects;
-	u32	  transforms;
-	u32	  textures;
-	u32	  builder;
-} kRenderSpec;
+void kSetRenderFeatures(uint flags);
+bool kIsRenderFeatureEnabled(uint flags);
+void kEnableRenderFeatures(uint flags);
+void kDisableRenderFeatures(uint flags);
 
-static constexpr kRenderSpec kDefaultRenderSpec = {.thickness  = 1,
-												   .vertices   = 1048576,
-												   .indices	   = 1048576 * 6,
-												   .params	   = 1024,
-												   .commands   = 512,
-												   .passes	   = 64,
-												   .rects	   = 256,
-												   .transforms = 256,
-												   .textures   = 256,
-												   .builder	   = 16384};
+u32  kGetMSAASampleCount(void);
+void kSetMSAASampleCount(u32 count);
 
-void						 kCreateRenderContext(kRenderBackend backend, const kRenderSpec &spec = kDefaultRenderSpec);
-void						 kDestroyRenderContext(void);
+void kGetRenderFeatures(kRenderFeatures *features);
+void kSetRenderFeatures(const kRenderFeatures &features);
 
-void						 kCommitFrame(void);
-void						 kGetRenderData2D(kRenderData2D *data);
+void kCreateRenderContext(kRenderBackend backend, const kRenderFeatures &features = kDefaultRenderFeatures,
+                          const kRenderSpec &spec = kDefaultRenderSpec);
+void kDestroyRenderContext(void);
+
+void kBeginFrame(void);
+void kEndFrame(void);
+void kGetRenderData2D(kRenderData2D *data);
 
 void kBeginRenderPass(kTexture texture, kTexture depth_stencil = nullptr, uint flags = kRenderPass_ClearColor,
-					  kVec4 color = kVec4(0), float depth = 1.0f);
+                      kVec4 color = kVec4(0), float depth = 1.0f, kResolveTexture *resolve = nullptr);
 void kBeginDefaultRenderPass(uint flags = kRenderPass_ClearColor, kVec4 color = kVec4(0), float depth = 1.0f);
 void kEndRenderPass(void);
 
@@ -72,12 +40,8 @@ void kLineThickness(float thickness);
 
 void kFlushRenderCommand(void);
 
-void kSetRenderMode(kRenderMode2D mode);
-void kBeginRenderMode(kRenderMode2D mode);
-void kEndRenderMode(void);
-
-void kSetBlendMode(kBlendMode2D mode);
-void kBeginBlendMode(kBlendMode2D mode);
+void kSetBlendMode(kBlendMode mode);
+void kBeginBlendMode(kBlendMode mode);
 void kEndBlendMode(void);
 
 void kSetTextureFilter(kTextureFilter filter);
@@ -134,9 +98,9 @@ void kDrawRectCentered(kVec3 pos, kVec2 dim, kRect rect, kVec4 color);
 void kDrawRectCentered(kVec2 pos, kVec2 dim, kRect rect, kVec4 color);
 
 void kDrawRectCenteredRotated(kVec3 pos, kVec2 dim, float angle, kVec2 uv_a, kVec2 uv_b, kVec2 uv_c, kVec2 uv_d,
-							  kVec4 color);
+                              kVec4 color);
 void kDrawRectCenteredRotated(kVec2 pos, kVec2 dim, float angle, kVec2 uv_a, kVec2 uv_b, kVec2 uv_c, kVec2 uv_d,
-							  kVec4 color);
+                              kVec4 color);
 void kDrawRectCenteredRotated(kVec3 pos, kVec2 dim, float angle, kVec4 color);
 void kDrawRectCenteredRotated(kVec2 pos, kVec2 dim, float angle, kVec4 color);
 void kDrawRectCenteredRotated(kVec3 pos, kVec2 dim, float angle, kRect rect, kVec4 color);
@@ -154,9 +118,9 @@ void kDrawPie(kVec3 pos, float radius, float theta_a, float theta_b, kVec4 color
 void kDrawPie(kVec2 pos, float radius, float theta_a, float theta_b, kVec4 color);
 
 void kDrawPiePart(kVec3 pos, float radius_a_min, float radius_b_min, float radius_a_max, float radius_b_max,
-				  float theta_a, float theta_b, kVec4 color);
+                  float theta_a, float theta_b, kVec4 color);
 void kDrawPiePart(kVec2 pos, float radius_a_min, float radius_b_min, float radius_a_max, float radius_b_max,
-				  float theta_a, float theta_b, kVec4 color);
+                  float theta_a, float theta_b, kVec4 color);
 void kDrawPiePart(kVec3 pos, float radius_min, float radius_max, float theta_a, float theta_b, kVec4 color);
 void kDrawPiePart(kVec2 pos, float radius_min, float radius_max, float theta_a, float theta_b, kVec4 color);
 
@@ -223,9 +187,9 @@ void kDrawRoundedRectOutline(kVec3 pos, kVec2 dim, kVec4 color, float radius = 1
 void kDrawRoundedRectOutline(kVec2 pos, kVec2 dim, kVec4 color, float radius = 1.0f);
 
 kGlyph *kFindFontGlyph(kFont *font, u32 codepoint);
-float	kCalculateText(kString text, kFont *font, float height = 1);
-float	kCalculateText(kString text, float height = 1);
-void	kDrawText(kString text, kVec3 pos, kFont *font, kVec4 color = kVec4(1), float height = 1);
-void	kDrawText(kString text, kVec2 pos, kFont *font, kVec4 color = kVec4(1), float height = 1);
-void	kDrawText(kString text, kVec3 pos, kVec4 color = kVec4(1), float height = 1);
-void	kDrawText(kString text, kVec2 pos, kVec4 color = kVec4(1), float height = 1);
+float   kCalculateText(kString text, kFont *font, float scale = 1);
+float   kCalculateText(kString text, float scale = 1);
+void    kDrawText(kString text, kVec3 pos, kFont *font, kVec4 color = kVec4(1), float scale = 1);
+void    kDrawText(kString text, kVec2 pos, kFont *font, kVec4 color = kVec4(1), float scale = 1);
+void    kDrawText(kString text, kVec3 pos, kVec4 color = kVec4(1), float scale = 1);
+void    kDrawText(kString text, kVec2 pos, kVec4 color = kVec4(1), float scale = 1);

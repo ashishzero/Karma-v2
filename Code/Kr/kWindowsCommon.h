@@ -15,8 +15,8 @@ static void kWinLogError(DWORD error, const char *source, const char *fmt, ...)
 	{
 		LPWSTR message = 0;
 		FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-					   NULL, error, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPWSTR)&message, 0, NULL);
-		char	buff[4096];
+		               NULL, error, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPWSTR)&message, 0, NULL);
+		char    buff[4096];
 		va_list args;
 		va_start(args, fmt);
 		vsnprintf(buff, sizeof(buff), fmt, args);
@@ -26,7 +26,7 @@ static void kWinLogError(DWORD error, const char *source, const char *fmt, ...)
 	}
 	else
 	{
-		char	buff[4096];
+		char    buff[4096];
 		va_list args;
 		va_start(args, fmt);
 		vsnprintf(buff, sizeof(buff), fmt, args);

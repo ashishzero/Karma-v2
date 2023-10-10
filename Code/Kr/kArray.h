@@ -3,11 +3,12 @@
 #include "kContext.h"
 #include <string.h>
 
-template <typename T> struct kArray
+template <typename T>
+struct kArray
 {
 	imem count;
 	imem allocated;
-	T	*data;
+	T   *data;
 
 	kArray() : count(0), allocated(0), data(nullptr)
 	{}
@@ -126,7 +127,7 @@ template <typename T> struct kArray
 		void *mem = kRealloc(data, allocated * sizeof(T), req_cap * sizeof(T));
 		if (mem)
 		{
-			data	  = (T *)mem;
+			data      = (T *)mem;
 			allocated = req_cap;
 			return true;
 		}
@@ -237,7 +238,7 @@ template <typename T> struct kArray
 			void *mem = kRealloc(data, allocated * sizeof(T), count * sizeof(T));
 			if (mem)
 			{
-				data	  = (T *)mem;
+				data      = (T *)mem;
 				allocated = count;
 			}
 		}
@@ -251,12 +252,14 @@ template <typename T> struct kArray
 	}
 };
 
-template <typename T> void kFree(kArray<T> *arr)
+template <typename T>
+void kFree(kArray<T> *arr)
 {
 	kFree(arr->data, arr->allocated * sizeof(T));
 }
 
-template <typename T> void kFree(kSpan<T> *arr)
+template <typename T>
+void kFree(kSpan<T> *arr)
 {
 	kFree(arr->data, arr->count * sizeof(T));
 }
@@ -278,7 +281,8 @@ imem Find(kSpan<T> arr, SearchFunc func, const Args &...args)
 	return -1;
 }
 
-template <typename T> imem Find(kSpan<T> arr, const T &v)
+template <typename T>
+imem Find(kSpan<T> arr, const T &v)
 {
 	for (imem index = 0; index < arr.count; ++index)
 	{

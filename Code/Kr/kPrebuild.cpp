@@ -21,16 +21,16 @@ struct kShaderSource
 #include <dxgi1_3.h>
 
 typedef HRESULT (*kHLSL_CompileProc)(LPCVOID pSrcData, SIZE_T SrcDataSize, LPCSTR pSourceName,
-									 CONST D3D_SHADER_MACRO *pDefines, ID3DInclude *pInclude, LPCSTR pEntrypoint,
-									 LPCSTR pTarget, UINT Flags1, UINT Flags2, ID3DBlob **ppCode,
-									 ID3DBlob **ppErrorMsgs);
+                                     CONST D3D_SHADER_MACRO *pDefines, ID3DInclude *pInclude, LPCSTR pEntrypoint,
+                                     LPCSTR pTarget, UINT Flags1, UINT Flags2, ID3DBlob **ppCode,
+                                     ID3DBlob **ppErrorMsgs);
 
 static kHLSL_CompileProc kHLSLCompileImpl;
 
-static HRESULT			 kHLSL_CompileFallback(LPCVOID pSrcData, SIZE_T SrcDataSize, LPCSTR pSourceName,
-											   CONST D3D_SHADER_MACRO *pDefines, ID3DInclude *pInclude, LPCSTR pEntrypoint,
-											   LPCSTR pTarget, UINT Flags1, UINT Flags2, ID3DBlob **ppCode,
-											   ID3DBlob **ppErrorMsgs)
+static HRESULT           kHLSL_CompileFallback(LPCVOID pSrcData, SIZE_T SrcDataSize, LPCSTR pSourceName,
+                                               CONST D3D_SHADER_MACRO *pDefines, ID3DInclude *pInclude, LPCSTR pEntrypoint,
+                                               LPCSTR pTarget, UINT Flags1, UINT Flags2, ID3DBlob **ppCode,
+                                               ID3DBlob **ppErrorMsgs)
 {
 	return E_NOTIMPL;
 }
@@ -48,9 +48,9 @@ static void kHLSL_LoadShaderCompiler()
 	}
 
 	const wchar_t *compilers[] = {L"D3DCompiler_47.dll", L"D3DCompiler_46.dll", L"D3DCompiler_45.dll",
-								  L"D3DCompiler_44.dll", L"D3DCompiler_43.dll"};
+	                              L"D3DCompiler_44.dll", L"D3DCompiler_43.dll"};
 
-	HMODULE		   handle	   = 0;
+	HMODULE        handle      = 0;
 
 	for (int i = 0; i < kArrayCount(compilers); ++i)
 	{
@@ -74,22 +74,22 @@ static void kHLSL_LoadShaderCompiler()
 }
 
 static HRESULT kHLSL_Compile(LPCVOID pSrcData, SIZE_T SrcDataSize, LPCSTR pSourceName, CONST D3D_SHADER_MACRO *pDefines,
-							 ID3DInclude *pInclude, LPCSTR pEntrypoint, LPCSTR pTarget, UINT Flags1, UINT Flags2,
-							 ID3DBlob **ppCode, ID3DBlob **ppErrorMsgs)
+                             ID3DInclude *pInclude, LPCSTR pEntrypoint, LPCSTR pTarget, UINT Flags1, UINT Flags2,
+                             ID3DBlob **ppCode, ID3DBlob **ppErrorMsgs)
 {
 	kHLSL_LoadShaderCompiler();
 	return kHLSLCompileImpl(pSrcData, SrcDataSize, pSourceName, pDefines, pInclude, pEntrypoint, pTarget, Flags1,
-							Flags2, ppCode, ppErrorMsgs);
+	                        Flags2, ppCode, ppErrorMsgs);
 }
 
 bool kCompileShader(const kShaderSource &shader, kString src, kString path, kString *compiled)
 {
-	ID3DBlob *	compiled_blob = nullptr;
-	ID3DBlob *	err			  = nullptr;
-	bool		succeeded	  = true;
-	HRESULT		hr			  = S_OK;
+	ID3DBlob   *compiled_blob = nullptr;
+	ID3DBlob   *err           = nullptr;
+	bool        succeeded     = true;
+	HRESULT     hr            = S_OK;
 
-	const char *version		  = "";
+	const char *version       = "";
 
 	if (shader.kind == kShader_Vertex)
 	{
@@ -124,7 +124,7 @@ bool kCompileShader(const kShaderSource &shader, kString src, kString path, kStr
 	if (compiled_blob)
 	{
 		compiled->count = (imem)compiled_blob->GetBufferSize();
-		compiled->data	= (u8 *)kAlloc(compiled->count);
+		compiled->data  = (u8 *)kAlloc(compiled->count);
 		memcpy(compiled->data, compiled_blob->GetBufferPointer(), compiled->count);
 		compiled_blob->Release();
 	}
@@ -189,7 +189,7 @@ static bool kWriteShaderFile(kStringBuilder<> *builder, kString path, kSpan<kSha
 static bool kFlushBuilderToFile(kString path, kStringBuilder<> *builder)
 {
 	kString buffer = builder->ToString();
-	bool rc = kWriteEntireFile(path, buffer.data, buffer.count);
+	bool    rc     = kWriteEntireFile(path, buffer.data, buffer.count);
 	kFree(buffer.data, buffer.count + 1);
 	builder->Reset();
 	return rc;
@@ -205,15 +205,15 @@ bool kExecutePrebuild(void)
 	if (ok)
 	{
 		kString outpath = "Code/Kr/Generated/kShaders.h";
-		kString inpath	= "Code/Kr/Shaders/kRender2D.hlsl";
+		kString inpath  = "Code/Kr/Shaders/kRender2D.hlsl";
 
-		bool	rebuild = true;
+		bool    rebuild = true;
 
 		if (kGetFileAttributes(outpath))
 		{
 			u64 outtm = kGetFileLastModifiedTime(outpath);
 			u64 intm  = kGetFileLastModifiedTime(inpath);
-			rebuild	  = (intm > outtm);
+			rebuild   = (intm > outtm);
 		}
 
 		if (rebuild)
@@ -223,7 +223,6 @@ bool kExecutePrebuild(void)
 			kShaderSource shaders[] = {
 				{"kQuadVS", "QuadVsMain", kShader_Vertex},
 				{"kQuadPS", "QuadPsMain", kShader_Pixel},
-				{"kSignedDistPS", "SignedDistPsMain", kShader_Pixel},
 			};
 
 			kStringBuilder builder;

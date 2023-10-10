@@ -1,11 +1,26 @@
 #include "kMedia.h"
 #include "kRender.h"
+#include "kStrings.h"
 
 void Update(float dt)
 {
+	kArena *arena = kGetFrameArena();
+
 	if (kKeyPressed(kKey_Escape))
 	{
 		kBreakLoop(0);
+	}
+
+	if (kKeyPressed(kKey_M))
+	{
+		if (kIsRenderFeatureEnabled(kRenderFeature_MSAA))
+		{
+			kDisableRenderFeatures(kRenderFeature_MSAA);
+		}
+		else
+		{
+			kEnableRenderFeatures(kRenderFeature_MSAA);
+		}
 	}
 
 	if (kKeyPressed(kKey_F11))
@@ -22,8 +37,15 @@ void Update(float dt)
 
 	kBeginCameraRect(0, (float)w, 0, (float)h);
 
-	kDrawText("Karma-2023", kVec2(200), kVec4(1, 1, 0, 1), 256);
+	kString res = kFormatString(arena, "Resolution (%u, %u) - MSAA: %u", w, h, kGetMSAASampleCount());
 
+	//kDrawRect(kVec2(50), kVec2(2000, 64), kVec4(1, 1, 1, 0.5));
+	kDrawText(res, kVec2(50, 50), kVec4(1, 1, 0, 1));
+
+	kEndCamera();
+
+	kBeginCamera(aspect_ratio, 100);
+	kDrawLine(kVec2(-30), kVec2(50, 70), kVec4(1));
 	kEndCamera();
 
 	kEndRenderPass();

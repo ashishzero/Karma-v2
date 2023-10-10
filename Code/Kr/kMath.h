@@ -94,45 +94,51 @@ inproc float kCeil(float x)
 //
 //
 
-float						  kWrap(float min, float a, float max);
-kVec2						  kArm(float angle);
-kVec2						  kArmInverse(float angle);
+float kWrap(float min, float a, float max);
+kVec2 kArm(float angle);
+kVec2 kArmInverse(float angle);
 
-bool						  kAlmostEqual(float a, float b, float delta = REAL_EPSILON);
-bool						  kAlmostEqual(kVec2 a, kVec2 b, float delta = REAL_EPSILON);
-bool						  kAlmostEqual(kVec3 a, kVec3 b, float delta = REAL_EPSILON);
-bool						  kAlmostEqual(kVec4 a, kVec4 b, float delta = REAL_EPSILON);
+bool  kAlmostEqual(float a, float b, float delta = REAL_EPSILON);
+bool  kAlmostEqual(kVec2 a, kVec2 b, float delta = REAL_EPSILON);
+bool  kAlmostEqual(kVec3 a, kVec3 b, float delta = REAL_EPSILON);
+bool  kAlmostEqual(kVec4 a, kVec4 b, float delta = REAL_EPSILON);
 
-bool						  kIsNull(float a);
-bool						  kIsNull(kVec2 a);
-bool						  kIsNull(kVec3 a);
-bool						  kIsNull(kVec4 a);
-bool						  kIsNull(int32_t a);
-bool						  kIsNull(kVec2i a);
-bool						  kIsNull(kVec3i a);
-bool						  kIsNull(kVec4i a);
+bool  kIsNull(float a);
+bool  kIsNull(kVec2 a);
+bool  kIsNull(kVec3 a);
+bool  kIsNull(kVec4 a);
+bool  kIsNull(int32_t a);
+bool  kIsNull(kVec2i a);
+bool  kIsNull(kVec3i a);
+bool  kIsNull(kVec4i a);
 
-template <typename Item> bool operator==(kVec2T<Item> a, kVec2T<Item> b)
+template <typename Item>
+bool operator==(kVec2T<Item> a, kVec2T<Item> b)
 {
 	return a.x == b.x && a.y == b.y;
 }
-template <typename Item> bool operator!=(kVec2T<Item> a, kVec2T<Item> b)
+template <typename Item>
+bool operator!=(kVec2T<Item> a, kVec2T<Item> b)
 {
 	return a.x != b.x || a.y != b.y;
 }
-template <typename Item> bool operator==(kVec3T<Item> a, kVec3T<Item> b)
+template <typename Item>
+bool operator==(kVec3T<Item> a, kVec3T<Item> b)
 {
 	return a.x == b.x && a.y == b.y && a.z == b.z;
 }
-template <typename Item> bool operator!=(kVec3T<Item> a, kVec3T<Item> b)
+template <typename Item>
+bool operator!=(kVec3T<Item> a, kVec3T<Item> b)
 {
 	return a.x != b.x || a.y != b.y || a.z != b.z;
 }
-template <typename Item> bool operator==(kVec4T<Item> a, kVec4T<Item> b)
+template <typename Item>
+bool operator==(kVec4T<Item> a, kVec4T<Item> b)
 {
 	return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
 }
-template <typename Item> bool operator!=(kVec4T<Item> a, kVec4T<Item> b)
+template <typename Item>
+bool operator!=(kVec4T<Item> a, kVec4T<Item> b)
 {
 	return a.x != b.x || a.y != b.y && a.z != b.z || a.w != b.w;
 }
@@ -150,266 +156,325 @@ inproc kVec4 kRound(kVec4 v)
 	return kVec4(kRound(v.x), kRound(v.y), kRound(v.z), kRound(v.w));
 }
 
-template <typename Item> kVec2T<Item> kMin(kVec2T<Item> a, kVec2T<Item> b)
+template <typename Item>
+kVec2T<Item> kMin(kVec2T<Item> a, kVec2T<Item> b)
 {
 	return kVec2T<Item>{kMin(a.x, b.x), kMin(a.y, b.y)};
 }
-template <typename Item> kVec2T<Item> kMax(kVec2T<Item> a, kVec2T<Item> b)
+template <typename Item>
+kVec2T<Item> kMax(kVec2T<Item> a, kVec2T<Item> b)
 {
 	return kVec2T<Item>{kMax(a.x, b.x), kMax(a.y, b.y)};
 }
-template <typename Item> kVec3T<Item> kMin(kVec3T<Item> a, kVec3T<Item> b)
+template <typename Item>
+kVec3T<Item> kMin(kVec3T<Item> a, kVec3T<Item> b)
 {
 	return kVec3T<Item>{kMin(a.x, b.x), kMin(a.y, b.y), kMin(a.z, b.z)};
 }
-template <typename Item> kVec3T<Item> kMax(kVec3T<Item> a, kVec3T<Item> b)
+template <typename Item>
+kVec3T<Item> kMax(kVec3T<Item> a, kVec3T<Item> b)
 {
 	return kVec3T<Item>{kMax(a.x, b.x), kMax(a.y, b.y), kMax(a.z, b.z)};
 }
-template <typename Item> kVec4T<Item> kMin(kVec4T<Item> a, kVec4T<Item> b)
+template <typename Item>
+kVec4T<Item> kMin(kVec4T<Item> a, kVec4T<Item> b)
 {
 	return kVec4T<Item>{kMin(a.x, b.x), kMin(a.y, b.y), kMin(a.z, b.z), kMin(a.w, b.w)};
 }
-template <typename Item> kVec4T<Item> kMax(kVec4T<Item> a, kVec4T<Item> b)
+template <typename Item>
+kVec4T<Item> kMax(kVec4T<Item> a, kVec4T<Item> b)
 {
 	return kVec4T<Item>{kMax(a.x, b.x), kMax(a.y, b.y), kMax(a.z, b.z), kMax(a.w, b.w)};
 }
 
-template <typename Item> bool kIsInRange(kVec2T<Item> a, kVec2T<Item> b, kVec2T<Item> v)
+template <typename Item>
+bool kIsInRange(kVec2T<Item> a, kVec2T<Item> b, kVec2T<Item> v)
 {
 	return kIsInRange(a.x, b.x, v.x) && kIsInRange(a.y, b.y, v.y);
 }
-template <typename Item> bool kIsInRange(kVec3T<Item> a, kVec3T<Item> b, kVec3T<Item> v)
+template <typename Item>
+bool kIsInRange(kVec3T<Item> a, kVec3T<Item> b, kVec3T<Item> v)
 {
 	return kIsInRange(a.x, b.x, v.x) && kIsInRange(a.y, b.y, v.y) && kIsInRange(a.z, b.z, v.z);
 }
-template <typename Item> bool kIsInRange(kVec4T<Item> a, kVec4T<Item> b, kVec4T<Item> v)
+template <typename Item>
+bool kIsInRange(kVec4T<Item> a, kVec4T<Item> b, kVec4T<Item> v)
 {
 	return kIsInRange(a.x, b.x, v.x) && kIsInRange(a.y, b.y, v.y) && kIsInRange(a.z, b.z, v.z) &&
-		   kIsInRange(a.w, b.w, v.w);
+	       kIsInRange(a.w, b.w, v.w);
 }
 
-template <typename Item> kVec2T<Item> operator+(kVec2T<Item> a, kVec2T<Item> b)
+template <typename Item>
+kVec2T<Item> operator+(kVec2T<Item> a, kVec2T<Item> b)
 {
 	return kVec2T<Item>(a.x + b.x, a.y + b.y);
 }
-template <typename Item> kVec3T<Item> operator+(kVec3T<Item> a, kVec3T<Item> b)
+template <typename Item>
+kVec3T<Item> operator+(kVec3T<Item> a, kVec3T<Item> b)
 {
 	return kVec3T<Item>(a.x + b.x, a.y + b.y, a.z + b.z);
 }
-template <typename Item> kVec4T<Item> operator+(kVec4T<Item> a, kVec4T<Item> b)
+template <typename Item>
+kVec4T<Item> operator+(kVec4T<Item> a, kVec4T<Item> b)
 {
 	return kVec4T<Item>(a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w);
 }
-template <typename Item> kVec2T<Item> operator-(kVec2T<Item> a, kVec2T<Item> b)
+template <typename Item>
+kVec2T<Item> operator-(kVec2T<Item> a, kVec2T<Item> b)
 {
 	return kVec2T<Item>(a.x - b.x, a.y - b.y);
 }
-template <typename Item> kVec3T<Item> operator-(kVec3T<Item> a, kVec3T<Item> b)
+template <typename Item>
+kVec3T<Item> operator-(kVec3T<Item> a, kVec3T<Item> b)
 {
 	return kVec3T<Item>(a.x - b.x, a.y - b.y, a.z - b.z);
 }
-template <typename Item> kVec4T<Item> operator-(kVec4T<Item> a, kVec4T<Item> b)
+template <typename Item>
+kVec4T<Item> operator-(kVec4T<Item> a, kVec4T<Item> b)
 {
 	return kVec4T<Item>(a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w);
 }
-template <typename Item> kVec2T<Item> operator*(Item s, kVec2T<Item> v)
+template <typename Item>
+kVec2T<Item> operator*(Item s, kVec2T<Item> v)
 {
 	return kVec2T<Item>(s * v.x, s * v.y);
 }
-template <typename Item> kVec2T<Item> operator*(kVec2T<Item> v, Item s)
+template <typename Item>
+kVec2T<Item> operator*(kVec2T<Item> v, Item s)
 {
 	return s * v;
 }
-template <typename Item> kVec3T<Item> operator*(Item s, kVec3T<Item> v)
+template <typename Item>
+kVec3T<Item> operator*(Item s, kVec3T<Item> v)
 {
 	return kVec3T<Item>(s * v.x, s * v.y, s * v.z);
 }
-template <typename Item> kVec3T<Item> operator*(kVec3T<Item> v, Item s)
+template <typename Item>
+kVec3T<Item> operator*(kVec3T<Item> v, Item s)
 {
 	return s * v;
 }
-template <typename Item> kVec4T<Item> operator*(Item s, kVec4T<Item> v)
+template <typename Item>
+kVec4T<Item> operator*(Item s, kVec4T<Item> v)
 {
 	return kVec4T<Item>(s * v.x, s * v.y, s * v.z, s * v.w);
 }
-template <typename Item> kVec4T<Item> operator*(kVec4T<Item> v, Item s)
+template <typename Item>
+kVec4T<Item> operator*(kVec4T<Item> v, Item s)
 {
 	return s * v;
 }
-template <typename Item> kVec2T<Item> operator/(kVec2T<Item> v, Item s)
+template <typename Item>
+kVec2T<Item> operator/(kVec2T<Item> v, Item s)
 {
 	return kVec2T<Item>(v.x / s, v.y / s);
 }
-template <typename Item> kVec3T<Item> operator/(kVec3T<Item> v, Item s)
+template <typename Item>
+kVec3T<Item> operator/(kVec3T<Item> v, Item s)
 {
 	return kVec3T<Item>(v.x / s, v.y / s, v.z / s);
 }
-template <typename Item> kVec4T<Item> operator/(kVec4T<Item> v, Item s)
+template <typename Item>
+kVec4T<Item> operator/(kVec4T<Item> v, Item s)
 {
 	return kVec4T<Item>(v.x / s, v.y / s, v.z / s, v.w / s);
 }
-template <typename Item> kVec2T<Item> operator*(kVec2T<Item> l, kVec2T<Item> r)
+template <typename Item>
+kVec2T<Item> operator*(kVec2T<Item> l, kVec2T<Item> r)
 {
 	return kVec2T<Item>(l.x * r.x, l.y * r.y);
 }
-template <typename Item> kVec3T<Item> operator*(kVec3T<Item> l, kVec3T<Item> r)
+template <typename Item>
+kVec3T<Item> operator*(kVec3T<Item> l, kVec3T<Item> r)
 {
 	return kVec3T<Item>(l.x * r.x, l.y * r.y, l.z * r.z);
 }
-template <typename Item> kVec4T<Item> operator*(kVec4T<Item> l, kVec4T<Item> r)
+template <typename Item>
+kVec4T<Item> operator*(kVec4T<Item> l, kVec4T<Item> r)
 {
 	return kVec4T<Item>(l.x * r.x, l.y * r.y, l.z * r.z, l.w * r.w);
 }
-template <typename Item> kVec2T<Item> operator/(kVec2T<Item> l, kVec2T<Item> r)
+template <typename Item>
+kVec2T<Item> operator/(kVec2T<Item> l, kVec2T<Item> r)
 {
 	return kVec2T<Item>(l.x / r.x, l.y / r.y);
 }
-template <typename Item> kVec3T<Item> operator/(kVec3T<Item> l, kVec3T<Item> r)
+template <typename Item>
+kVec3T<Item> operator/(kVec3T<Item> l, kVec3T<Item> r)
 {
 	return kVec3T<Item>(l.x / r.x, l.y / r.y, l.z / r.z);
 }
-template <typename Item> kVec4T<Item> operator/(kVec4T<Item> l, kVec4T<Item> r)
+template <typename Item>
+kVec4T<Item> operator/(kVec4T<Item> l, kVec4T<Item> r)
 {
 	return kVec4T<Item>(l.x / r.x, l.y / r.y, l.z / r.z, l.w / r.w);
 }
-template <typename Item> kVec2T<Item> operator-(const kVec2T<Item> &v)
+template <typename Item>
+kVec2T<Item> operator-(const kVec2T<Item> &v)
 {
 	return kVec2T<Item>(-v.x, -v.y);
 }
-template <typename Item> kVec3T<Item> operator-(const kVec3T<Item> &v)
+template <typename Item>
+kVec3T<Item> operator-(const kVec3T<Item> &v)
 {
 	return kVec3T<Item>(-v.x, -v.y, -v.z);
 }
-template <typename Item> kVec4T<Item> operator-(const kVec4T<Item> &v)
+template <typename Item>
+kVec4T<Item> operator-(const kVec4T<Item> &v)
 {
 	return kVec4T<Item>(-v.x, -v.y, -v.z, -v.w);
 }
 
-template <typename Item> kVec2T<Item> &operator+=(kVec2T<Item> &a, kVec2T<Item> b)
+template <typename Item>
+kVec2T<Item> &operator+=(kVec2T<Item> &a, kVec2T<Item> b)
 {
 	a = a + b;
 	return a;
 }
-template <typename Item> kVec3T<Item> &operator+=(kVec3T<Item> &a, kVec3T<Item> b)
+template <typename Item>
+kVec3T<Item> &operator+=(kVec3T<Item> &a, kVec3T<Item> b)
 {
 	a = a + b;
 	return a;
 }
-template <typename Item> kVec4T<Item> &operator+=(kVec4T<Item> &a, kVec4T<Item> b)
+template <typename Item>
+kVec4T<Item> &operator+=(kVec4T<Item> &a, kVec4T<Item> b)
 {
 	a = a + b;
 	return a;
 }
-template <typename Item> kVec2T<Item> &operator-=(kVec2T<Item> &a, kVec2T<Item> b)
+template <typename Item>
+kVec2T<Item> &operator-=(kVec2T<Item> &a, kVec2T<Item> b)
 {
 	a = a - b;
 	return a;
 }
-template <typename Item> kVec3T<Item> &operator-=(kVec3T<Item> &a, kVec3T<Item> b)
+template <typename Item>
+kVec3T<Item> &operator-=(kVec3T<Item> &a, kVec3T<Item> b)
 {
 	a = a - b;
 	return a;
 }
-template <typename Item> kVec4T<Item> &operator-=(kVec4T<Item> &a, kVec4T<Item> b)
+template <typename Item>
+kVec4T<Item> &operator-=(kVec4T<Item> &a, kVec4T<Item> b)
 {
 	a = a - b;
 	return a;
 }
-template <typename Item> kVec2T<Item> &operator*=(kVec2T<Item> &t, Item s)
+template <typename Item>
+kVec2T<Item> &operator*=(kVec2T<Item> &t, Item s)
 {
 	t = t * s;
 	return t;
 }
-template <typename Item> kVec3T<Item> &operator*=(kVec3T<Item> &t, Item s)
+template <typename Item>
+kVec3T<Item> &operator*=(kVec3T<Item> &t, Item s)
 {
 	t = t * s;
 	return t;
 }
-template <typename Item> kVec4T<Item> &operator*=(kVec4T<Item> &t, Item s)
+template <typename Item>
+kVec4T<Item> &operator*=(kVec4T<Item> &t, Item s)
 {
 	t = t * s;
 	return t;
 }
-template <typename Item> kVec2T<Item> &operator/=(kVec2T<Item> &t, Item s)
+template <typename Item>
+kVec2T<Item> &operator/=(kVec2T<Item> &t, Item s)
 {
 	t = t / s;
 	return t;
 }
-template <typename Item> kVec3T<Item> &operator/=(kVec3T<Item> &t, Item s)
+template <typename Item>
+kVec3T<Item> &operator/=(kVec3T<Item> &t, Item s)
 {
 	t = t / s;
 	return t;
 }
-template <typename Item> kVec4T<Item> &operator/=(kVec4T<Item> &t, Item s)
+template <typename Item>
+kVec4T<Item> &operator/=(kVec4T<Item> &t, Item s)
 {
 	t = t / s;
 	return t;
 }
-template <typename Item> kVec2T<Item> &operator*=(kVec2T<Item> &t, kVec2T<Item> s)
+template <typename Item>
+kVec2T<Item> &operator*=(kVec2T<Item> &t, kVec2T<Item> s)
 {
 	t = t * s;
 	return t;
 }
-template <typename Item> kVec3T<Item> &operator*=(kVec3T<Item> &t, kVec3T<Item> s)
+template <typename Item>
+kVec3T<Item> &operator*=(kVec3T<Item> &t, kVec3T<Item> s)
 {
 	t = t * s;
 	return t;
 }
-template <typename Item> kVec4T<Item> &operator*=(kVec4T<Item> &t, kVec4T<Item> s)
+template <typename Item>
+kVec4T<Item> &operator*=(kVec4T<Item> &t, kVec4T<Item> s)
 {
 	t = t * s;
 	return t;
 }
-template <typename Item> kVec2T<Item> &operator/=(kVec2T<Item> &t, kVec2T<Item> s)
+template <typename Item>
+kVec2T<Item> &operator/=(kVec2T<Item> &t, kVec2T<Item> s)
 {
 	t = t / s;
 	return t;
 }
-template <typename Item> kVec3T<Item> &operator/=(kVec3T<Item> &t, kVec3T<Item> s)
+template <typename Item>
+kVec3T<Item> &operator/=(kVec3T<Item> &t, kVec3T<Item> s)
 {
 	t = t / s;
 	return t;
 }
-template <typename Item> kVec4T<Item> &operator/=(kVec4T<Item> &t, kVec4T<Item> s)
+template <typename Item>
+kVec4T<Item> &operator/=(kVec4T<Item> &t, kVec4T<Item> s)
 {
 	t = t / s;
 	return t;
 }
 
-template <typename Item> kVec2T<Item> kComplexProduct(kVec2T<Item> a, kVec2T<Item> b)
+template <typename Item>
+kVec2T<Item> kComplexProduct(kVec2T<Item> a, kVec2T<Item> b)
 {
 	return kVec2T<Item>(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x);
 }
-template <typename Item> kVec2T<Item> kComplexConjugate(kVec2T<Item> a)
+template <typename Item>
+kVec2T<Item> kComplexConjugate(kVec2T<Item> a)
 {
 	return kVec2T<Item>(a.x, -a.y);
 }
 
-template <typename Item> Item kDotProduct(kVec2T<Item> a, kVec2T<Item> b)
+template <typename Item>
+Item kDotProduct(kVec2T<Item> a, kVec2T<Item> b)
 {
 	return a.x * b.x + a.y * b.y;
 }
-template <typename Item> Item kDotProduct(kVec3T<Item> a, kVec3T<Item> b)
+template <typename Item>
+Item kDotProduct(kVec3T<Item> a, kVec3T<Item> b)
 {
 	return a.x * b.x + a.y * b.y + a.z * b.z;
 }
-template <typename Item> Item kDotProduct(kVec4T<Item> a, kVec4T<Item> b)
+template <typename Item>
+Item kDotProduct(kVec4T<Item> a, kVec4T<Item> b)
 {
 	return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
 }
-template <typename Item> Item kDeterminant(kVec2T<Item> a, kVec2T<Item> b)
+template <typename Item>
+Item kDeterminant(kVec2T<Item> a, kVec2T<Item> b)
 {
 	return (a.x * b.y) - (a.y * b.x);
 }
 
-template <typename Item> float kCrossProduct(kVec2T<Item> a, kVec2T<Item> b)
+template <typename Item>
+float kCrossProduct(kVec2T<Item> a, kVec2T<Item> b)
 {
 	Item z = (a.x * b.y) - (a.y * b.x);
 	return z;
 }
 
-template <typename Item> kVec3T<Item> kCrossProduct(kVec3T<Item> a, kVec3T<Item> b)
+template <typename Item>
+kVec3T<Item> kCrossProduct(kVec3T<Item> a, kVec3T<Item> b)
 {
 	kVec3T<Item> res;
 	res.x = (a.y * b.z) - (a.z * b.y);
@@ -418,23 +483,26 @@ template <typename Item> kVec3T<Item> kCrossProduct(kVec3T<Item> a, kVec3T<Item>
 	return res;
 }
 
-template <typename Item> kVec2T<Item> kTripleProduct(kVec2T<Item> a, kVec2T<Item> b, kVec2T<Item> c)
+template <typename Item>
+kVec2T<Item> kTripleProduct(kVec2T<Item> a, kVec2T<Item> b, kVec2T<Item> c)
 {
-	Item		 det = kDeterminant(a, b);
+	Item         det = kDeterminant(a, b);
 	kVec2T<Item> res;
 	res.x = -c.y * det;
 	res.y = c.x * det;
 	return res;
 }
 
-template <typename Item> kVec3T<Item> kTripleProduct(kVec3T<Item> a, kVec3T<Item> b, kVec3T<Item> c)
+template <typename Item>
+kVec3T<Item> kTripleProduct(kVec3T<Item> a, kVec3T<Item> b, kVec3T<Item> c)
 {
 	return kCrossProduct(kCrossProduct(a, b), c);
 }
 
-template <typename Item> kVec3T<Item> kOrthoNormalBasisRH(kVec3T<Item> *a, kVec3T<Item> *b)
+template <typename Item>
+kVec3T<Item> kOrthoNormalBasisRH(kVec3T<Item> *a, kVec3T<Item> *b)
 {
-	*a			   = kNormalizeZ(*a);
+	*a             = kNormalizeZ(*a);
 	kVec3T<Item> c = kCrossProduct(*a, *b);
 	if (kLengthSq(c) == 0.0f)
 		return;
@@ -443,9 +511,10 @@ template <typename Item> kVec3T<Item> kOrthoNormalBasisRH(kVec3T<Item> *a, kVec3
 	return c;
 }
 
-template <typename Item> kVec3T<Item> kOrthoNormalBasisLH(kVec3T<Item> *a, kVec3T<Item> *b)
+template <typename Item>
+kVec3T<Item> kOrthoNormalBasisLH(kVec3T<Item> *a, kVec3T<Item> *b)
 {
-	*a			   = kNormalizeZ(*a);
+	*a             = kNormalizeZ(*a);
 	kVec3T<Item> c = kCrossProduct(*b, *a);
 	if (kLengthSq(c) == 0.0f)
 		return;
@@ -454,43 +523,53 @@ template <typename Item> kVec3T<Item> kOrthoNormalBasisLH(kVec3T<Item> *a, kVec3
 	return c;
 }
 
-template <typename Item> Item kLengthSq(kVec2T<Item> v)
+template <typename Item>
+Item kLengthSq(kVec2T<Item> v)
 {
 	return kDotProduct(v, v);
 }
-template <typename Item> Item kLengthSq(kVec3T<Item> v)
+template <typename Item>
+Item kLengthSq(kVec3T<Item> v)
 {
 	return kDotProduct(v, v);
 }
-template <typename Item> Item kLengthSq(kVec4T<Item> v)
+template <typename Item>
+Item kLengthSq(kVec4T<Item> v)
 {
 	return kDotProduct(v, v);
 }
-template <typename Item> Item kLength(kVec2T<Item> v)
+template <typename Item>
+Item kLength(kVec2T<Item> v)
 {
 	return kSquareRoot(kDotProduct(v, v));
 }
-template <typename Item> Item kLength(kVec3T<Item> v)
+template <typename Item>
+Item kLength(kVec3T<Item> v)
 {
 	return kSquareRoot(kDotProduct(v, v));
 }
-template <typename Item> Item kLength(kVec4T<Item> v)
+template <typename Item>
+Item kLength(kVec4T<Item> v)
 {
 	return kSquareRoot(kDotProduct(v, v));
 }
-template <typename Item> Item kDistance(Item a, Item b)
+template <typename Item>
+Item kDistance(Item a, Item b)
 {
 	return b - a;
 }
-template <typename Item> Item kDistance(kVec2T<Item> a, kVec2T<Item> b)
+template <typename Item>
+Item kDistance(kVec2T<Item> a, kVec2T<Item> b)
 {
 	return kLength(b - a);
 }
-template <typename Item> Item kDistance(kVec3T<Item> a, kVec3T<Item> b)
+template <typename Item>
+Item kDistance(kVec3T<Item> a, kVec3T<Item> b)
 {
 	return kLength(b - a);
 }
-template <typename Item> Item kDistance(kVec4T<Item> a, kVec4T<Item> b)
+template <typename Item>
+Item kDistance(kVec4T<Item> a, kVec4T<Item> b)
 {
 	return kLength(b - a);
 }
@@ -653,12 +732,14 @@ kQuat kQuatLookAt(kVec3 from, kVec3 to, kVec3 world_forward);
 //
 //
 
-template <typename type> type kLerp(type from, type to, float t)
+template <typename type>
+type kLerp(type from, type to, float t)
 {
 	return (1 - t) * from + t * to;
 }
 
-template <typename type> type kBezierQuadratic(type a, type b, type c, float t)
+template <typename type>
+type kBezierQuadratic(type a, type b, type c, float t)
 {
 	float mt = 1 - t;
 	float w1 = mt * mt;
@@ -667,7 +748,8 @@ template <typename type> type kBezierQuadratic(type a, type b, type c, float t)
 	return w1 * a + w2 * b + w3 * c;
 }
 
-template <typename type> type kBezierCubic(type a, type b, type c, type d, float t)
+template <typename type>
+type kBezierCubic(type a, type b, type c, type d, float t)
 {
 	float mt = 1.0f - t;
 	float w1 = mt * mt * mt;
@@ -677,44 +759,48 @@ template <typename type> type kBezierCubic(type a, type b, type c, type d, float
 	return w1 * a + w2 * b + w3 * c + w4 * d;
 }
 
-template <typename type> void kBuildBezierQuadratic(type a, type b, type c, type *points, int segments)
+template <typename type>
+void kBuildBezierQuadratic(type a, type b, type c, type *points, int segments)
 {
 	for (int seg_index = 0; seg_index <= segments; ++seg_index)
 	{
-		float t			  = (float)seg_index / (float)segments;
-		auto  np		  = kBezierQuadratic(a, b, c, t);
+		float t           = (float)seg_index / (float)segments;
+		auto  np          = kBezierQuadratic(a, b, c, t);
 		points[seg_index] = np;
 	}
 }
 
-template <typename type> void kBuildBezierCubic(type a, type b, type c, type d, type *points, int segments)
+template <typename type>
+void kBuildBezierCubic(type a, type b, type c, type d, type *points, int segments)
 {
 	for (int seg_index = 0; seg_index <= segments; ++seg_index)
 	{
-		float t			  = (float)seg_index / (float)segments;
-		auto  np		  = kBezierCubic(a, b, c, d, t);
+		float t           = (float)seg_index / (float)segments;
+		auto  np          = kBezierCubic(a, b, c, d, t);
 		points[seg_index] = np;
 	}
 }
 
-template <typename type> type kSlerp(type from, type to, float angle, float t)
+template <typename type>
+type kSlerp(type from, type to, float angle, float t)
 {
-	float s	  = kSin(angle);
+	float s   = kSin(angle);
 	float ts  = kSin(angle * t);
 	float mts = kSin(angle * (1 - t));
 	return (mts * from + ts * to) * (1.0f / s);
 }
 
-kVec2						   kSlerp(kVec2 from, kVec2 to, float t);
-kVec3						   kSlerp(kVec3 from, kVec3 to, float t);
-kQuat						   kSlerp(kQuat from, kQuat to, float t);
-float						   kStep(float edge, float val);
-kVec2						   kStep(kVec2 edge, kVec2 val);
-kVec3						   kStep(kVec3 edge, kVec3 val);
-kVec4						   kStep(kVec4 edge, kVec4 val);
-kQuat						   kStep(kQuat edge, kQuat val);
+kVec2 kSlerp(kVec2 from, kVec2 to, float t);
+kVec3 kSlerp(kVec3 from, kVec3 to, float t);
+kQuat kSlerp(kQuat from, kQuat to, float t);
+float kStep(float edge, float val);
+kVec2 kStep(kVec2 edge, kVec2 val);
+kVec3 kStep(kVec3 edge, kVec3 val);
+kVec4 kStep(kVec4 edge, kVec4 val);
+kQuat kStep(kQuat edge, kQuat val);
 
-template <typename Item> float kSmoothStepZ(Item a, Item b, Item v)
+template <typename Item>
+float kSmoothStepZ(Item a, Item b, Item v)
 {
 	float div_distance = kDistance(a, b);
 	if (div_distance)
@@ -725,19 +811,22 @@ template <typename Item> float kSmoothStepZ(Item a, Item b, Item v)
 	return 1;
 }
 
-template <typename Item> float kSmoothStep(Item a, Item b, Item v)
+template <typename Item>
+float kSmoothStep(Item a, Item b, Item v)
 {
 	auto x = kClamp(0.0f, 1.0f, kDistance(a, v) / kDistance(a, b));
 	return x * x * (3 - 2 * x);
 }
 
-float						  kInverseSmoothStep(float x);
+float kInverseSmoothStep(float x);
 
-template <typename Item> Item kMapRange(Item in_a, Item in_b, Item out_a, Item out_b, Item v)
+template <typename Item>
+Item kMapRange(Item in_a, Item in_b, Item out_a, Item out_b, Item v)
 {
 	return (out_b - out_a) / (in_b - in_a) * (v - in_a) + out_a;
 }
-template <typename Item> Item kMap01(Item in_a, Item in_b, Item v)
+template <typename Item>
+Item kMap01(Item in_a, Item in_b, Item v)
 {
 	return MapRange(in_a, in_b, Item(0), Item(1), v);
 }

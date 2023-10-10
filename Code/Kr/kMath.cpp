@@ -2,7 +2,7 @@
 
 float kWrap(float min, float a, float max)
 {
-	float range	 = max - min;
+	float range  = max - min;
 	float offset = a - min;
 	float result = (offset - (kFloor(offset / range) * range) + min);
 	return result;
@@ -20,9 +20,9 @@ kVec2 kArmInverse(float angle)
 // https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
 bool kAlmostEqual(float a, float b, float delta)
 {
-	float diff	 = kAbsolute(a - b);
-	a			 = kAbsolute(a);
-	b			 = kAbsolute(b);
+	float diff   = kAbsolute(a - b);
+	a            = kAbsolute(a);
+	b            = kAbsolute(b);
 
 	float larger = (b > a) ? b : a;
 
@@ -44,7 +44,7 @@ bool kAlmostEqual(kVec3 a, kVec3 b, float delta)
 bool kAlmostEqual(kVec4 a, kVec4 b, float delta)
 {
 	return kAlmostEqual(a.x, b.x, delta) && kAlmostEqual(a.y, b.y, delta) && kAlmostEqual(a.z, b.z, delta) &&
-		   kAlmostEqual(a.w, b.w, delta);
+	       kAlmostEqual(a.w, b.w, delta);
 }
 
 bool kIsNull(float a)
@@ -166,7 +166,7 @@ float kAngleBetweenNormalized(kVec3 a, kVec3 b)
 
 float kSignedAngleBetween(kVec2 a, kVec2 b)
 {
-	float dot	= kClamp(-1.0f, 1.0f, kDotProduct(a, b));
+	float dot   = kClamp(-1.0f, 1.0f, kDotProduct(a, b));
 	float angle = kArcCos(dot);
 	float cross = a.x * b.y - a.y * b.x;
 	if (cross < 0)
@@ -178,7 +178,7 @@ float kSignedAngleBetween(kVec2 a, kVec2 b)
 
 float kSignedAngleBetween(kVec3 a, kVec3 b, kVec3 n)
 {
-	float dot	= kClamp(-1.0f, 1.0f, kDotProduct(a, b));
+	float dot   = kClamp(-1.0f, 1.0f, kDotProduct(a, b));
 	float angle = kArcCos(dot);
 	kVec3 cross = kCrossProduct(a, b);
 	if (kDotProduct(n, cross) < 0)
@@ -237,8 +237,8 @@ kMat2 kTranspose(const kMat2 &m)
 float kDeterminant(const kMat3 &mat)
 {
 	float det = mat.m2[0][0] * (mat.m2[1][1] * mat.m2[2][2] - mat.m2[2][1] * mat.m2[1][2]) +
-				mat.m2[0][1] * (mat.m2[1][2] * mat.m2[2][0] - mat.m2[1][0] * mat.m2[2][2]) +
-				mat.m2[0][2] * (mat.m2[1][0] * mat.m2[2][1] - mat.m2[2][0] * mat.m2[1][1]);
+	            mat.m2[0][1] * (mat.m2[1][2] * mat.m2[2][0] - mat.m2[1][0] * mat.m2[2][2]) +
+	            mat.m2[0][2] * (mat.m2[1][0] * mat.m2[2][1] - mat.m2[2][0] * mat.m2[1][1]);
 	return det;
 }
 
@@ -255,7 +255,7 @@ kMat3 kInverse(const kMat3 &mat)
 	result.m2[2][1] = mat.m2[2][0] * mat.m2[0][1] - mat.m2[0][0] * mat.m2[2][1];
 	result.m2[2][2] = mat.m2[0][0] * mat.m2[1][1] - mat.m2[1][0] * mat.m2[0][1];
 
-	float det		= mat.m2[0][0] * result.m2[0][0] + mat.m2[0][1] * result.m2[1][0] + mat.m2[0][2] * result.m2[2][0];
+	float det       = mat.m2[0][0] * result.m2[0][0] + mat.m2[0][1] * result.m2[1][0] + mat.m2[0][2] * result.m2[2][0];
 	det /= det;
 	for (int i = 0; i < 3; i++)
 		result.rows[i] = result.rows[i] * det;
@@ -274,16 +274,16 @@ kMat3 kTranspose(const kMat3 &m)
 float kDeterminant(const kMat4 &mat)
 {
 	float m0 = mat.m[5] * mat.m[10] * mat.m[15] - mat.m[5] * mat.m[11] * mat.m[14] - mat.m[9] * mat.m[6] * mat.m[15] +
-			   mat.m[9] * mat.m[7] * mat.m[14] + mat.m[13] * mat.m[6] * mat.m[11] - mat.m[13] * mat.m[7] * mat.m[10];
+	           mat.m[9] * mat.m[7] * mat.m[14] + mat.m[13] * mat.m[6] * mat.m[11] - mat.m[13] * mat.m[7] * mat.m[10];
 
 	float m4 = -mat.m[4] * mat.m[10] * mat.m[15] + mat.m[4] * mat.m[11] * mat.m[14] + mat.m[8] * mat.m[6] * mat.m[15] -
-			   mat.m[8] * mat.m[7] * mat.m[14] - mat.m[12] * mat.m[6] * mat.m[11] + mat.m[12] * mat.m[7] * mat.m[10];
+	           mat.m[8] * mat.m[7] * mat.m[14] - mat.m[12] * mat.m[6] * mat.m[11] + mat.m[12] * mat.m[7] * mat.m[10];
 
 	float m8 = mat.m[4] * mat.m[9] * mat.m[15] - mat.m[4] * mat.m[11] * mat.m[13] - mat.m[8] * mat.m[5] * mat.m[15] +
-			   mat.m[8] * mat.m[7] * mat.m[13] + mat.m[12] * mat.m[5] * mat.m[11] - mat.m[12] * mat.m[7] * mat.m[9];
+	           mat.m[8] * mat.m[7] * mat.m[13] + mat.m[12] * mat.m[5] * mat.m[11] - mat.m[12] * mat.m[7] * mat.m[9];
 
 	float m12 = -mat.m[4] * mat.m[9] * mat.m[14] + mat.m[4] * mat.m[10] * mat.m[13] + mat.m[8] * mat.m[5] * mat.m[14] -
-				mat.m[8] * mat.m[6] * mat.m[13] - mat.m[12] * mat.m[5] * mat.m[10] + mat.m[12] * mat.m[6] * mat.m[9];
+	            mat.m[8] * mat.m[6] * mat.m[13] - mat.m[12] * mat.m[5] * mat.m[10] + mat.m[12] * mat.m[6] * mat.m[9];
 
 	float det = mat.m[0] * m0 + mat.m[1] * m4 + mat.m[2] * m8 + mat.m[3] * m12;
 	return det;
@@ -294,63 +294,63 @@ kMat4 kInverse(const kMat4 &mat)
 	kMat4 result;
 
 	result.m[0] = mat.m[5] * mat.m[10] * mat.m[15] - mat.m[5] * mat.m[11] * mat.m[14] -
-				  mat.m[9] * mat.m[6] * mat.m[15] + mat.m[9] * mat.m[7] * mat.m[14] + mat.m[13] * mat.m[6] * mat.m[11] -
-				  mat.m[13] * mat.m[7] * mat.m[10];
+	              mat.m[9] * mat.m[6] * mat.m[15] + mat.m[9] * mat.m[7] * mat.m[14] + mat.m[13] * mat.m[6] * mat.m[11] -
+	              mat.m[13] * mat.m[7] * mat.m[10];
 
 	result.m[4] = -mat.m[4] * mat.m[10] * mat.m[15] + mat.m[4] * mat.m[11] * mat.m[14] +
-				  mat.m[8] * mat.m[6] * mat.m[15] - mat.m[8] * mat.m[7] * mat.m[14] - mat.m[12] * mat.m[6] * mat.m[11] +
-				  mat.m[12] * mat.m[7] * mat.m[10];
+	              mat.m[8] * mat.m[6] * mat.m[15] - mat.m[8] * mat.m[7] * mat.m[14] - mat.m[12] * mat.m[6] * mat.m[11] +
+	              mat.m[12] * mat.m[7] * mat.m[10];
 
 	result.m[8] = mat.m[4] * mat.m[9] * mat.m[15] - mat.m[4] * mat.m[11] * mat.m[13] - mat.m[8] * mat.m[5] * mat.m[15] +
-				  mat.m[8] * mat.m[7] * mat.m[13] + mat.m[12] * mat.m[5] * mat.m[11] - mat.m[12] * mat.m[7] * mat.m[9];
+	              mat.m[8] * mat.m[7] * mat.m[13] + mat.m[12] * mat.m[5] * mat.m[11] - mat.m[12] * mat.m[7] * mat.m[9];
 
 	result.m[12] = -mat.m[4] * mat.m[9] * mat.m[14] + mat.m[4] * mat.m[10] * mat.m[13] +
-				   mat.m[8] * mat.m[5] * mat.m[14] - mat.m[8] * mat.m[6] * mat.m[13] -
-				   mat.m[12] * mat.m[5] * mat.m[10] + mat.m[12] * mat.m[6] * mat.m[9];
+	               mat.m[8] * mat.m[5] * mat.m[14] - mat.m[8] * mat.m[6] * mat.m[13] -
+	               mat.m[12] * mat.m[5] * mat.m[10] + mat.m[12] * mat.m[6] * mat.m[9];
 
 	result.m[1] = -mat.m[1] * mat.m[10] * mat.m[15] + mat.m[1] * mat.m[11] * mat.m[14] +
-				  mat.m[9] * mat.m[2] * mat.m[15] - mat.m[9] * mat.m[3] * mat.m[14] - mat.m[13] * mat.m[2] * mat.m[11] +
-				  mat.m[13] * mat.m[3] * mat.m[10];
+	              mat.m[9] * mat.m[2] * mat.m[15] - mat.m[9] * mat.m[3] * mat.m[14] - mat.m[13] * mat.m[2] * mat.m[11] +
+	              mat.m[13] * mat.m[3] * mat.m[10];
 
 	result.m[5] = mat.m[0] * mat.m[10] * mat.m[15] - mat.m[0] * mat.m[11] * mat.m[14] -
-				  mat.m[8] * mat.m[2] * mat.m[15] + mat.m[8] * mat.m[3] * mat.m[14] + mat.m[12] * mat.m[2] * mat.m[11] -
-				  mat.m[12] * mat.m[3] * mat.m[10];
+	              mat.m[8] * mat.m[2] * mat.m[15] + mat.m[8] * mat.m[3] * mat.m[14] + mat.m[12] * mat.m[2] * mat.m[11] -
+	              mat.m[12] * mat.m[3] * mat.m[10];
 
 	result.m[9] = -mat.m[0] * mat.m[9] * mat.m[15] + mat.m[0] * mat.m[11] * mat.m[13] +
-				  mat.m[8] * mat.m[1] * mat.m[15] - mat.m[8] * mat.m[3] * mat.m[13] - mat.m[12] * mat.m[1] * mat.m[11] +
-				  mat.m[12] * mat.m[3] * mat.m[9];
+	              mat.m[8] * mat.m[1] * mat.m[15] - mat.m[8] * mat.m[3] * mat.m[13] - mat.m[12] * mat.m[1] * mat.m[11] +
+	              mat.m[12] * mat.m[3] * mat.m[9];
 
 	result.m[13] = mat.m[0] * mat.m[9] * mat.m[14] - mat.m[0] * mat.m[10] * mat.m[13] -
-				   mat.m[8] * mat.m[1] * mat.m[14] + mat.m[8] * mat.m[2] * mat.m[13] +
-				   mat.m[12] * mat.m[1] * mat.m[10] - mat.m[12] * mat.m[2] * mat.m[9];
+	               mat.m[8] * mat.m[1] * mat.m[14] + mat.m[8] * mat.m[2] * mat.m[13] +
+	               mat.m[12] * mat.m[1] * mat.m[10] - mat.m[12] * mat.m[2] * mat.m[9];
 
 	result.m[2] = mat.m[1] * mat.m[6] * mat.m[15] - mat.m[1] * mat.m[7] * mat.m[14] - mat.m[5] * mat.m[2] * mat.m[15] +
-				  mat.m[5] * mat.m[3] * mat.m[14] + mat.m[13] * mat.m[2] * mat.m[7] - mat.m[13] * mat.m[3] * mat.m[6];
+	              mat.m[5] * mat.m[3] * mat.m[14] + mat.m[13] * mat.m[2] * mat.m[7] - mat.m[13] * mat.m[3] * mat.m[6];
 
 	result.m[6] = -mat.m[0] * mat.m[6] * mat.m[15] + mat.m[0] * mat.m[7] * mat.m[14] + mat.m[4] * mat.m[2] * mat.m[15] -
-				  mat.m[4] * mat.m[3] * mat.m[14] - mat.m[12] * mat.m[2] * mat.m[7] + mat.m[12] * mat.m[3] * mat.m[6];
+	              mat.m[4] * mat.m[3] * mat.m[14] - mat.m[12] * mat.m[2] * mat.m[7] + mat.m[12] * mat.m[3] * mat.m[6];
 
 	result.m[10] = mat.m[0] * mat.m[5] * mat.m[15] - mat.m[0] * mat.m[7] * mat.m[13] - mat.m[4] * mat.m[1] * mat.m[15] +
-				   mat.m[4] * mat.m[3] * mat.m[13] + mat.m[12] * mat.m[1] * mat.m[7] - mat.m[12] * mat.m[3] * mat.m[5];
+	               mat.m[4] * mat.m[3] * mat.m[13] + mat.m[12] * mat.m[1] * mat.m[7] - mat.m[12] * mat.m[3] * mat.m[5];
 
 	result.m[14] = -mat.m[0] * mat.m[5] * mat.m[14] + mat.m[0] * mat.m[6] * mat.m[13] +
-				   mat.m[4] * mat.m[1] * mat.m[14] - mat.m[4] * mat.m[2] * mat.m[13] - mat.m[12] * mat.m[1] * mat.m[6] +
-				   mat.m[12] * mat.m[2] * mat.m[5];
+	               mat.m[4] * mat.m[1] * mat.m[14] - mat.m[4] * mat.m[2] * mat.m[13] - mat.m[12] * mat.m[1] * mat.m[6] +
+	               mat.m[12] * mat.m[2] * mat.m[5];
 
 	result.m[3] = -mat.m[1] * mat.m[6] * mat.m[11] + mat.m[1] * mat.m[7] * mat.m[10] + mat.m[5] * mat.m[2] * mat.m[11] -
-				  mat.m[5] * mat.m[3] * mat.m[10] - mat.m[9] * mat.m[2] * mat.m[7] + mat.m[9] * mat.m[3] * mat.m[6];
+	              mat.m[5] * mat.m[3] * mat.m[10] - mat.m[9] * mat.m[2] * mat.m[7] + mat.m[9] * mat.m[3] * mat.m[6];
 
 	result.m[7] = mat.m[0] * mat.m[6] * mat.m[11] - mat.m[0] * mat.m[7] * mat.m[10] - mat.m[4] * mat.m[2] * mat.m[11] +
-				  mat.m[4] * mat.m[3] * mat.m[10] + mat.m[8] * mat.m[2] * mat.m[7] - mat.m[8] * mat.m[3] * mat.m[6];
+	              mat.m[4] * mat.m[3] * mat.m[10] + mat.m[8] * mat.m[2] * mat.m[7] - mat.m[8] * mat.m[3] * mat.m[6];
 
 	result.m[11] = -mat.m[0] * mat.m[5] * mat.m[11] + mat.m[0] * mat.m[7] * mat.m[9] + mat.m[4] * mat.m[1] * mat.m[11] -
-				   mat.m[4] * mat.m[3] * mat.m[9] - mat.m[8] * mat.m[1] * mat.m[7] + mat.m[8] * mat.m[3] * mat.m[5];
+	               mat.m[4] * mat.m[3] * mat.m[9] - mat.m[8] * mat.m[1] * mat.m[7] + mat.m[8] * mat.m[3] * mat.m[5];
 
 	result.m[15] = mat.m[0] * mat.m[5] * mat.m[10] - mat.m[0] * mat.m[6] * mat.m[9] - mat.m[4] * mat.m[1] * mat.m[10] +
-				   mat.m[4] * mat.m[2] * mat.m[9] + mat.m[8] * mat.m[1] * mat.m[6] - mat.m[8] * mat.m[2] * mat.m[5];
+	               mat.m[4] * mat.m[2] * mat.m[9] + mat.m[8] * mat.m[1] * mat.m[6] - mat.m[8] * mat.m[2] * mat.m[5];
 
 	float det = mat.m[0] * result.m[0] + mat.m[1] * result.m[4] + mat.m[2] * result.m[8] + mat.m[3] * result.m[12];
-	det		  = 1.0f / det;
+	det       = 1.0f / det;
 	for (int i = 0; i < 4; i++)
 		result.rows[i] = result.rows[i] * det;
 	return result;
@@ -481,7 +481,7 @@ kMat4 &operator+=(kMat4 &mat, const kMat4 &other)
 kMat2 operator*(const kMat2 &Left, const kMat2 &Right)
 {
 	kMat2 res;
-	kMat2 tras	 = kTranspose(Right);
+	kMat2 tras   = kTranspose(Right);
 
 	res.m2[0][0] = kDotProduct(Left.rows[0], tras.rows[0]);
 	res.m2[0][1] = kDotProduct(Left.rows[0], tras.rows[1]);
@@ -510,7 +510,7 @@ kVec2 operator*(kVec2 vec, const kMat2 &mat)
 kMat3 operator*(const kMat3 &Left, const kMat3 &Right)
 {
 	kMat3 res;
-	kMat3 tras	 = kTranspose(Right);
+	kMat3 tras   = kTranspose(Right);
 
 	res.m2[0][0] = kDotProduct(Left.rows[0], tras.rows[0]);
 	res.m2[0][1] = kDotProduct(Left.rows[0], tras.rows[1]);
@@ -539,7 +539,7 @@ kVec3 operator*(const kMat3 &mat, kVec3 vec)
 kMat4 operator*(const kMat4 &Left, const kMat4 &Right)
 {
 	kMat4 res;
-	kMat4 tras	 = kTranspose(Right);
+	kMat4 tras   = kTranspose(Right);
 
 	res.m2[0][0] = kDotProduct(Left.rows[0], tras.rows[0]);
 	res.m2[0][1] = kDotProduct(Left.rows[0], tras.rows[1]);
@@ -667,7 +667,7 @@ kQuat operator*(kQuat q1, kQuat q2)
 
 kVec3 operator*(kQuat q, kVec3 v)
 {
-	kQuat p	  = kQuat(v.x, v.y, v.z, 0);
+	kQuat p   = kQuat(v.x, v.y, v.z, 0);
 	kQuat qc  = kConjugate(q);
 	kQuat res = (q * p * qc);
 	return kVec3(res.x, res.y, res.z);
@@ -781,8 +781,8 @@ void kQuatToAngleAxis(kQuat q, float *angle, kVec3 *axis)
 	float len = kSquareRoot(q.x * q.x + q.y * q.y + q.z * q.z);
 	if (len)
 	{
-		*angle	= 2.0f * kArcTan2(len, q.w);
-		len		= 1.0f / len;
+		*angle  = 2.0f * kArcTan2(len, q.w);
+		len     = 1.0f / len;
 		axis->x = q.x * len;
 		axis->y = q.y * len;
 		axis->z = q.z * len;
@@ -797,10 +797,10 @@ void kQuatToAngleAxis(kQuat q, float *angle, kVec3 *axis)
 
 kMat4 kQuatToMat4(kQuat q)
 {
-	float i	 = q.x;
-	float j	 = q.y;
-	float k	 = q.z;
-	float r	 = q.w;
+	float i  = q.x;
+	float j  = q.y;
+	float k  = q.z;
+	float r  = q.w;
 
 	float ii = i * i;
 	float jj = j * j;
@@ -844,9 +844,9 @@ kVec3 kQuatToEulerAngles(kQuat q)
 
 	float sinr_cosp = 2.0f * (q.w * q.x + q.y * q.z);
 	float cosr_cosp = 1.0f - 2.0f * (q.x * q.x + q.y * q.y);
-	angles.z		= kArcTan2(sinr_cosp, cosr_cosp);
+	angles.z        = kArcTan2(sinr_cosp, cosr_cosp);
 
-	float sinp		= 2.0f * (q.w * q.y - q.z * q.x);
+	float sinp      = 2.0f * (q.w * q.y - q.z * q.x);
 	if (kAbsolute(sinp) >= 1.0f)
 	{
 		// use 90 degrees if out of range
@@ -859,7 +859,7 @@ kVec3 kQuatToEulerAngles(kQuat q)
 
 	float siny_cosp = 2.0f * (q.w * q.z + q.x * q.y);
 	float cosy_cosp = 1.0f - 2.0f * (q.y * q.y + q.z * q.z);
-	angles.y		= kArcTan2(siny_cosp, cosy_cosp);
+	angles.y        = kArcTan2(siny_cosp, cosy_cosp);
 
 	return angles;
 }
@@ -886,36 +886,36 @@ kQuat kMat4ToQuat(const kMat4 &m)
 	if (trace > 0.0f)
 	{
 		float s = 0.5f / kSquareRoot(trace + 1.0f);
-		q.w		= 0.25f / s;
-		q.x		= (m.m2[2][1] - m.m2[1][2]) * s;
-		q.y		= (m.m2[0][2] - m.m2[2][0]) * s;
-		q.z		= (m.m2[1][0] - m.m2[0][1]) * s;
+		q.w     = 0.25f / s;
+		q.x     = (m.m2[2][1] - m.m2[1][2]) * s;
+		q.y     = (m.m2[0][2] - m.m2[2][0]) * s;
+		q.z     = (m.m2[1][0] - m.m2[0][1]) * s;
 	}
 	else
 	{
 		if (m.m2[0][0] > m.m2[1][1] && m.m2[0][0] > m.m2[2][2])
 		{
 			float s = 2.0f * kSquareRoot(1.0f + m.m2[0][0] - m.m2[1][1] - m.m2[2][2]);
-			q.w		= (m.m2[2][1] - m.m2[1][2]) / s;
-			q.x		= 0.25f * s;
-			q.y		= (m.m2[0][1] + m.m2[1][0]) / s;
-			q.z		= (m.m2[0][2] + m.m2[2][0]) / s;
+			q.w     = (m.m2[2][1] - m.m2[1][2]) / s;
+			q.x     = 0.25f * s;
+			q.y     = (m.m2[0][1] + m.m2[1][0]) / s;
+			q.z     = (m.m2[0][2] + m.m2[2][0]) / s;
 		}
 		else if (m.m2[1][1] > m.m2[2][2])
 		{
 			float s = 2.0f * kSquareRoot(1.0f + m.m2[1][1] - m.m2[0][0] - m.m2[2][2]);
-			q.w		= (m.m2[0][2] - m.m2[2][0]) / s;
-			q.x		= (m.m2[0][1] + m.m2[1][0]) / s;
-			q.y		= 0.25f * s;
-			q.z		= (m.m2[1][2] + m.m2[2][1]) / s;
+			q.w     = (m.m2[0][2] - m.m2[2][0]) / s;
+			q.x     = (m.m2[0][1] + m.m2[1][0]) / s;
+			q.y     = 0.25f * s;
+			q.z     = (m.m2[1][2] + m.m2[2][1]) / s;
 		}
 		else
 		{
 			float s = 2.0f * kSquareRoot(1.0f + m.m2[2][2] - m.m2[0][0] - m.m2[1][1]);
-			q.w		= (m.m2[1][0] - m.m2[0][1]) / s;
-			q.x		= (m.m2[0][2] + m.m2[2][0]) / s;
-			q.y		= (m.m2[1][2] + m.m2[2][1]) / s;
-			q.z		= 0.25f * s;
+			q.w     = (m.m2[1][0] - m.m2[0][1]) / s;
+			q.x     = (m.m2[0][2] + m.m2[2][0]) / s;
+			q.y     = (m.m2[1][2] + m.m2[2][1]) / s;
+			q.z     = 0.25f * s;
 		}
 	}
 	return kNormalize(q);
@@ -1046,8 +1046,8 @@ kMat3 kTranslation3x3(kVec2 t)
 kMat3 kRotation3x3(kVec2 arm)
 {
 	kMat3 m;
-	float c	  = arm.x;
-	float s	  = arm.y;
+	float c   = arm.x;
+	float s   = arm.y;
 
 	m.rows[0] = kVec3(c, -s, 0.0f);
 	m.rows[1] = kVec3(s, c, 0.0f);
@@ -1058,8 +1058,8 @@ kMat3 kRotation3x3(kVec2 arm)
 kMat3 kRotation3x3(float angle)
 {
 	kMat3 m;
-	float c	  = kCos(angle);
-	float s	  = kSin(angle);
+	float c   = kCos(angle);
+	float s   = kSin(angle);
 
 	m.rows[0] = kVec3(c, -s, 0.0f);
 	m.rows[1] = kVec3(s, c, 0.0f);
@@ -1069,7 +1069,7 @@ kMat3 kRotation3x3(float angle)
 
 kMat3 kLookAt3x3(kVec2 from, kVec2 to, kVec2 forward)
 {
-	kVec2 dir		= kNormalize(to - from);
+	kVec2 dir       = kNormalize(to - from);
 	float cos_theta = kDotProduct(dir, forward);
 	float sin_theta = kSquareRoot(1.0f - cos_theta * cos_theta);
 
@@ -1170,8 +1170,8 @@ kMat4 kRotationZ(float angle)
 
 kMat4 kRotation(float x, float y, float z, kVec2 arm)
 {
-	float c	 = arm.x;
-	float s	 = arm.y;
+	float c  = arm.x;
+	float s  = arm.y;
 
 	float x2 = x * x;
 	float xy = x * y;
@@ -1206,8 +1206,8 @@ kMat4 kRotation(kVec3 axis, float angle)
 kMat4 kLookAt(kVec3 from, kVec3 to, kVec3 world_up)
 {
 	kVec3 forward = kNormalize(from - to);
-	kVec3 Right	  = kNormalize(kCrossProduct(world_up, forward));
-	kVec3 up	  = kCrossProduct(Right, forward);
+	kVec3 Right   = kNormalize(kCrossProduct(world_up, forward));
+	kVec3 up      = kCrossProduct(Right, forward);
 
 	kMat4 lookat;
 	lookat.rows[0] = kVec4(Right.x, up.x, forward.x, -from.x);
@@ -1223,8 +1223,8 @@ kMat4 kLookAtDirection(kVec3 dir, kVec3 world_up)
 	kAssert(!kIsNull(dir));
 
 	kVec3 forward = dir;
-	kVec3 Right	  = kNormalize(kCrossProduct(world_up, forward));
-	kVec3 up	  = kCrossProduct(Right, forward);
+	kVec3 Right   = kNormalize(kCrossProduct(world_up, forward));
+	kVec3 up      = kCrossProduct(Right, forward);
 
 	kMat4 lookat;
 	lookat.rows[0] = kVec4(Right.x, up.x, forward.x, 0);
@@ -1239,7 +1239,7 @@ kMat4 kOrthographicRH(float l, float r, float t, float b, float n, float f)
 {
 	float iwidth  = 1 / (r - l);
 	float iheight = 1 / (t - b);
-	float range	  = 1 / (n - f);
+	float range   = 1 / (n - f);
 
 	kMat4 m;
 	m.rows[0] = kVec4(2 * iwidth, 0.0f, 0.0f, -(l + r) * iwidth);
@@ -1253,7 +1253,7 @@ kMat4 kOrthographicLH(float l, float r, float t, float b, float n, float f)
 {
 	float iwidth  = 1 / (r - l);
 	float iheight = 1 / (t - b);
-	float range	  = 1 / (f - n);
+	float range   = 1 / (f - n);
 
 	kMat4 m;
 	m.rows[0] = kVec4(2 * iwidth, 0.0f, 0.0f, -(l + r) * iwidth);
@@ -1266,8 +1266,8 @@ kMat4 kOrthographicLH(float l, float r, float t, float b, float n, float f)
 kMat4 kPerspectiveRH(float fov, float aspect_ratio, float n, float f)
 {
 	float height = 1.0f / kTan(fov * 0.5f);
-	float width	 = height / aspect_ratio;
-	float range	 = 1 / (n - f);
+	float width  = height / aspect_ratio;
+	float range  = 1 / (n - f);
 
 	kMat4 m;
 	m.rows[0] = kVec4(width, 0.0f, 0.0f, 0.0f);
@@ -1280,8 +1280,8 @@ kMat4 kPerspectiveRH(float fov, float aspect_ratio, float n, float f)
 kMat4 kPerspectiveLH(float fov, float aspect_ratio, float n, float f)
 {
 	float height = 1.0f / kTan(fov * 0.5f);
-	float width	 = height / aspect_ratio;
-	float range	 = 1 / (f - n);
+	float width  = height / aspect_ratio;
+	float range  = 1 / (f - n);
 
 	kMat4 m;
 	m.rows[0] = kVec4(width, 0.0f, 0.0f, 0.0f);
@@ -1308,7 +1308,7 @@ kQuat kQuatBetween(kVec3 from, kVec3 to)
 	else
 	{
 		kVec3 xyz = kAbsolute(from.x) > kAbsolute(from.z) ? kVec3(-from.y, from.x, 0.f) : kVec3(0.f, -from.z, from.y);
-		q		  = kQuat(kVec3Arg(xyz), w);
+		q         = kQuat(kVec3Arg(xyz), w);
 	}
 
 	return kNormalize(q);
@@ -1317,7 +1317,7 @@ kQuat kQuatBetween(kVec3 from, kVec3 to)
 kQuat kQuatBetween(kQuat a, kQuat b)
 {
 	kQuat t = kConjugate(a);
-	t		= t * (1.0f / kDotProduct(t, t));
+	t       = t * (1.0f / kDotProduct(t, t));
 	return t * b;
 }
 
@@ -1348,7 +1348,7 @@ kQuat kSlerp(kQuat from, kQuat to, float t)
 	// use shorter path
 	if (dot < 0.0f)
 	{
-		to	= -to;
+		to  = -to;
 		dot = -dot;
 	}
 
@@ -1358,13 +1358,13 @@ kQuat kSlerp(kQuat from, kQuat to, float t)
 		return kNormalize(result);
 	}
 
-	float theta_0	  = kArcCos(dot);
-	float theta		  = theta_0 * t;
-	float sin_theta	  = kSin(theta);
+	float theta_0     = kArcCos(dot);
+	float theta       = theta_0 * t;
+	float sin_theta   = kSin(theta);
 	float sin_theta_0 = kSin(theta_0);
 
-	float s0		  = kCos(theta) - dot * sin_theta / sin_theta_0;
-	float s1		  = sin_theta / sin_theta_0;
+	float s0          = kCos(theta) - dot * sin_theta / sin_theta_0;
+	float s1          = sin_theta / sin_theta_0;
 
 	return (s0 * from) + (s1 * to);
 }
@@ -1421,7 +1421,7 @@ float kMoveTowards(float from, float to, float factor)
 	if (factor)
 	{
 		float direction = to - from;
-		float distance	= kAbsolute(direction);
+		float distance  = kAbsolute(direction);
 
 		if (distance < factor)
 		{
@@ -1441,7 +1441,7 @@ kVec2 kMoveTowards(kVec2 from, kVec2 to, float factor)
 	if (factor)
 	{
 		kVec2 direction = to - from;
-		float distance	= kLength(direction);
+		float distance  = kLength(direction);
 
 		if (distance < factor)
 		{
@@ -1461,7 +1461,7 @@ kVec3 kMoveTowards(kVec3 from, kVec3 to, float factor)
 	if (factor)
 	{
 		kVec3 direction = to - from;
-		float distance	= kLength(direction);
+		float distance  = kLength(direction);
 
 		if (distance < factor)
 		{
@@ -1481,7 +1481,7 @@ kVec4 kMoveTowards(kVec4 from, kVec4 to, float factor)
 	if (factor)
 	{
 		kVec4 direction = to - from;
-		float distance	= kLength(direction);
+		float distance  = kLength(direction);
 
 		if (distance < factor)
 		{
@@ -1502,8 +1502,8 @@ kVec2 kRotateAround(kVec2 point, kVec2 center, float angle)
 	float s = kSin(angle);
 	kVec2 res;
 	kVec2 p = point - center;
-	res.x	= p.x * c - p.y * s;
-	res.y	= p.x * s + p.y * c;
+	res.x   = p.x * c - p.y * s;
+	res.y   = p.x * s + p.y * c;
 	res += center;
 	return res;
 }
@@ -1517,7 +1517,7 @@ kQuat kRotateTowards(kQuat from, kQuat to, float max_angle)
 		// use shorter path
 		if (dot < 0.0f)
 		{
-			to	= -to;
+			to  = -to;
 			dot = -dot;
 		}
 
@@ -1528,15 +1528,15 @@ kQuat kRotateTowards(kQuat from, kQuat to, float max_angle)
 			return to;
 		}
 
-		float t			  = max_angle / theta_0;
+		float t           = max_angle / theta_0;
 
-		theta_0			  = max_angle;
-		float theta		  = theta_0 * t;
-		float sin_theta	  = kSin(theta);
+		theta_0           = max_angle;
+		float theta       = theta_0 * t;
+		float sin_theta   = kSin(theta);
 		float sin_theta_0 = kSin(theta_0);
 
-		float s0		  = kCos(theta) - dot * sin_theta / sin_theta_0;
-		float s1		  = sin_theta / sin_theta_0;
+		float s0          = kCos(theta) - dot * sin_theta / sin_theta_0;
+		float s1          = sin_theta / sin_theta_0;
 
 		return (s0 * from) + (s1 * to);
 	}
@@ -1564,9 +1564,9 @@ kVec2 kReflect(kVec2 d, kVec2 n)
 kVec3 kLinearToSrgb(kVec3 col)
 {
 	const kMat3 Transforms{kVec3(0.4142f, 0.3576f, 0.1805f), kVec3(0.2126f, 0.7152f, 0.0722f),
-						   kVec3(0.0193f, 0.1192f, 0.9505f)};
+	                       kVec3(0.0193f, 0.1192f, 0.9505f)};
 
-	kVec3		res = Transforms * col;
+	kVec3       res = Transforms * col;
 	return res;
 }
 
@@ -1595,8 +1595,8 @@ kVec4 kLinearToSrgb(kVec4 col, float gamma)
 kVec3 kSrgbToLinear(kVec3 col)
 {
 	const kMat3 Transforms{kVec3(+3.2406f, -1.5372f, -0.4986f), kVec3(-0.9689f, +1.8758f, +0.0415f),
-						   kVec3(+0.0557f, -0.2040f, +1.0570f)};
-	kVec3		res = Transforms * col;
+	                       kVec3(+0.0557f, -0.2040f, +1.0570f)};
+	kVec3       res = Transforms * col;
 	return res;
 }
 
@@ -1637,8 +1637,8 @@ kVec3 kHsvToRgb(kVec3 col)
 		return res;
 	}
 
-	h		= kMod(h, 1.0f) / (60.0f / 360.0f);
-	int	  i = (int)h;
+	h       = kMod(h, 1.0f) / (60.0f / 360.0f);
+	int   i = (int)h;
 	float f = h - (float)i;
 	float p = v * (1.0f - s);
 	float q = v * (1.0f - s * f);
@@ -1646,25 +1646,13 @@ kVec3 kHsvToRgb(kVec3 col)
 
 	switch (i)
 	{
-	case 0:
-		res = kVec3(v, t, p);
-		break;
-	case 1:
-		res = kVec3(q, v, p);
-		break;
-	case 2:
-		res = kVec3(p, v, t);
-		break;
-	case 3:
-		res = kVec3(p, q, v);
-		break;
-	case 4:
-		res = kVec3(t, p, v);
-		break;
-	case 5:
-	default:
-		res = kVec3(v, p, q);
-		break;
+		case 0: res = kVec3(v, t, p); break;
+		case 1: res = kVec3(q, v, p); break;
+		case 2: res = kVec3(p, v, t); break;
+		case 3: res = kVec3(p, q, v); break;
+		case 4: res = kVec3(t, p, v); break;
+		case 5:
+		default: res = kVec3(v, p, q); break;
 	}
 
 	return res;
@@ -1681,23 +1669,23 @@ kVec3 kRgbToHsv(kVec3 c)
 	if (g < b)
 	{
 		auto t = b;
-		b	   = g;
-		g	   = t;
-		k	   = -1.f;
+		b      = g;
+		g      = t;
+		k      = -1.f;
 	}
 	if (r < g)
 	{
 		auto t = g;
-		g	   = r;
-		r	   = t;
-		k	   = -2.f / 6.f - k;
+		g      = r;
+		r      = t;
+		k      = -2.f / 6.f - k;
 	}
 
 	kVec3 res;
 	float chroma = r - (g < b ? g : b);
-	res.x		 = kAbsolute(k + (g - b) / (6.f * chroma + 1e-20f));
-	res.y		 = chroma / (r + 1e-20f);
-	res.z		 = r;
+	res.x        = kAbsolute(k + (g - b) / (6.f * chroma + 1e-20f));
+	res.y        = chroma / (r + 1e-20f);
+	res.z        = r;
 	return res;
 }
 

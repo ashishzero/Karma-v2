@@ -6,8 +6,8 @@
 #include <UserEnv.h>
 #include <avrt.h>
 
-#pragma comment(lib, "Avrt.lib")	 // AvSetMmThreadCharacteristicsW
-#pragma comment(lib, "Userenv.lib")	 // GetUserProfileDirectoryW
+#pragma comment(lib, "Avrt.lib")     // AvSetMmThreadCharacteristicsW
+#pragma comment(lib, "Userenv.lib")  // GetUserProfileDirectoryW
 #pragma comment(lib, "Advapi32.lib") // OpenProcessToken
 
 u64 kGetPerformanceFrequency(void)
@@ -37,7 +37,7 @@ kFile kOpenFile(kString mb_path, kFileAccess paccess, kFileShareMode pshare, kFi
 {
 	wchar_t path[K_MAX_PATH];
 
-	int len	  = MultiByteToWideChar(CP_UTF8, 0, (char *)mb_path.data, (int)mb_path.count, path, kArrayCount(path) - 1);
+	int len   = MultiByteToWideChar(CP_UTF8, 0, (char *)mb_path.data, (int)mb_path.count, path, kArrayCount(path) - 1);
 	path[len] = 0;
 
 	DWORD access = 0;
@@ -90,7 +90,7 @@ umem kReadFile(kFile handle, u8 *buffer, umem size)
 	else
 		read_size = (DWORD)size;
 
-	umem total_bytes_read		 = 0;
+	umem total_bytes_read        = 0;
 	umem remaining_bytes_to_read = size;
 
 	while (remaining_bytes_to_read)
@@ -121,7 +121,7 @@ umem kWriteFile(kFile handle, u8 *buff, umem size)
 	else
 		write_size = (DWORD)size;
 
-	umem total_bytes_written	  = 0;
+	umem total_bytes_written      = 0;
 	umem remaining_bytes_to_write = size;
 
 	while (remaining_bytes_to_write)
@@ -156,7 +156,7 @@ kString kReadEntireFile(kString path)
 	if (handle.resource)
 	{
 		umem size = kGetFileSize(handle);
-		u8	*buff = (u8 *)kAlloc(size);
+		u8  *buff = (u8 *)kAlloc(size);
 		if (buff)
 			size = kReadFile(handle, buff, size);
 		kCloseFile(handle);
@@ -209,7 +209,7 @@ static uint kTranslateAttributes(DWORD attrs)
 uint kGetFileAttributes(kString mb_path)
 {
 	wchar_t path[K_MAX_PATH];
-	int len	  = MultiByteToWideChar(CP_UTF8, 0, (char *)mb_path.data, (int)mb_path.count, path, kArrayCount(path) - 1);
+	int len   = MultiByteToWideChar(CP_UTF8, 0, (char *)mb_path.data, (int)mb_path.count, path, kArrayCount(path) - 1);
 	path[len] = 0;
 	DWORD attrs = GetFileAttributesW(path);
 	return kTranslateAttributes(attrs);
@@ -220,7 +220,7 @@ u64 kGetFileLastModifiedTime(kString mb_filepath)
 	kFile file = kOpenFile(mb_filepath, kFileAccess_Read, kFileShareMode_ReadWrite, kFileMethod_OpenExisting);
 	if (file)
 	{
-		HANDLE	 handle = file.resource;
+		HANDLE   handle = file.resource;
 		FILETIME tm;
 		if (GetFileTime(handle, 0, 0, &tm))
 		{
@@ -238,7 +238,7 @@ u64 kGetFileLastModifiedTime(kString mb_filepath)
 bool kSetWorkingDirectory(kString mb_path)
 {
 	wchar_t path[K_MAX_PATH];
-	int len	  = MultiByteToWideChar(CP_UTF8, 0, (char *)mb_path.data, (int)mb_path.count, path, kArrayCount(path) - 1);
+	int len   = MultiByteToWideChar(CP_UTF8, 0, (char *)mb_path.data, (int)mb_path.count, path, kArrayCount(path) - 1);
 	path[len] = 0;
 	return SetCurrentDirectoryW(path);
 }
@@ -256,15 +256,15 @@ int kGetWorkingDirectory(u8 *mb_path, int len)
 bool kSearchPath(kString exe)
 {
 	wchar_t path[K_MAX_PATH];
-	int		len = MultiByteToWideChar(CP_UTF8, 0, (char *)exe.data, (int)exe.count, path, kArrayCount(path) - 1);
-	path[len]	= 0;
+	int     len = MultiByteToWideChar(CP_UTF8, 0, (char *)exe.data, (int)exe.count, path, kArrayCount(path) - 1);
+	path[len]   = 0;
 	return SearchPathW(0, path, L".exe", 0, 0, 0);
 }
 
 bool kCreateDirectories(kString mb_path)
 {
 	wchar_t path[K_MAX_PATH];
-	int len	  = MultiByteToWideChar(CP_UTF8, 0, (char *)mb_path.data, (int)mb_path.count, path, kArrayCount(path) - 1);
+	int len   = MultiByteToWideChar(CP_UTF8, 0, (char *)mb_path.data, (int)mb_path.count, path, kArrayCount(path) - 1);
 	path[len] = 0;
 	int count = 0;
 
@@ -290,7 +290,7 @@ int kGetUserPath(u8 *mb_path, int len)
 	{
 		wchar_t path[K_MAX_PATH] = {};
 
-		DWORD	wlen			 = kArrayCount(path);
+		DWORD   wlen             = kArrayCount(path);
 		if (GetUserProfileDirectoryW(token, path, &wlen))
 		{
 			return kWinWideToUTF8((char *)mb_path, len, path);
@@ -300,30 +300,30 @@ int kGetUserPath(u8 *mb_path, int len)
 }
 
 static void kTranslateDirectoryItem(kDirectoryItem *dst, WIN32_FIND_DATAW *src, wchar_t *root, imem root_len,
-									char *buffer, imem buff_len)
+                                    char *buffer, imem buff_len)
 {
 	ULARGE_INTEGER converter;
 
 	converter.HighPart = src->ftCreationTime.dwHighDateTime;
 	converter.LowPart  = src->ftCreationTime.dwLowDateTime;
-	dst->created	   = converter.QuadPart;
+	dst->created       = converter.QuadPart;
 
 	converter.HighPart = src->ftLastAccessTime.dwHighDateTime;
 	converter.LowPart  = src->ftLastAccessTime.dwLowDateTime;
-	dst->accessed	   = converter.QuadPart;
+	dst->accessed      = converter.QuadPart;
 
 	converter.HighPart = src->ftLastWriteTime.dwHighDateTime;
 	converter.LowPart  = src->ftLastWriteTime.dwLowDateTime;
-	dst->modified	   = converter.QuadPart;
+	dst->modified      = converter.QuadPart;
 
 	converter.HighPart = src->nFileSizeHigh;
 	converter.LowPart  = src->nFileSizeLow;
-	dst->size		   = converter.QuadPart;
+	dst->size          = converter.QuadPart;
 
-	DWORD attr		   = src->dwFileAttributes;
-	dst->attributes	   = kTranslateAttributes(attr);
+	DWORD attr         = src->dwFileAttributes;
+	dst->attributes    = kTranslateAttributes(attr);
 
-	int count		   = snprintf(buffer, buff_len, "%S%S", root, src->cFileName);
+	int count          = snprintf(buffer, buff_len, "%S%S", root, src->cFileName);
 
 	for (int i = 0; i < count; ++i)
 	{
@@ -338,7 +338,7 @@ static void kTranslateDirectoryItem(kDirectoryItem *dst, WIN32_FIND_DATAW *src, 
 static bool kVisitDirectories(wchar_t *path, int len, kDirectoryVisitorProc visitor, void *data)
 {
 	WIN32_FIND_DATAW find;
-	HANDLE			 handle = FindFirstFileW(path, &find);
+	HANDLE           handle = FindFirstFileW(path, &find);
 	if (handle == INVALID_HANDLE_VALUE)
 	{
 		kWinLogError(GetLastError(), "Windows", "Failed to visit directory: \"%S\"", path);
@@ -353,7 +353,7 @@ static bool kVisitDirectories(wchar_t *path, int len, kDirectoryVisitorProc visi
 	{
 		if (wcscmp(find.cFileName, L".") != 0 && wcscmp(find.cFileName, L"..") != 0)
 		{
-			char		   buffer[K_MAX_PATH];
+			char           buffer[K_MAX_PATH];
 
 			kDirectoryItem item;
 			kTranslateDirectoryItem(&item, &find, path, len, buffer, kArrayCount(buffer));
@@ -363,8 +363,8 @@ static bool kVisitDirectories(wchar_t *path, int len, kDirectoryVisitorProc visi
 			if ((item.attributes & kFileAttribute_Directory) && r == kDirectoryVisit_Recurse)
 			{
 				wchar_t append[] = L"\\*";
-				int		flen	 = lstrlenW(find.cFileName);
-				int		sublen	 = len + flen + kArrayCount(append) - 1;
+				int     flen     = lstrlenW(find.cFileName);
+				int     sublen   = len + flen + kArrayCount(append) - 1;
 
 				if (sublen + 1 >= K_MAX_PATH)
 					return false;
@@ -398,7 +398,7 @@ bool kVisitDirectories(kString mb_path, kDirectoryVisitorProc visitor, void *dat
 		return false;
 
 	wchar_t path[K_MAX_PATH];
-	int len	  = MultiByteToWideChar(CP_UTF8, 0, (char *)mb_path.data, (int)mb_path.count, path, kArrayCount(path) - 1);
+	int len   = MultiByteToWideChar(CP_UTF8, 0, (char *)mb_path.data, (int)mb_path.count, path, kArrayCount(path) - 1);
 	path[len] = 0;
 
 	wchar_t append[] = L"\\*";
@@ -426,17 +426,17 @@ bool kVisitDirectories(kString mb_path, kDirectoryVisitorProc visitor, void *dat
 
 typedef struct ThreadUserData
 {
-	kThreadProc		 proc;
-	void			*data;
+	kThreadProc      proc;
+	void            *data;
 	kThreadAttribute attr;
-	HANDLE			 event;
+	HANDLE           event;
 } ThreadUserData;
 
 static void kSetThreadAttribute(kThreadAttribute attr)
 {
-	const wchar_t *Name[]	   = {L"Audio", L"Capture", L"Distribution", L"Games", L"Playback", L"Pro Audio"};
-	DWORD		   task_index  = 0;
-	HANDLE		   task_handle = AvSetMmThreadCharacteristicsW(Name[attr], &task_index);
+	const wchar_t *Name[]      = {L"Audio", L"Capture", L"Distribution", L"Games", L"Playback", L"Pro Audio"};
+	DWORD          task_index  = 0;
+	HANDLE         task_handle = AvSetMmThreadCharacteristicsW(Name[attr], &task_index);
 	(void)task_handle;
 }
 
@@ -450,10 +450,10 @@ static DWORD WINAPI kThreadStartRoutine(LPVOID thread_param)
 
 int kExecuteProcess(kString cmdline)
 {
-	int					len		 = MultiByteToWideChar(CP_UTF8, 0, (char *)cmdline.data, (int)cmdline.count, 0, 0) + 1;
-	wchar_t			   *cmd		 = (wchar_t *)kAlloc(sizeof(wchar_t) * len);
-	STARTUPINFOW		start_up = {sizeof(start_up)};
-	PROCESS_INFORMATION process	 = {};
+	int                 len      = MultiByteToWideChar(CP_UTF8, 0, (char *)cmdline.data, (int)cmdline.count, 0, 0) + 1;
+	wchar_t            *cmd      = (wchar_t *)kAlloc(sizeof(wchar_t) * len);
+	STARTUPINFOW        start_up = {sizeof(start_up)};
+	PROCESS_INFORMATION process  = {};
 
 	if (!cmd)
 	{
@@ -487,10 +487,10 @@ int kExecuteProcess(kString cmdline)
 kThread kLaunchThread(kThreadProc proc, void *arg, kThreadAttribute attr)
 {
 	ThreadUserData data;
-	data.proc	  = proc;
-	data.data	  = arg;
-	data.attr	  = attr;
-	data.event	  = CreateEventW(0, 0, 0, 0);
+	data.proc     = proc;
+	data.data     = arg;
+	data.attr     = attr;
+	data.event    = CreateEventW(0, 0, 0, 0);
 	HANDLE handle = CreateThread(NULL, 0, kThreadStartRoutine, &data, 0, NULL);
 	if (handle)
 		WaitForSingleObject(data.event, INFINITE);
@@ -562,7 +562,7 @@ void kWaitSemaphore(kSemaphore *sem)
 int kWaitSemaphoreTimed(kSemaphore *sem, u32 millisecs)
 {
 	HANDLE handle = sem->_id;
-	DWORD  res	  = WaitForSingleObject(handle, millisecs);
+	DWORD  res    = WaitForSingleObject(handle, millisecs);
 	if (res == WAIT_OBJECT_0)
 		return 1;
 	if (res == WAIT_TIMEOUT)
@@ -633,7 +633,7 @@ int kWaitCondVarTimed(kCondVar *cond, kMutex *mutex, u32 millisecs)
 kModule kLoadModule(kString mb_path)
 {
 	wchar_t path[K_MAX_PATH];
-	int len	  = MultiByteToWideChar(CP_UTF8, 0, (char *)mb_path.data, (int)mb_path.count, path, kArrayCount(path) - 1);
+	int len   = MultiByteToWideChar(CP_UTF8, 0, (char *)mb_path.data, (int)mb_path.count, path, kArrayCount(path) - 1);
 	path[len] = 0;
 	HMODULE mod = LoadLibraryW(path);
 	kModule res = {(kPlatformModule *)mod};
@@ -647,7 +647,7 @@ void kFreeModule(kModule module)
 
 kProcedure kGetProcAddress(kModule module, const char *name)
 {
-	HMODULE	   mod	= (HMODULE)module.resource;
+	HMODULE    mod  = (HMODULE)module.resource;
 	kProcedure proc = (kProcedure)GetProcAddress(mod, name);
 	return proc;
 }

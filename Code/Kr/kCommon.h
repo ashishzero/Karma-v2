@@ -135,7 +135,7 @@
 #if defined(_MSC_VER)
 #define kTriggerBreakpoint() __debugbreak()
 #elif ((!defined(__NACL__)) &&                                                                                         \
-	   ((defined(__GNUC__) || defined(__clang__)) && (defined(__i386__) || defined(__x86_64__))))
+       ((defined(__GNUC__) || defined(__clang__)) && (defined(__i386__) || defined(__x86_64__))))
 #define kTriggerBreakpoint() __asm__ __volatile__("int $3\n\t")
 #elif defined(__386__) && defined(__WATCOMC__)
 #define kTriggerBreakpoint() _asm { int 0x03}
@@ -206,9 +206,7 @@ inproc void kUnreachable()
 #endif
 
 #define kNoDefaultCase()                                                                                               \
-	default:                                                                                                           \
-		kUnreachable();                                                                                                \
-		break
+	default: kUnreachable(); break
 
 [[noreturn]] inproc void kUnimplemented()
 {
@@ -223,7 +221,8 @@ inproc void kUnreachable()
 #define kConcatRaw(x, y) x##y
 #define kConcatRaw2(x, y) kConcatRaw(x, y)
 
-template <typename Item> struct kExitScope
+template <typename Item>
+struct kExitScope
 {
 	Item lambda;
 	kExitScope(Item lambda) : lambda(lambda)
@@ -235,7 +234,8 @@ template <typename Item> struct kExitScope
 };
 struct kExitScope2
 {
-	template <typename Item> kExitScope<Item> operator+(Item t)
+	template <typename Item>
+	kExitScope<Item> operator+(Item t)
 	{
 		return t;
 	}
@@ -247,20 +247,20 @@ struct kExitScope2
 //
 
 typedef uint32_t  uint;
-typedef float	  real;
-typedef uint8_t	  byte;
-typedef uint8_t	  u8;
+typedef float     real;
+typedef uint8_t   byte;
+typedef uint8_t   u8;
 typedef uint16_t  u16;
 typedef uint32_t  u32;
 typedef uint64_t  u64;
-typedef int8_t	  i8;
-typedef int16_t	  i16;
-typedef int32_t	  i32;
-typedef int32_t	  b32;
-typedef int64_t	  i64;
-typedef float	  r32;
-typedef double	  r64;
-typedef size_t	  umem;
+typedef int8_t    i8;
+typedef int16_t   i16;
+typedef int32_t   i32;
+typedef int32_t   b32;
+typedef int64_t   i64;
+typedef float     r32;
+typedef double    r64;
+typedef size_t    umem;
 typedef ptrdiff_t imem;
 
 #define REAL32_MIN FLT_MIN
@@ -277,42 +277,51 @@ typedef ptrdiff_t imem;
 
 #define kArrayCount(a) (sizeof(a) / sizeof((a)[0]))
 
-template <typename Item> constexpr Item kMin(Item a, Item b)
+template <typename Item>
+constexpr Item kMin(Item a, Item b)
 {
 	return a < b ? a : b;
 }
-template <typename Item> constexpr Item kMax(Item a, Item b)
+template <typename Item>
+constexpr Item kMax(Item a, Item b)
 {
 	return a > b ? a : b;
 }
-template <typename Item> constexpr Item kClamp(Item a, Item b, Item v)
+template <typename Item>
+constexpr Item kClamp(Item a, Item b, Item v)
 {
 	return kMin(b, kMax(a, v));
 }
-template <typename Item> constexpr bool kIsInRange(Item a, Item b, Item v)
+template <typename Item>
+constexpr bool kIsInRange(Item a, Item b, Item v)
 {
 	return v >= a && v <= b;
 }
-template <typename Item> void kSwap(Item *a, Item *b)
+template <typename Item>
+void kSwap(Item *a, Item *b)
 {
 	Item t = *b;
-	*b	   = *a;
-	*a	   = t;
+	*b     = *a;
+	*a     = t;
 }
-template <typename Item> constexpr Item kIsPower2(Item value)
+template <typename Item>
+constexpr Item kIsPower2(Item value)
 {
 	return ((value != 0) && ((value) & ((value)-1)) == 0);
 }
-template <typename Item, typename U> constexpr Item kAlignUp(Item x, U p)
+template <typename Item, typename U>
+constexpr Item kAlignUp(Item x, U p)
 {
 	return (((x) + (p)-1) & ~((p)-1));
 }
-template <typename Item, typename U> constexpr Item kAlignDown(Item x, U p)
+template <typename Item, typename U>
+constexpr Item kAlignDown(Item x, U p)
 {
 	return ((x) & ~((p)-1));
 }
 
-template <typename Item, typename U> constexpr Item kIPower(Item v, U p)
+template <typename Item, typename U>
+constexpr Item kIPower(Item v, U p)
 {
 	Item r = v;
 	for (Item i = 1; i < p; ++i)
@@ -320,7 +329,8 @@ template <typename Item, typename U> constexpr Item kIPower(Item v, U p)
 	return r;
 }
 
-template <typename Item> constexpr static Item kNextPowerOf2(Item n)
+template <typename Item>
+constexpr static Item kNextPowerOf2(Item n)
 {
 	if (kIsPower2(n))
 		return n;
@@ -346,9 +356,9 @@ inproc u32 constexpr kBSwap32(u32 a)
 inproc u64 constexpr kBSwap64(u64 a)
 {
 	return ((((a)&0x00000000000000FFULL) << 56) | (((a)&0x000000000000FF00ULL) << 40) |
-			(((a)&0x0000000000FF0000ULL) << 24) | (((a)&0x00000000FF000000ULL) << 8) |
-			(((a)&0x000000FF00000000ULL) >> 8) | (((a)&0x0000FF0000000000ULL) >> 24) |
-			(((a)&0x00FF000000000000ULL) >> 40) | (((a)&0xFF00000000000000ULL) >> 56));
+	        (((a)&0x0000000000FF0000ULL) << 24) | (((a)&0x00000000FF000000ULL) << 8) |
+	        (((a)&0x000000FF00000000ULL) >> 8) | (((a)&0x0000FF0000000000ULL) >> 24) |
+	        (((a)&0x00FF000000000000ULL) >> 40) | (((a)&0xFF00000000000000ULL) >> 56));
 }
 
 inproc constexpr umem  kKiloByte  = (1024ULL);
@@ -389,7 +399,8 @@ void kHandleAssertion(const char *file, int line, const char *proc, const char *
 //
 //
 
-template <typename T> struct kVec2T
+template <typename T>
+struct kVec2T
 {
 	union {
 		struct
@@ -407,7 +418,8 @@ template <typename T> struct kVec2T
 	{}
 };
 
-template <typename T> struct kVec3T
+template <typename T>
+struct kVec3T
 {
 	union {
 		struct
@@ -418,11 +430,11 @@ template <typename T> struct kVec3T
 		struct
 		{
 			kVec2T<T> xy;
-			T		  _end;
+			T         _end;
 		};
 		struct
 		{
-			T		  _beg;
+			T         _beg;
 			kVec2T<T> yz;
 		};
 	};
@@ -439,7 +451,8 @@ template <typename T> struct kVec3T
 	{}
 };
 
-template <typename T> struct kVec4T
+template <typename T>
+struct kVec4T
 {
 	union {
 		struct
@@ -455,12 +468,12 @@ template <typename T> struct kVec4T
 		struct
 		{
 			kVec3T<T> xyz;
-			T		  _end;
+			T         _end;
 		};
 		struct
 		{
 			kVec3T<T> _beg;
-			T		  yzw;
+			T         yzw;
 		};
 	};
 
@@ -480,9 +493,9 @@ template <typename T> struct kVec4T
 	{}
 };
 
-using kVec2	 = kVec2T<float>;
-using kVec3	 = kVec3T<float>;
-using kVec4	 = kVec4T<float>;
+using kVec2  = kVec2T<float>;
+using kVec3  = kVec3T<float>;
+using kVec4  = kVec4T<float>;
 using kVec2i = kVec2T<int>;
 using kVec3i = kVec3T<int>;
 using kVec4i = kVec4T<int>;
@@ -574,7 +587,8 @@ typedef union kQuat {
 //
 //
 
-template <typename Item> struct kSpan
+template <typename Item>
+struct kSpan
 {
 	imem  count;
 	Item *data;
@@ -583,7 +597,8 @@ template <typename Item> struct kSpan
 	{}
 	inline kSpan(const Item *p, imem n) : count(n), data((Item *)p)
 	{}
-	template <imem _Count> constexpr kSpan(const Item (&a)[_Count]) : count(_Count), data((Item *)a)
+	template <imem _Count>
+	constexpr kSpan(const Item (&a)[_Count]) : count(_Count), data((Item *)a)
 	{}
 	inline Item &operator[](imem index) const
 	{
@@ -639,7 +654,8 @@ template <typename Item> struct kSpan
 //
 //
 
-template <typename T> struct kHandle
+template <typename T>
+struct kHandle
 {
 	T *resource;
 
@@ -662,12 +678,14 @@ template <typename T> struct kHandle
 	}
 };
 
-template <typename T> bool operator==(kHandle<T> a, kHandle<T> b)
+template <typename T>
+bool operator==(kHandle<T> a, kHandle<T> b)
 {
 	return a.resource == b.resource;
 }
 
-template <typename T> bool operator!=(kHandle<T> a, kHandle<T> b)
+template <typename T>
+bool operator!=(kHandle<T> a, kHandle<T> b)
 {
 	return a.resource != b.resource;
 }
@@ -679,7 +697,7 @@ template <typename T> bool operator!=(kHandle<T> a, kHandle<T> b)
 struct kString
 {
 	imem count;
-	u8	*data;
+	u8  *data;
 
 	kString() : count(0), data(0)
 	{}
@@ -687,7 +705,8 @@ struct kString
 	{}
 	kString(kSpan<char> av) : count(av.count), data((u8 *)av.data)
 	{}
-	template <imem _Length> constexpr kString(const char (&a)[_Length]) : count(_Length - 1), data((u8 *)a)
+	template <imem _Length>
+	constexpr kString(const char (&a)[_Length]) : count(_Length - 1), data((u8 *)a)
 	{}
 	kString(const u8 *_Data, imem _Length) : count(_Length), data((u8 *)_Data)
 	{}
@@ -751,7 +770,7 @@ typedef void *(*kAllocatorProc)(kAllocatorMode, void *, umem, umem, void *);
 typedef struct kAllocator
 {
 	kAllocatorProc proc;
-	void		  *data;
+	void          *data;
 } kAllocator;
 
 enum kArenaFlags
@@ -771,24 +790,24 @@ typedef struct kAtomic
 
 typedef struct kArena
 {
-	u8	   *mem;
-	umem	pos;
-	umem	cap;
-	u32		alignment;
-	u32		flags;
+	u8     *mem;
+	umem    pos;
+	umem    cap;
+	u32     alignment;
+	u32     flags;
 	kAtomic lock;
 } kArena;
 
 typedef struct kTempBlock
 {
 	kArena *arena;
-	umem	checkpoint;
+	umem    checkpoint;
 } kTempBlock;
 
 typedef struct kArenaSpec
 {
-	u32	 flags;
-	u32	 alignment;
+	u32  flags;
+	u32  alignment;
 	umem capacity;
 } kArenaSpec;
 
@@ -815,7 +834,7 @@ typedef struct kLogger
 {
 	kLogProc  proc;
 	kLogLevel level;
-	void	 *data;
+	void     *data;
 } kLogger;
 
 //
@@ -828,28 +847,28 @@ inproc void *kFallbackAllocatorProc(kAllocatorMode mode, void *ptr, umem prev, u
 }
 
 static const kAllocator kFallbackAllocator = {kFallbackAllocatorProc};
-static const kArena		kFallbackArena	   = {};
+static const kArena     kFallbackArena     = {};
 
 //
 //
 //
 
-u8	   *kAlignPointer(u8 *location, umem alignment);
+u8     *kAlignPointer(u8 *location, umem alignment);
 
 void   *kAlloc(kAllocator *allocator, umem size);
 void   *kRealloc(kAllocator *allocator, void *ptr, umem prev, umem size);
-void	kFree(kAllocator *allocator, void *ptr, umem size);
+void    kFree(kAllocator *allocator, void *ptr, umem size);
 
-void	kArenaAllocator(kArena *arena, kAllocator *allocator);
+void    kArenaAllocator(kArena *arena, kAllocator *allocator);
 kArena *kAllocArena(const kArenaSpec &spec, kAllocator *allocator);
-void	kFreeArena(kArena *arena, kAllocator *allocator);
-void	kResetArena(kArena *arena);
+void    kFreeArena(kArena *arena, kAllocator *allocator);
+void    kResetArena(kArena *arena);
 
-void	kLockArena(kArena *arena);
-void	kUnlockArena(kArena *arena);
+void    kLockArena(kArena *arena);
+void    kUnlockArena(kArena *arena);
 
-bool	kSetPosition(kArena *arena, umem pos, uint flags);
-bool	kAlignPosition(kArena *arena, umem alignment, uint flags);
+bool    kSetPosition(kArena *arena, umem pos, uint flags);
+bool    kAlignPosition(kArena *arena, umem alignment, uint flags);
 
 void   *kPushSize(kArena *arena, umem size, uint flags);
 void   *kPushSizeAligned(kArena *arena, umem size, u32 alignment, uint flags);
@@ -858,18 +877,18 @@ void   *kPushSizeAligned(kArena *arena, umem size, u32 alignment, uint flags);
 #define kPushArray(arena, type, count, flags)                                                                          \
 	(type *)kPushSizeAligned(arena, sizeof(type) * (count), alignof(type), flags)
 
-void	   kPopSize(kArena *arena, umem size, uint flags);
+void       kPopSize(kArena *arena, umem size, uint flags);
 
 kTempBlock kBeginTemporaryMemory(kArena *arena, uint flags);
-void	   kEndTemporaryMemory(kTempBlock *temp, uint flags);
+void       kEndTemporaryMemory(kTempBlock *temp, uint flags);
 
 //
 //
 //
 
-u32	  kRandom(kRandomSource *random);
-u32	  kRandomBound(kRandomSource *random, u32 bound);
-u32	  kRandomRange(kRandomSource *random, u32 min, u32 max);
+u32   kRandom(kRandomSource *random);
+u32   kRandomBound(kRandomSource *random, u32 bound);
+u32   kRandomRange(kRandomSource *random, u32 min, u32 max);
 float kRandomFloat01(kRandomSource *random);
 float kRandomFloatBound(kRandomSource *random, float bound);
 float kRandomFloatRange(kRandomSource *random, float min, float max);
@@ -880,46 +899,46 @@ void  kRandomSourceSeed(kRandomSource *random, u64 state, u64 seq);
 //
 //
 
-int		kCodepointToUTF8(u32 codepoint, u8 buffer[4]);
-int		kUTF8ToCodepoint(const u8 *start, u8 *end, u32 *codepoint);
+int     kCodepointToUTF8(u32 codepoint, u8 buffer[4]);
+int     kUTF8ToCodepoint(const u8 *start, u8 *end, u32 *codepoint);
 
 kString kCopyString(kString string, kAllocator *allocator);
 char   *kStringToCstr(kString string, kAllocator *allocator);
 
-bool	kIsWhitespace(u32 ch);
+bool    kIsWhitespace(u32 ch);
 kString kTrimString(kString str);
 kString kSubString(const kString str, imem index, imem count);
 kString kSubLeft(const kString str, imem count);
 kString kSubRight(const kString str, imem index);
 
-bool	kStringEquals(kString a, kString b);
-bool	kStartsWith(kString str, kString sub);
-bool	kEndsWith(kString str, kString sub);
+bool    kStringEquals(kString a, kString b);
+bool    kStartsWith(kString str, kString sub);
+bool    kEndsWith(kString str, kString sub);
 
 kString kRemovePrefix(kString str, imem count);
 kString kRemoveSuffix(kString str, imem count);
 
-imem	kFindString(kString str, const kString key, imem pos);
-imem	kFindChar(kString str, u32 key, imem pos);
-imem	kInvFindString(kString str, kString key, imem pos);
-imem	kInvFindChar(kString str, u32 key, imem pos);
+imem    kFindString(kString str, const kString key, imem pos);
+imem    kFindChar(kString str, u32 key, imem pos);
+imem    kInvFindString(kString str, kString key, imem pos);
+imem    kInvFindChar(kString str, u32 key, imem pos);
 
-bool	kSplitString(kString str, kString substr, kString *left, kString *right);
+bool    kSplitString(kString str, kString substr, kString *left, kString *right);
 
-bool	operator==(const kString a, const kString b);
-bool	operator!=(const kString a, const kString b);
+bool    operator==(const kString a, const kString b);
+bool    operator!=(const kString a, const kString b);
 
 //
 //
 //
 
-int	  kAtomicLoad(kAtomic *atomic);
+int   kAtomicLoad(kAtomic *atomic);
 void  kAtomicStore(kAtomic *atomic, int value);
-int	  kAtomicInc(kAtomic *dst);
-int	  kAtomicDec(kAtomic *dst);
-int	  kAtomicAdd(kAtomic *dst, int val);
-int	  kAtomicCmpExg(kAtomic *dst, int exchange, int compare);
+int   kAtomicInc(kAtomic *dst);
+int   kAtomicDec(kAtomic *dst);
+int   kAtomicAdd(kAtomic *dst, int val);
+int   kAtomicCmpExg(kAtomic *dst, int exchange, int compare);
 void *kAtomicCmpExgPtr(void *volatile *dst, void *exchange, void *compare);
-int	  kAtomicExg(kAtomic *dst, int val);
+int   kAtomicExg(kAtomic *dst, int val);
 void  kAtomicLock(kAtomic *lock);
 void  kAtomicUnlock(kAtomic *lock);
