@@ -41,7 +41,7 @@ void Update(float dt)
 	float   k   = kGetWindowDpiScale();
 
 	// kDrawRect(kVec2(50), kVec2(2000, 64), kVec4(1, 1, 1, 0.5));
-	kDrawText(res, kVec2(250, 250), kVec4(1, 1, 1, 1), k);
+	kDrawText(res, kVec2(250, 250), kVec4(1, 1, 1, 1), k * 0.5f);
 
 	kEndCamera();
 
