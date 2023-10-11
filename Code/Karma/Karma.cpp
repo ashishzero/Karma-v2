@@ -1,3 +1,4 @@
+#include "kMath.h"
 #include "kMedia.h"
 #include "kRender.h"
 #include "kStrings.h"
@@ -28,20 +29,18 @@ void Update(float dt)
 		kToggleWindowFullscreen();
 	}
 
-	u32 w, h;
-	kGetWindowSize(&w, &h);
-
-	float aspect_ratio = (float)w / (float)h;
+	kVec2i size         = kGetWindowSize();
+	float  aspect_ratio = kGetWindowAspectRatio();
 
 	kBeginDefaultRenderPass(1, kVec4(0.1f, 0.1f, 0.1f, 1.0f));
 
-	kBeginCameraRect(0, (float)w, 0, (float)h);
+	kBeginCameraRect(0, (float)size.x, 0, (float)size.y);
 
-	kString res = kFormatString(arena, "Resolution (%u, %u) - MSAA: %u", w, h, kGetMSAASampleCount());
+	kString res = kFormatString(arena, "Resolution (%d, %d) - MSAA: %u", size.x, size.y, kGetMSAASampleCount());
 
 	float   k   = kGetWindowDpiScale();
 
-	//kDrawRect(kVec2(50), kVec2(2000, 64), kVec4(1, 1, 1, 0.5));
+	// kDrawRect(kVec2(50), kVec2(2000, 64), kVec4(1, 1, 1, 0.5));
 	kDrawText(res, kVec2(50, 0), kVec4(1, 1, 0, 1), k);
 
 	kEndCamera();

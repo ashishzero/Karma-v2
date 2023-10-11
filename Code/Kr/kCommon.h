@@ -583,6 +583,27 @@ typedef union kQuat {
 	}
 } kQuat;
 
+typedef struct kRect
+{
+	kVec2 min;
+	kVec2 max;
+
+	kRect()
+	{}
+
+	kRect(float minx, float miny, float maxx, float maxy)
+	{
+		min = kVec2(minx, miny);
+		max = kVec2(maxx, maxy);
+	}
+
+	kRect(kVec2 rmin, kVec2 rmax)
+	{
+		min = rmin;
+		max = rmax;
+	}
+} kRect;
+
 //
 //
 //

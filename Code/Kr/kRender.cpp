@@ -1,3 +1,4 @@
+#include "kMath.h"
 #include "kArray.h"
 #include "kRender.h"
 
@@ -70,6 +71,7 @@ typedef struct kRenderContext
 	kRenderContextFrame   frame;
 	kRenderContext2D      context2d;
 	kRenderContextBuiltin builtin;
+	kSwapChain            swap_chain;
 	kRenderBackend        backend;
 	uint                  req_features;
 } kRenderContext;
@@ -147,89 +149,6 @@ static float kCosLookup(float turns)
 //
 //
 
-static void kDestroyRenderTargetMSAA(kRenderContextTarget *target)
-{
-	if (target->msaa)
-	{
-		render.backend.destroy_texture(target->msaa);
-		target->msaa = nullptr;
-	}
-
-	if (target->msaa_resolved)
-	{
-		render.backend.destroy_texture(target->msaa_resolved);
-		target->msaa_resolved = nullptr;
-	}
-
-	target->multisamples = 0;
-}
-
-static void kRecreateRenderTargetMSAA(kRenderContextTarget *target, u32 w, u32 h, u32 multisamples)
-{
-	kAssert(w && h && multisamples);
-
-	if (target->msaa && target->msaa_resolved)
-	{
-		u32 cw, ch;
-		render.backend.texture_size(target->msaa, &cw, &ch);
-
-		if (target->multisamples == multisamples && cw == w && ch == h)
-			return;
-	}
-
-	kDestroyRenderTargetMSAA(target);
-
-	kTextureSpec spec     = {};
-	spec.format           = kFormat_RGBA16_FLOAT;
-	spec.width            = w;
-	spec.height           = h;
-	spec.bind_flags       = kBind_RenderTarget;
-	spec.num_samples      = multisamples;
-	spec.usage            = kUsage_Default;
-
-	kTextureSpec resolved = spec;
-	resolved.num_samples  = 1;
-	resolved.bind_flags   = kBind_ShaderResource;
-
-	target->multisamples  = multisamples;
-	target->msaa          = render.backend.create_texture(spec);
-	target->msaa_resolved = render.backend.create_texture(resolved);
-}
-
-static void kResizeSwapChainTargetMSAA(kSwapChain swap_chain, u32 w, u32 h, void *data)
-{
-	if (w && h)
-	{
-		if (!render.builtin.target.multisamples)
-			render.builtin.target.multisamples = 1;
-		kRecreateRenderTargetMSAA(&render.builtin.target, w, h, render.builtin.target.multisamples);
-	}
-}
-
-static void kDestroySwapChainRenderTargetMSAA(void)
-{
-	kDestroyRenderTargetMSAA(&render.builtin.target);
-}
-
-static void kRecreateSwapChainRenderTargetMSAA(void)
-{
-	render.builtin.target.multisamples = render.frame.features.msaa.samples;
-
-	u32        w, h;
-	kSwapChain swap_chain = render.backend.window_swap_chain();
-	kTexture   target     = render.backend.swap_chain_target(swap_chain);
-	render.backend.texture_size(target, &w, &h);
-	kResizeSwapChainTargetMSAA(swap_chain, w, h, 0);
-	render.backend.swap_chain_resize_cb(swap_chain, kResizeSwapChainTargetMSAA, 0);
-}
-
-static void kCreateBuiltinResources(void);
-static void kDestroyBuiltinResources(void);
-
-//
-//
-//
-
 void kSetRenderFeatures(uint flags)
 {
 	render.req_features = flags;
@@ -265,163 +184,6 @@ void kSetMSAASampleCount(u32 count)
 void kGetRenderFeatures(kRenderFeatures *features)
 {
 	*features = render.frame.features;
-}
-
-void kCreateRenderContext(kRenderBackend backend, const kRenderFeatures &features, const kRenderSpec &spec)
-{
-	render.backend = backend;
-
-	for (u32 i = 0; i < K_MAX_CIRCLE_SEGMENTS; ++i)
-	{
-		float theta = ((float)i / (float)(K_MAX_CIRCLE_SEGMENTS - 1));
-		Cosines[i]  = kCos(theta);
-		Sines[i]    = kSin(theta);
-	}
-
-	Cosines[K_MAX_CIRCLE_SEGMENTS - 1] = 1;
-	Sines[K_MAX_CIRCLE_SEGMENTS - 1]   = 0;
-
-	render.frame.features              = features;
-	render.req_features                = features.flags;
-
-	if (kIsRenderFeatureEnabled(kRenderFeature_MSAA))
-	{
-		if (!render.frame.features.msaa.samples)
-			render.frame.features.msaa.samples = 1;
-	}
-
-	kCreateBuiltinResources();
-
-	render.context2d.thickness = spec.thickness;
-
-	render.context2d.vertices.Reserve(spec.vertices);
-	render.context2d.indices.Reserve(spec.indices);
-	render.context2d.params.Reserve(spec.params);
-	render.context2d.commands.Reserve(spec.commands);
-	render.context2d.passes.Reserve(spec.passes);
-
-	render.context2d.rects.Reserve(spec.rects);
-	render.context2d.transforms.Reserve(spec.transforms);
-
-	for (u32 i = 0; i < K_MAX_TEXTURE_SLOTS; ++i)
-		render.context2d.textures[i].Reserve(spec.textures);
-
-	render.context2d.builder.Reserve(spec.builder);
-
-	render.context2d.rects.Add(kRect{});
-	render.context2d.transforms.Add(kIdentity());
-
-	render.context2d.textures[0].Add(render.builtin.texture);
-	render.context2d.textures[1].Add(render.builtin.texture);
-
-	kRenderShader2D shader = {};
-	shader.blend           = kBlendMode_Alpha;
-	render.context2d.shaders.Add(shader);
-
-	kBeginFrame();
-}
-
-void kDestroyRenderContext(void)
-{
-	kDestroyBuiltinResources();
-
-	kFree(&render.context2d.vertices);
-	kFree(&render.context2d.indices);
-	kFree(&render.context2d.params);
-	kFree(&render.context2d.commands);
-	kFree(&render.context2d.passes);
-
-	kFree(&render.context2d.rects);
-	kFree(&render.context2d.transforms);
-
-	for (u32 i = 0; i < K_MAX_TEXTURE_SLOTS; ++i)
-		kFree(&render.context2d.textures[i]);
-
-	kFree(&render.context2d.builder);
-
-	memset(&render, 0, sizeof(render));
-}
-
-void kBeginFrame(void)
-{
-	memset(&render.context2d.state, 0, sizeof(render.context2d.state));
-
-	render.context2d.vertices.count   = 0;
-	render.context2d.indices.count    = 0;
-	render.context2d.params.count     = 0;
-	render.context2d.commands.count   = 0;
-	render.context2d.passes.count     = 0;
-	render.context2d.rects.count      = 1;
-	render.context2d.transforms.count = 1;
-
-	for (u32 i = 0; i < K_MAX_TEXTURE_SLOTS; ++i)
-		render.context2d.textures[i].count = 1;
-
-	render.context2d.shaders.count = 1;
-
-	//
-	//
-	//
-
-	uint requested = render.frame.features.flags ^ render.req_features;
-
-	if (requested & kRenderFeature_MSAA)
-	{
-		if (render.req_features & kRenderFeature_MSAA)
-		{
-			kRecreateSwapChainRenderTargetMSAA();
-		}
-		else
-		{
-			kDestroySwapChainRenderTargetMSAA();
-		}
-	}
-
-	render.frame.features.flags = render.req_features;
-
-	if (render.frame.features.flags & kRenderFeature_MSAA)
-	{
-		if (render.builtin.target.multisamples != render.frame.features.msaa.samples)
-		{
-			kRecreateSwapChainRenderTargetMSAA();
-		}
-		render.frame.target  = render.builtin.target.msaa;
-		render.frame.resolve = render.builtin.target.msaa_resolved;
-	}
-	else
-	{
-		kSwapChain swap_chain = render.backend.window_swap_chain();
-		render.frame.target   = render.backend.swap_chain_target(swap_chain);
-		render.frame.resolve  = nullptr;
-	}
-}
-
-void kEndFrame(void)
-{
-	if (render.frame.features.flags & kRenderFeature_MSAA)
-	{
-		kSwapChain swap_chain = render.backend.window_swap_chain();
-		kTexture   target     = render.backend.swap_chain_target(swap_chain);
-
-		// TODO: Optimize
-		kBeginRenderPass(target);
-		kBeginBlendMode(kBlendMode_None);
-		kPushTexture(render.frame.resolve, 0);
-		kDrawRect(kVec2(-1), kVec2(2), kRect(0, 1, 1, 0), kVec4(1));
-		kEndBlendMode();
-		kEndRenderPass();
-	}
-
-	kRenderData2D data;
-	kGetRenderData2D(&data);
-	render.backend.execute_commands(data);
-}
-
-void kGetRenderData2D(kRenderData2D *data)
-{
-	data->passes   = render.context2d.passes;
-	data->vertices = render.context2d.vertices;
-	data->indices  = render.context2d.indices;
 }
 
 void kBeginRenderPass(kTexture texture, kTexture depth_stencil, uint flags, kVec4 color, float depth,
@@ -555,7 +317,7 @@ void kFlushRenderCommand(void)
 void kSetBlendMode(kBlendMode mode)
 {
 	kRenderContext2D *ctx  = kGetRenderContext2D();
-	kRenderShader2D * prev = &ctx->shaders.Last();
+	kRenderShader2D  *prev = &ctx->shaders.Last();
 	if (prev->blend != mode)
 	{
 		kFlushRenderCommand();
@@ -619,7 +381,7 @@ void kSetTexture(kTexture texture, uint idx)
 {
 	kAssert(idx < K_MAX_TEXTURE_SLOTS);
 	kRenderContext2D *ctx  = kGetRenderContext2D();
-	kTexture *        prev = &ctx->textures[idx].Last();
+	kTexture         *prev = &ctx->textures[idx].Last();
 	if (*prev != texture)
 	{
 		kFlushRenderParam();
@@ -649,7 +411,7 @@ void kPopTexture(uint idx)
 void kSetRect(kRect rect)
 {
 	kRenderContext2D *ctx  = kGetRenderContext2D();
-	kRect *           prev = &ctx->rects.Last();
+	kRect            *prev = &ctx->rects.Last();
 	if (memcmp(prev, &rect, sizeof(rect)) != 0)
 	{
 		kFlushRenderParam();
@@ -697,7 +459,7 @@ void kPopRect(void)
 void kSetTransform(const kMat4 &transform)
 {
 	kRenderContext2D *ctx  = kGetRenderContext2D();
-	kMat4 *           prev = &ctx->transforms.Last();
+	kMat4            *prev = &ctx->transforms.Last();
 	if (memcmp(prev, &transform, sizeof(kMat4)) != 0)
 	{
 		kFlushRenderParam();
@@ -1781,8 +1543,8 @@ float kCalculateText(kString text, kFont *font, float scale)
 	float dist = 0;
 
 	u32   codepoint;
-	u8 *  ptr = text.begin();
-	u8 *  end = text.end();
+	u8   *ptr = text.begin();
+	u8   *end = text.end();
 
 	while (ptr < end)
 	{
@@ -1852,6 +1614,82 @@ void kDrawText(kString text, kVec2 pos, kVec4 color, float scale)
 
 #include "Font/kFont.h"
 
+static void kDestroyRenderTargetMSAA(kRenderContextTarget *target)
+{
+	if (target->msaa)
+	{
+		render.backend.destroy_texture(target->msaa);
+		target->msaa = nullptr;
+	}
+
+	if (target->msaa_resolved)
+	{
+		render.backend.destroy_texture(target->msaa_resolved);
+		target->msaa_resolved = nullptr;
+	}
+
+	target->multisamples = 0;
+}
+
+static void kRecreateRenderTargetMSAA(kRenderContextTarget *target, u32 w, u32 h, u32 multisamples)
+{
+	kAssert(w && h && multisamples);
+
+	if (target->msaa && target->msaa_resolved)
+	{
+		u32 cw, ch;
+		render.backend.texture_size(target->msaa, &cw, &ch);
+
+		if (target->multisamples == multisamples && cw == w && ch == h)
+			return;
+	}
+
+	kDestroyRenderTargetMSAA(target);
+
+	kTextureSpec spec     = {};
+	spec.format           = kFormat_RGBA16_FLOAT;
+	spec.width            = w;
+	spec.height           = h;
+	spec.bind_flags       = kBind_RenderTarget;
+	spec.num_samples      = multisamples;
+	spec.usage            = kUsage_Default;
+
+	kTextureSpec resolved = spec;
+	resolved.num_samples  = 1;
+	resolved.bind_flags   = kBind_ShaderResource;
+
+	target->multisamples  = multisamples;
+	target->msaa          = render.backend.create_texture(spec);
+	target->msaa_resolved = render.backend.create_texture(resolved);
+}
+
+static void kResizeSwapChainTargetMSAA(kSwapChain swap_chain, u32 w, u32 h, void *data)
+{
+	if (w && h)
+	{
+		if (!render.builtin.target.multisamples)
+			render.builtin.target.multisamples = 1;
+		kRecreateRenderTargetMSAA(&render.builtin.target, w, h, render.builtin.target.multisamples);
+	}
+}
+
+static void kDestroySwapChainRenderTargetMSAA(void)
+{
+	kDestroyRenderTargetMSAA(&render.builtin.target);
+}
+
+static void kRecreateSwapChainRenderTargetMSAA(void)
+{
+	render.builtin.target.multisamples = render.frame.features.msaa.samples;
+
+	u32        w, h;
+	kSwapChain swap_chain = render.swap_chain;
+	kTexture   target     = render.backend.swap_chain.target(swap_chain);
+	render.backend.texture_size(target, &w, &h);
+	kResizeSwapChainTargetMSAA(swap_chain, w, h, 0);
+	render.backend.swap_chain.resizecb(swap_chain, kResizeSwapChainTargetMSAA, 0);
+}
+
 static void kCreateBuiltinResources(void)
 {
 	{
@@ -1871,7 +1709,7 @@ static void kCreateBuiltinResources(void)
 	}
 
 	{
-		kFont *      font = &render.builtin.font;
+		kFont       *font = &render.builtin.font;
 
 		kTextureSpec spec = {};
 		spec.num_samples  = 1;
@@ -1925,4 +1763,160 @@ static void kDestroyBuiltinResources(void)
 	}
 
 	kDestroySwapChainRenderTargetMSAA();
+}
+
+// TODO: Remove swap_chain from there
+void kCreateRenderContext(kRenderBackend backend, kSwapChain swap_chain, const kRenderFeatures &features,
+                          const kRenderSpec &spec)
+{
+	render.backend    = backend;
+	render.swap_chain = swap_chain;
+
+	for (u32 i = 0; i < K_MAX_CIRCLE_SEGMENTS; ++i)
+	{
+		float theta = ((float)i / (float)(K_MAX_CIRCLE_SEGMENTS - 1));
+		Cosines[i]  = kCos(theta);
+		Sines[i]    = kSin(theta);
+	}
+
+	Cosines[K_MAX_CIRCLE_SEGMENTS - 1] = 1;
+	Sines[K_MAX_CIRCLE_SEGMENTS - 1]   = 0;
+
+	render.frame.features              = features;
+	render.req_features                = features.flags;
+
+	if (kIsRenderFeatureEnabled(kRenderFeature_MSAA))
+	{
+		if (!render.frame.features.msaa.samples)
+			render.frame.features.msaa.samples = 1;
+	}
+
+	kCreateBuiltinResources();
+
+	render.context2d.thickness = spec.thickness;
+
+	render.context2d.vertices.Reserve(spec.vertices);
+	render.context2d.indices.Reserve(spec.indices);
+	render.context2d.params.Reserve(spec.params);
+	render.context2d.commands.Reserve(spec.commands);
+	render.context2d.passes.Reserve(spec.passes);
+
+	render.context2d.rects.Reserve(spec.rects);
+	render.context2d.transforms.Reserve(spec.transforms);
+
+	for (u32 i = 0; i < K_MAX_TEXTURE_SLOTS; ++i)
+		render.context2d.textures[i].Reserve(spec.textures);
+
+	render.context2d.builder.Reserve(spec.builder);
+
+	render.context2d.rects.Add(kRect{});
+	render.context2d.transforms.Add(kIdentity());
+
+	render.context2d.textures[0].Add(render.builtin.texture);
+	render.context2d.textures[1].Add(render.builtin.texture);
+
+	kRenderShader2D shader = {};
+	shader.blend           = kBlendMode_Alpha;
+	render.context2d.shaders.Add(shader);
+
+	kBeginFrame();
+}
+
+void kDestroyRenderContext(void)
+{
+	kDestroyBuiltinResources();
+
+	kFree(&render.context2d.vertices);
+	kFree(&render.context2d.indices);
+	kFree(&render.context2d.params);
+	kFree(&render.context2d.commands);
+	kFree(&render.context2d.passes);
+
+	kFree(&render.context2d.rects);
+	kFree(&render.context2d.transforms);
+
+	for (u32 i = 0; i < K_MAX_TEXTURE_SLOTS; ++i)
+		kFree(&render.context2d.textures[i]);
+
+	kFree(&render.context2d.builder);
+
+	memset(&render, 0, sizeof(render));
+}
+
+void kBeginFrame(void)
+{
+	memset(&render.context2d.state, 0, sizeof(render.context2d.state));
+
+	render.context2d.vertices.count   = 0;
+	render.context2d.indices.count    = 0;
+	render.context2d.params.count     = 0;
+	render.context2d.commands.count   = 0;
+	render.context2d.passes.count     = 0;
+	render.context2d.rects.count      = 1;
+	render.context2d.transforms.count = 1;
+
+	for (u32 i = 0; i < K_MAX_TEXTURE_SLOTS; ++i)
+		render.context2d.textures[i].count = 1;
+
+	render.context2d.shaders.count = 1;
+
+	//
+	//
+	//
+
+	uint requested = render.frame.features.flags ^ render.req_features;
+
+	if (requested & kRenderFeature_MSAA)
+	{
+		if (render.req_features & kRenderFeature_MSAA)
+		{
+			kRecreateSwapChainRenderTargetMSAA();
+		}
+		else
+		{
+			kDestroySwapChainRenderTargetMSAA();
+		}
+	}
+
+	render.frame.features.flags = render.req_features;
+
+	if (render.frame.features.flags & kRenderFeature_MSAA)
+	{
+		if (render.builtin.target.multisamples != render.frame.features.msaa.samples)
+		{
+			kRecreateSwapChainRenderTargetMSAA();
+		}
+		render.frame.target  = render.builtin.target.msaa;
+		render.frame.resolve = render.builtin.target.msaa_resolved;
+	}
+	else
+	{
+		kSwapChain swap_chain = render.swap_chain;
+		render.frame.target   = render.backend.swap_chain.target(swap_chain);
+		render.frame.resolve  = nullptr;
+	}
+}
+
+void kEndFrame(void)
+{
+	if (render.frame.features.flags & kRenderFeature_MSAA)
+	{
+		kSwapChain swap_chain = render.swap_chain;
+		kTexture   target     = render.backend.swap_chain.target(swap_chain);
+
+		// TODO: Optimize
+		kBeginRenderPass(target);
+		kBeginBlendMode(kBlendMode_None);
+		kPushTexture(render.frame.resolve, 0);
+		kDrawRect(kVec2(-1), kVec2(2), kRect(0, 1, 1, 0), kVec4(1));
+		kEndBlendMode();
+		kEndRenderPass();
+	}
+
+	kRenderData2D data;
+	data.passes   = render.context2d.passes;
+	data.vertices = render.context2d.vertices;
+	data.indices  = render.context2d.indices;
+
+	render.backend.commit(data);
 }

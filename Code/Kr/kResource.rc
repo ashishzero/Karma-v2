@@ -33,9 +33,9 @@ BEGIN
         BLOCK "040904b0"
         BEGIN
             VALUE "FileVersion", "1.0.0.1"
-            VALUE "InternalName", "kResource.rc"
+            VALUE "InternalName", "Karma.exe"
             VALUE "LegalCopyright", "Copyright (C) 2023"
-            VALUE "OriginalFilename", "kResource.rc"
+            VALUE "OriginalFilename", "Karma.exe"
             VALUE "ProductName", "Karma"
             VALUE "ProductVersion", "1.0.0.1"
         END

@@ -1,4 +1,4 @@
-#include "kRenderApi.h"
+#include "kRenderBackend.h"
 #include "kLinkedList.h"
 
 #if defined(K_BUILD_DEBUG) || defined(K_BUILD_DEVELOPER)
@@ -35,14 +35,6 @@ static kTexture kSwapChainRenderTargetFallback(kSwapChain)
 static void kSwapChainPresentFallback(kSwapChain)
 {}
 
-static kSwapChain kRenderBackendGetWindowSwapChainFallback(void)
-{
-	return nullptr;
-}
-static kTexture kBackendSwapChainTargetFallback(kSwapChain)
-{
-	return nullptr;
-}
 static kTexture kBackendCreateTextureFallback(const kTextureSpec &)
 {
 	return nullptr;
@@ -53,7 +45,7 @@ static void kBackendTextureSizeFallback(kTexture, u32 *, u32 *)
 {}
 static void kBackendResizeTextureFallback(kTexture, u32, u32)
 {}
-static void kBackendExecuteCommandsFallback(const kRenderData2D &)
+static void kBackendCommitFallback(const kRenderData2D &)
 {}
 static void kBackendDestroyFallback(void)
 {}
@@ -97,6 +89,8 @@ typedef struct kPlatformSwapChain
 	kPlatformTexture       texture;
 	kSwapChainResizeCbProc resized;
 	void                  *data;
+	kPlatformSwapChain    *prev;
+	kPlatformSwapChain    *next;
 } kPlatformSwapChain;
 
 typedef struct kPlatformTextureBlock
@@ -128,10 +122,11 @@ typedef struct kPlatformRender2D
 typedef struct kPlatformRenderResource
 {
 	kPlatformTexturePool     textures;
-	kPlatformRender2D        render2d;
+	kPlatformSwapChain       swap_chains;
 	ID3D11DepthStencilState *depth;
 	ID3D11SamplerState      *samplers[kTextureFilter_Count];
 	ID3D11BlendState        *blends[kBlendMode_Count];
+	kPlatformRender2D        render2d;
 } kPlatformRenderContext;
 
 typedef struct kPlatformRenderBackend
@@ -379,6 +374,8 @@ static void kD3D11_DestroySwapChain(kSwapChain swap_chain)
 	kD3D11_Flush();
 
 	kPlatformSwapChain *r = swap_chain.resource;
+
+	kDListRemove(r);
 	kD3D11_DestroySwapChainBuffers(swap_chain);
 	kRelease(&r->native);
 	kFree(r, sizeof(*r));
@@ -427,6 +424,7 @@ static kSwapChain kD3D11_CreateSwapChain(void *_window)
 
 	r->native = swapchain1;
 	kD3D11_CreateSwapChainBuffers(r);
+	kDListPushBack(&d3d11.resource.swap_chains, r);
 
 	return r;
 }
@@ -481,7 +479,7 @@ static_assert(kArrayCount(kD3D11_FilterMap) == kTextureFilter_Count, "");
 //
 //
 
-static void kD3D11_ExecuteCommands(const kRenderData2D &data)
+static void kD3D11_Commit(const kRenderData2D &data)
 {
 	if (data.vertices.count == 0 || data.indices.count == 0)
 		return;
@@ -1074,28 +1072,29 @@ static bool kD3D11_CreateRenderResources(void)
 //
 //
 
-bool kD3D11_CreateRenderBackend(kRenderBackend *backend, kSwapChainBackend *swap_chain)
+bool kD3D11_CreateRenderBackend(kRenderBackend *backend)
 {
 	if (!kD3D11_CreateGraphicsDevice())
 		return false;
 
 	kDListInit(&d3d11.resource.textures.items);
+	kDListInit(&d3d11.resource.swap_chains);
 
-	backend->window_swap_chain    = kRenderBackendGetWindowSwapChainFallback;
-	backend->swap_chain_target    = kD3D11_GetSwapChainRenderTarget;
-	backend->swap_chain_resize_cb = kD3D11_SwapChainResizedCb;
-	backend->create_texture       = kD3D11_CreateTexture;
-	backend->destroy_texture      = kD3D11_DestroyTexture;
-	backend->texture_size         = kD3D11_GetTextureSize;
-	backend->resize_texture       = kD3D11_ResizeTexture;
-	backend->execute_commands     = kD3D11_ExecuteCommands;
-	backend->destroy              = kD3D11_DestroyGraphicsDevice;
+	kSwapChainBackend *swap_chain = &backend->swap_chain;
 
 	swap_chain->create            = kD3D11_CreateSwapChain;
 	swap_chain->destroy           = kD3D11_DestroySwapChain;
 	swap_chain->resize            = kD3D11_ResizeSwapChainBuffers;
+	swap_chain->resizecb          = kD3D11_SwapChainResizedCb;
 	swap_chain->present           = kD3D11_Present;
-	swap_chain->render_target     = kD3D11_GetSwapChainRenderTarget;
+	swap_chain->target            = kD3D11_GetSwapChainRenderTarget;
+
+	backend->create_texture       = kD3D11_CreateTexture;
+	backend->destroy_texture      = kD3D11_DestroyTexture;
+	backend->texture_size         = kD3D11_GetTextureSize;
+	backend->resize_texture       = kD3D11_ResizeTexture;
+	backend->commit               = kD3D11_Commit;
+	backend->destroy              = kD3D11_DestroyGraphicsDevice;
 
 	return true;
 }
@@ -1106,24 +1105,24 @@ bool kD3D11_CreateRenderBackend(kRenderBackend *backend, kSwapChainBackend *swap
 //
 //
 
-void kCreateRenderBackend(kRenderBackend *backend, kSwapChainBackend *swap_chain)
+void kCreateRenderBackend(kRenderBackend *backend)
 {
-	if (kD3D11_CreateRenderBackend(backend, swap_chain))
+	if (kD3D11_CreateRenderBackend(backend))
 		return;
+
+	kSwapChainBackend *swap_chain = &backend->swap_chain;
 
 	swap_chain->create            = kSwapChainCreateFallback;
 	swap_chain->destroy           = kSwapChainDestroyFallback;
 	swap_chain->resize            = kSwapChainResizeFallback;
-	swap_chain->render_target     = kSwapChainRenderTargetFallback;
+	swap_chain->resizecb          = kBackendSwapChainResizedCbFallback;
+	swap_chain->target            = kSwapChainRenderTargetFallback;
 	swap_chain->present           = kSwapChainPresentFallback;
 
-	backend->window_swap_chain    = kRenderBackendGetWindowSwapChainFallback;
-	backend->swap_chain_target    = kBackendSwapChainTargetFallback;
-	backend->swap_chain_resize_cb = kBackendSwapChainResizedCbFallback;
 	backend->create_texture       = kBackendCreateTextureFallback;
 	backend->destroy_texture      = kBackendDestroyTextureFallback;
 	backend->texture_size         = kBackendTextureSizeFallback;
 	backend->resize_texture       = kBackendResizeTextureFallback;
-	backend->execute_commands     = kBackendExecuteCommandsFallback;
+	backend->commit               = kBackendCommitFallback;
 	backend->destroy              = kBackendDestroyFallback;
 }
