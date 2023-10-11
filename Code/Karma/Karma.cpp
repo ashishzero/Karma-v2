@@ -1,4 +1,4 @@
-#include "kMath.h"
+﻿#include "kMath.h"
 #include "kMedia.h"
 #include "kRender.h"
 #include "kStrings.h"
@@ -32,16 +32,16 @@ void Update(float dt)
 	kVec2i size         = kGetWindowSize();
 	float  aspect_ratio = kGetWindowAspectRatio();
 
-	kBeginDefaultRenderPass(1, kVec4(0.1f, 0.1f, 0.1f, 1.0f));
+	kBeginDefaultRenderPass(1);
 
 	kBeginCameraRect(0, (float)size.x, 0, (float)size.y);
 
-	kString res = kFormatString(arena, "Resolution (%d, %d) - MSAA: %u", size.x, size.y, kGetMSAASampleCount());
+	kString res = kFormatString(arena, (char *)"Window (%d, %d) - MSAA: %u", size.x, size.y, kGetMSAASampleCount());
 
 	float   k   = kGetWindowDpiScale();
 
 	// kDrawRect(kVec2(50), kVec2(2000, 64), kVec4(1, 1, 1, 0.5));
-	kDrawText(res, kVec2(50, 0), kVec4(1, 1, 0, 1), k);
+	kDrawText(res, kVec2(250, 250), kVec4(1, 1, 1, 1), k);
 
 	kEndCamera();
 
@@ -50,7 +50,7 @@ void Update(float dt)
 	kVec2 pos2 = -kVec2(aspect_ratio * 50, 50);
 	kDrawRect(pos1, kVec2(10), kVec4(1, 1, 0, 1));
 	kDrawRect(pos2, kVec2(10), kVec4(1, 1, 0, 1));
-	kDrawLine(kVec2(-30), kVec2(50, 70), kVec4(1));
+	//kDrawLine(kVec2(-30), kVec2(50, 70), kVec4(1));
 	kEndCamera();
 
 	kEndRenderPass();
