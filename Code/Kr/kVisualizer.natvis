@@ -15,7 +15,7 @@
 		</Expand>
 	</Type>
 
-	<Type Name="kSlice&lt;*&gt;">
+	<Type Name="kSpan&lt;*&gt;">
 		<DisplayString>{{ count={count} }}</DisplayString>
 		<Expand>
 			<Item Name="[count]" ExcludeView="simple">count</Item>

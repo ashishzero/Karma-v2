@@ -69,7 +69,7 @@ kFile kOpenFile(kString mb_path, kFileAccess paccess, kFileShareMode pshare, kFi
 	HANDLE file = CreateFileW(path, access, share_mode, NULL, disposition, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (file == INVALID_HANDLE_VALUE)
 	{
-		kWinLogError(GetLastError(), "Windows", "Failed to open file: \"%s\"", mb_path);
+		kLogHresultError(GetLastError(), "Windows", "Failed to open file: \"%s\"", mb_path);
 		return nullptr;
 	}
 
@@ -98,7 +98,7 @@ umem kReadFile(kFile handle, u8 *buffer, umem size)
 		DWORD read_bytes = 0;
 		if (!ReadFile((HANDLE)handle.resource, buffer + total_bytes_read, read_size, &read_bytes, NULL))
 		{
-			kWinLogError(GetLastError(), "Windows", "Failed while reading file");
+			kLogHresultError(GetLastError(), "Windows", "Failed while reading file");
 			break;
 		}
 
@@ -129,7 +129,7 @@ umem kWriteFile(kFile handle, u8 *buff, umem size)
 		DWORD written = 0;
 		if (!WriteFile((HANDLE)handle.resource, buff + total_bytes_written, write_size, &written, NULL))
 		{
-			kWinLogError(GetLastError(), "Windows", "Failed while writing file");
+			kLogHresultError(GetLastError(), "Windows", "Failed while writing file");
 			break;
 		}
 
@@ -248,7 +248,7 @@ int kGetWorkingDirectory(u8 *mb_path, int len)
 	wchar_t path[K_MAX_PATH] = {};
 	if (GetCurrentDirectoryW(kArrayCount(path), path))
 	{
-		return kWinWideToUTF8((char *)mb_path, len, path);
+		return WideCharToMultiByte(CP_UTF8, 0, path, -1, (char *)mb_path, len, 0, 0) - 1;
 	}
 	return 0;
 }
@@ -293,7 +293,7 @@ int kGetUserPath(u8 *mb_path, int len)
 		DWORD   wlen             = kArrayCount(path);
 		if (GetUserProfileDirectoryW(token, path, &wlen))
 		{
-			return kWinWideToUTF8((char *)mb_path, len, path);
+			return WideCharToMultiByte(CP_UTF8, 0, path, -1, (char *)mb_path, len, 0, 0) - 1;
 		}
 	}
 	return snprintf((char *)mb_path, len, "%s", "C:\\");
@@ -341,7 +341,7 @@ static bool kVisitDirectories(wchar_t *path, int len, kDirectoryVisitorProc visi
 	HANDLE           handle = FindFirstFileW(path, &find);
 	if (handle == INVALID_HANDLE_VALUE)
 	{
-		kWinLogError(GetLastError(), "Windows", "Failed to visit directory: \"%S\"", path);
+		kLogHresultError(GetLastError(), "Windows", "Failed to visit directory: \"%S\"", path);
 		return false;
 	}
 
@@ -476,7 +476,7 @@ int kExecuteProcess(kString cmdline)
 	}
 	else
 	{
-		kWinLogError(GetLastError(), "Windows", "Failed to execute process");
+		kLogHresultError(GetLastError(), "Windows", "Failed to execute process");
 	}
 
 	kFree(cmd, sizeof(wchar_t) * (len + 1));

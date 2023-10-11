@@ -235,7 +235,7 @@ static bool kD3D11_CreateGraphicsDevice(void)
 				hr = CreateDXGIFactory1(IID_PPV_ARGS(&d3d11.factory));
 				if (FAILED(hr))
 				{
-					kWinLogError(hr, "DirectX11", "Failed to create factory");
+					kLogHresultError(hr, "DirectX11", "Failed to create factory");
 					return false;
 				}
 			}
@@ -274,7 +274,7 @@ static bool kD3D11_CreateGraphicsDevice(void)
 
 		if (FAILED(hr))
 		{
-			kWinLogError(hr, "DirectX11", "Failed to create device");
+			kLogHresultError(hr, "DirectX11", "Failed to create device");
 			return false;
 		}
 
@@ -335,7 +335,7 @@ static void kD3D11_CreateSwapChainBuffers(kSwapChain swap_chain)
 	if (FAILED(hr))
 	{
 		r->texture.state = kResourceState_Error;
-		kWinLogError(hr, "DirectX11", "Failed to get buffer from swapchain");
+		kLogHresultError(hr, "DirectX11", "Failed to get buffer from swapchain");
 		return;
 	}
 
@@ -349,7 +349,7 @@ static void kD3D11_CreateSwapChainBuffers(kSwapChain swap_chain)
 	if (FAILED(hr))
 	{
 		r->texture.state = kResourceState_Error;
-		kWinLogError(hr, "DirectX11", "Failed to create render target view");
+		kLogHresultError(hr, "DirectX11", "Failed to create render target view");
 		return;
 	}
 
@@ -401,7 +401,8 @@ static kSwapChain kD3D11_CreateSwapChain(void *_window)
 	swap_chain_desc.BufferUsage           = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	swap_chain_desc.BufferCount           = K_BACK_BUFFER_COUNT;
 	swap_chain_desc.SwapEffect            = swap_effect;
-	swap_chain_desc.AlphaMode             = DXGI_ALPHA_MODE_IGNORE;
+	swap_chain_desc.Scaling               = DXGI_SCALING_STRETCH;
+	swap_chain_desc.AlphaMode             = DXGI_ALPHA_MODE_UNSPECIFIED;
 
 	IDXGISwapChain1 *swapchain1           = nullptr;
 	HRESULT          hr = d3d11.factory->CreateSwapChainForHwnd(d3d11.device, wnd, &swap_chain_desc, 0, 0, &swapchain1);
@@ -409,7 +410,7 @@ static kSwapChain kD3D11_CreateSwapChain(void *_window)
 
 	if (FAILED(hr))
 	{
-		kWinLogError(hr, "DirectX11", "Failed to create swap chain");
+		kLogHresultError(hr, "DirectX11", "Failed to create swap chain");
 		return nullptr;
 	}
 
@@ -502,7 +503,7 @@ static void kD3D11_ExecuteCommands(const kRenderData2D &data)
 		HRESULT hr                        = d3d11.device->CreateBuffer(&vb_desc, 0, &d3d11.resource.render2d.vertex);
 		if (FAILED(hr))
 		{
-			kWinLogError(hr, "DirectX11", "Failed to allocate vertex buffer");
+			kLogHresultError(hr, "DirectX11", "Failed to allocate vertex buffer");
 			return;
 		}
 
@@ -523,7 +524,7 @@ static void kD3D11_ExecuteCommands(const kRenderData2D &data)
 		HRESULT hr                       = d3d11.device->CreateBuffer(&ib_desc, 0, &d3d11.resource.render2d.index);
 		if (FAILED(hr))
 		{
-			kWinLogError(hr, "DirectX11", "Failed to allocate index buffer");
+			kLogHresultError(hr, "DirectX11", "Failed to allocate index buffer");
 			return;
 		}
 
@@ -541,7 +542,7 @@ static void kD3D11_ExecuteCommands(const kRenderData2D &data)
 	hr                          = dc->Map(vb, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
 	if (FAILED(hr))
 	{
-		kWinLogError(hr, "DirectX11", "Failed to map vertex2d buffer");
+		kLogHresultError(hr, "DirectX11", "Failed to map vertex2d buffer");
 		return;
 	}
 	memcpy(mapped.pData, data.vertices.data, vb_size);
@@ -550,7 +551,7 @@ static void kD3D11_ExecuteCommands(const kRenderData2D &data)
 	hr = dc->Map(ib, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
 	if (FAILED(hr))
 	{
-		kWinLogError(hr, "DirectX11", "Failed to map index2d buffer");
+		kLogHresultError(hr, "DirectX11", "Failed to map index2d buffer");
 		return;
 	}
 	memcpy(mapped.pData, data.indices.data, ib_size);
@@ -618,7 +619,7 @@ static void kD3D11_ExecuteCommands(const kRenderData2D &data)
 				hr = dc->Map(cb, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
 				if (FAILED(hr))
 				{
-					kWinLogError(hr, "DirectX11", "Failed to map constant buffer");
+					kLogHresultError(hr, "DirectX11", "Failed to map constant buffer");
 					continue;
 				}
 				memcpy(mapped.pData, param.transform.m, sizeof(kMat4));
@@ -715,7 +716,7 @@ static void kD3D11_PrepareTexture(kPlatformTexture *texture, D3D11_SUBRESOURCE_D
 
 	if (FAILED(hr))
 	{
-		kWinLogError(hr, "DirectX11", "Failed to create texture");
+		kLogHresultError(hr, "DirectX11", "Failed to create texture");
 		texture->state = kResourceState_Error;
 		return;
 	}
@@ -725,7 +726,7 @@ static void kD3D11_PrepareTexture(kPlatformTexture *texture, D3D11_SUBRESOURCE_D
 		hr = d3d11.device->CreateShaderResourceView(texture->texture2d, nullptr, &texture->srv);
 		if (FAILED(hr))
 		{
-			kWinLogError(hr, "DirectX11", "Failed to create shader resource view");
+			kLogHresultError(hr, "DirectX11", "Failed to create shader resource view");
 		}
 	}
 
@@ -734,7 +735,7 @@ static void kD3D11_PrepareTexture(kPlatformTexture *texture, D3D11_SUBRESOURCE_D
 		hr = d3d11.device->CreateRenderTargetView(texture->texture2d, nullptr, &texture->rtv);
 		if (FAILED(hr))
 		{
-			kWinLogError(hr, "DirectX11", "Failed to create render target view");
+			kLogHresultError(hr, "DirectX11", "Failed to create render target view");
 		}
 	}
 
@@ -743,7 +744,7 @@ static void kD3D11_PrepareTexture(kPlatformTexture *texture, D3D11_SUBRESOURCE_D
 		hr = d3d11.device->CreateDepthStencilView(texture->texture2d, nullptr, &texture->dsv);
 		if (FAILED(hr))
 		{
-			kWinLogError(hr, "DirectX11", "Failed to create depth target view");
+			kLogHresultError(hr, "DirectX11", "Failed to create depth target view");
 		}
 	}
 
@@ -752,7 +753,7 @@ static void kD3D11_PrepareTexture(kPlatformTexture *texture, D3D11_SUBRESOURCE_D
 		hr = d3d11.device->CreateUnorderedAccessView(texture->texture2d, nullptr, &texture->uav);
 		if (FAILED(hr))
 		{
-			kWinLogError(hr, "DirectX11", "Failed to create unordered access view");
+			kLogHresultError(hr, "DirectX11", "Failed to create unordered access view");
 		}
 	}
 
@@ -890,7 +891,7 @@ static bool kD3D11_CreateRenderResources2D(void)
 		HRESULT hr                = d3d11.device->CreateBuffer(&cb_desc, 0, &d3d11.resource.render2d.constant);
 		if (FAILED(hr))
 		{
-			kWinLogError(hr, "DirectX11", "Failed to allocate constant buffer");
+			kLogHresultError(hr, "DirectX11", "Failed to allocate constant buffer");
 			return false;
 		}
 	}
@@ -907,7 +908,7 @@ static bool kD3D11_CreateRenderResources2D(void)
 		HRESULT hr = d3d11.device->CreateRasterizerState(&ras_desc, &d3d11.resource.render2d.rasterizer);
 		if (FAILED(hr))
 		{
-			kWinLogError(hr, "DirectX11", "Failed to create rasterizer");
+			kLogHresultError(hr, "DirectX11", "Failed to create rasterizer");
 			return false;
 		}
 	}
@@ -924,7 +925,7 @@ static bool kD3D11_CreateRenderResources2D(void)
 		                                             &d3d11.resource.render2d.input);
 		if (FAILED(hr))
 		{
-			kWinLogError(hr, "DirectX11", "Failed to create input layout");
+			kLogHresultError(hr, "DirectX11", "Failed to create input layout");
 			return false;
 		}
 	}
@@ -936,7 +937,7 @@ static bool kD3D11_CreateRenderResources2D(void)
 		HRESULT hr = d3d11.device->CreateVertexShader(vs.data, vs.count, 0, &d3d11.resource.render2d.vs);
 		if (FAILED(hr))
 		{
-			kWinLogError(hr, "DirectX11", "Failed to create vertex shader");
+			kLogHresultError(hr, "DirectX11", "Failed to create vertex shader");
 			return false;
 		}
 	}
@@ -946,7 +947,7 @@ static bool kD3D11_CreateRenderResources2D(void)
 		HRESULT hr = d3d11.device->CreatePixelShader(ps.data, ps.count, 0, &d3d11.resource.render2d.ps);
 		if (FAILED(hr))
 		{
-			kWinLogError(hr, "DirectX11", "Failed to create pixel shader");
+			kLogHresultError(hr, "DirectX11", "Failed to create pixel shader");
 			return false;
 		}
 	}
@@ -1011,7 +1012,7 @@ static bool kD3D11_CreateRenderResources(void)
 		HRESULT hr                 = d3d11.device->CreateSamplerState(&sampler, &d3d11.resource.samplers[i]);
 		if (FAILED(hr))
 		{
-			kWinLogError(hr, "DirectX11", "Failed to create sampler");
+			kLogHresultError(hr, "DirectX11", "Failed to create sampler");
 			return false;
 		}
 	}
@@ -1026,7 +1027,7 @@ static bool kD3D11_CreateRenderResources(void)
 		HRESULT hr                     = d3d11.device->CreateDepthStencilState(&depth, &d3d11.resource.depth);
 		if (FAILED(hr))
 		{
-			kWinLogError(hr, "DirectX11", "Failed to create depth stencil state");
+			kLogHresultError(hr, "DirectX11", "Failed to create depth stencil state");
 			return false;
 		}
 	}
@@ -1039,7 +1040,7 @@ static bool kD3D11_CreateRenderResources(void)
 		HRESULT hr = d3d11.device->CreateBlendState(&blend, &d3d11.resource.blends[kBlendMode_None]);
 		if (FAILED(hr))
 		{
-			kWinLogError(hr, "DirectX11", "Failed to create blend state");
+			kLogHresultError(hr, "DirectX11", "Failed to create blend state");
 			return false;
 		}
 	}
@@ -1059,7 +1060,7 @@ static bool kD3D11_CreateRenderResources(void)
 		HRESULT hr = d3d11.device->CreateBlendState(&blend, &d3d11.resource.blends[kBlendMode_Alpha]);
 		if (FAILED(hr))
 		{
-			kWinLogError(hr, "DirectX11", "Failed to create alpha blend state");
+			kLogHresultError(hr, "DirectX11", "Failed to create alpha blend state");
 			return false;
 		}
 	}

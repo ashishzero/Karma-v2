@@ -67,7 +67,7 @@ static void kHLSL_LoadShaderCompiler()
 	if (!kHLSLCompileImpl)
 	{
 		kHLSLCompileImpl = kHLSL_CompileFallback;
-		kWinLogError(GetLastError(), "HLSL", "Failed to load compiler");
+		kLogHresultError(GetLastError(), "HLSL", "Failed to load compiler");
 	}
 
 	kAtomicUnlock(&Lock);

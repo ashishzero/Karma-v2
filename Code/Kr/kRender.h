@@ -15,9 +15,7 @@ void kDisableRenderFeatures(uint flags);
 
 u32  kGetMSAASampleCount(void);
 void kSetMSAASampleCount(u32 count);
-
 void kGetRenderFeatures(kRenderFeatures *features);
-void kSetRenderFeatures(const kRenderFeatures &features);
 
 void kCreateRenderContext(kRenderBackend backend, const kRenderFeatures &features = kDefaultRenderFeatures,
                           const kRenderSpec &spec = kDefaultRenderSpec);

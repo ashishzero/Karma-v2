@@ -71,7 +71,7 @@ typedef struct kRenderContext
 	kRenderContext2D      context2d;
 	kRenderContextBuiltin builtin;
 	kRenderBackend        backend;
-	kRenderFeatures       req_features;
+	uint                  req_features;
 } kRenderContext;
 
 static kRenderContext render;
@@ -213,6 +213,8 @@ static void kDestroySwapChainRenderTargetMSAA(void)
 
 static void kRecreateSwapChainRenderTargetMSAA(void)
 {
+	render.builtin.target.multisamples = render.frame.features.msaa.samples;
+
 	u32        w, h;
 	kSwapChain swap_chain = render.backend.window_swap_chain();
 	kTexture   target     = render.backend.swap_chain_target(swap_chain);
@@ -230,42 +232,39 @@ static void kDestroyBuiltinResources(void);
 
 void kSetRenderFeatures(uint flags)
 {
-	render.req_features.flags = flags;
+	render.req_features = flags;
 }
 
 bool kIsRenderFeatureEnabled(uint flags)
 {
-	return (render.req_features.flags & flags);
+	return (render.req_features & flags);
 }
 
 void kEnableRenderFeatures(uint flags)
 {
-	render.req_features.flags |= flags;
+	render.req_features |= flags;
 }
 
 void kDisableRenderFeatures(uint flags)
 {
-	render.req_features.flags &= ~flags;
+	render.req_features &= ~flags;
 }
 
 u32 kGetMSAASampleCount(void)
 {
-	return render.req_features.msaa.samples;
+	if (render.req_features & kRenderFeature_MSAA)
+		return render.frame.features.msaa.samples;
+	return 1;
 }
 
 void kSetMSAASampleCount(u32 count)
 {
-	render.req_features.msaa.samples = count;
+	render.frame.features.msaa.samples = count;
 }
 
 void kGetRenderFeatures(kRenderFeatures *features)
 {
-	*features = render.req_features;
-}
-
-void kSetRenderFeatures(const kRenderFeatures &features)
-{
-	render.req_features = features;
+	*features = render.frame.features;
 }
 
 void kCreateRenderContext(kRenderBackend backend, const kRenderFeatures &features, const kRenderSpec &spec)
@@ -282,8 +281,8 @@ void kCreateRenderContext(kRenderBackend backend, const kRenderFeatures &feature
 	Cosines[K_MAX_CIRCLE_SEGMENTS - 1] = 1;
 	Sines[K_MAX_CIRCLE_SEGMENTS - 1]   = 0;
 
-	kSetRenderFeatures(features);
-	render.req_features = features;
+	render.frame.features              = features;
+	render.req_features                = features.flags;
 
 	if (kIsRenderFeatureEnabled(kRenderFeature_MSAA))
 	{
@@ -360,11 +359,30 @@ void kBeginFrame(void)
 
 	render.context2d.shaders.count = 1;
 
-	if (render.req_features.flags & kRenderFeature_MSAA)
+	//
+	//
+	//
+
+	uint requested = render.frame.features.flags ^ render.req_features;
+
+	if (requested & kRenderFeature_MSAA)
 	{
-		if (render.req_features.msaa.samples != render.builtin.target.multisamples)
+		if (render.req_features & kRenderFeature_MSAA)
 		{
-			render.builtin.target.multisamples = render.req_features.msaa.samples;
+			kRecreateSwapChainRenderTargetMSAA();
+		}
+		else
+		{
+			kDestroySwapChainRenderTargetMSAA();
+		}
+	}
+
+	render.frame.features.flags = render.req_features;
+
+	if (render.frame.features.flags & kRenderFeature_MSAA)
+	{
+		if (render.builtin.target.multisamples != render.frame.features.msaa.samples)
+		{
 			kRecreateSwapChainRenderTargetMSAA();
 		}
 		render.frame.target  = render.builtin.target.msaa;
@@ -372,16 +390,10 @@ void kBeginFrame(void)
 	}
 	else
 	{
-		if (render.frame.features.flags & kRenderFeature_MSAA)
-		{
-			kDestroySwapChainRenderTargetMSAA();
-		}
 		kSwapChain swap_chain = render.backend.window_swap_chain();
 		render.frame.target   = render.backend.swap_chain_target(swap_chain);
 		render.frame.resolve  = nullptr;
 	}
-
-	render.frame.features = render.req_features;
 }
 
 void kEndFrame(void)
@@ -543,7 +555,7 @@ void kFlushRenderCommand(void)
 void kSetBlendMode(kBlendMode mode)
 {
 	kRenderContext2D *ctx  = kGetRenderContext2D();
-	kRenderShader2D  *prev = &ctx->shaders.Last();
+	kRenderShader2D * prev = &ctx->shaders.Last();
 	if (prev->blend != mode)
 	{
 		kFlushRenderCommand();
@@ -607,7 +619,7 @@ void kSetTexture(kTexture texture, uint idx)
 {
 	kAssert(idx < K_MAX_TEXTURE_SLOTS);
 	kRenderContext2D *ctx  = kGetRenderContext2D();
-	kTexture         *prev = &ctx->textures[idx].Last();
+	kTexture *        prev = &ctx->textures[idx].Last();
 	if (*prev != texture)
 	{
 		kFlushRenderParam();
@@ -637,7 +649,7 @@ void kPopTexture(uint idx)
 void kSetRect(kRect rect)
 {
 	kRenderContext2D *ctx  = kGetRenderContext2D();
-	kRect            *prev = &ctx->rects.Last();
+	kRect *           prev = &ctx->rects.Last();
 	if (memcmp(prev, &rect, sizeof(rect)) != 0)
 	{
 		kFlushRenderParam();
@@ -685,7 +697,7 @@ void kPopRect(void)
 void kSetTransform(const kMat4 &transform)
 {
 	kRenderContext2D *ctx  = kGetRenderContext2D();
-	kMat4            *prev = &ctx->transforms.Last();
+	kMat4 *           prev = &ctx->transforms.Last();
 	if (memcmp(prev, &transform, sizeof(kMat4)) != 0)
 	{
 		kFlushRenderParam();
@@ -1769,8 +1781,8 @@ float kCalculateText(kString text, kFont *font, float scale)
 	float dist = 0;
 
 	u32   codepoint;
-	u8   *ptr = text.begin();
-	u8   *end = text.end();
+	u8 *  ptr = text.begin();
+	u8 *  end = text.end();
 
 	while (ptr < end)
 	{
@@ -1859,7 +1871,7 @@ static void kCreateBuiltinResources(void)
 	}
 
 	{
-		kFont       *font = &render.builtin.font;
+		kFont *      font = &render.builtin.font;
 
 		kTextureSpec spec = {};
 		spec.num_samples  = 1;
