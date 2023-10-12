@@ -1259,8 +1259,11 @@ static void kWin32_CreateWindow(kWindowState *ws, const kWindowSpec &spec)
 	BOOL dark = TRUE;
 	DwmSetWindowAttribute(window->wnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &dark, sizeof(dark));
 
-	LONG corner = DWMWCP_ROUND;
-	DwmSetWindowAttribute(window->wnd, DWMWA_WINDOW_CORNER_PREFERENCE, &corner, sizeof(corner));
+	if (spec.flags & kWindowStyle_ForceSharpCorners)
+	{
+		LONG corner = DWMWCP_DONOTROUND;
+		DwmSetWindowAttribute(window->wnd, DWMWA_WINDOW_CORNER_PREFERENCE, &corner, sizeof(corner));
+	}
 
 	UINT dpi = GetDpiForWindow(window->wnd);
 	SetRectEmpty(&window->border);

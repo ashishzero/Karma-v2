@@ -48,6 +48,7 @@ constexpr uint K_TEXTURE_MAX_PER_BLOCK = 32;
 
 typedef struct kD3D11_Texture : kTexture
 {
+	kVec2i                     size;
 	ID3D11ShaderResourceView  *srv;
 	ID3D11RenderTargetView    *rtv;
 	ID3D11DepthStencilView    *dsv;
@@ -266,7 +267,13 @@ static void kD3D11_PrepareTexture(kD3D11_Texture *texture, UINT bind_flags)
 		}
 	}
 
-	texture->state = kResourceState_Ready;
+	D3D11_TEXTURE2D_DESC desc;
+	texture->texture2d->GetDesc(&desc);
+
+	texture->size.x = (int)desc.Width;
+	texture->size.y = (int)desc.Height;
+
+	texture->state  = kResourceState_Ready;
 }
 
 static kTexture *kD3D11_CreateTexture(const kTextureSpec &spec)
@@ -329,6 +336,7 @@ static void kD3D11_UnprepareTexture(kD3D11_Texture *r)
 		kRelease(&r->dsv);
 		kRelease(&r->srv);
 		kRelease(&r->uav);
+		r->size  = kVec2i(0);
 		r->state = kResourceState_Unready;
 	}
 }
@@ -347,13 +355,7 @@ static void kD3D11_DestroyTexture(kTexture *texture)
 static kVec2i kD3D11_GetTextureSize(kTexture *texture)
 {
 	kD3D11_Texture *r = (kD3D11_Texture *)texture;
-	if (r->state == kResourceState_Ready)
-	{
-		D3D11_TEXTURE2D_DESC desc;
-		r->texture2d->GetDesc(&desc);
-		return kVec2i((int)desc.Width, (int)desc.Height);
-	}
-	return kVec2i(0);
+	return r->size;
 }
 
 static void kD3D11_ResizeTexture(kTexture *texture, u32 w, u32 h)
@@ -553,7 +555,7 @@ static kSwapChain *kD3D11_CreateSwapChain(void *_window)
 	r->state  = kResourceState_Ready;
 
 	// todo: param!!
-	r->rt_spec.antialiasing = kAntiAliasingMethod_MSAAx4;
+	r->rt_spec.antialiasing = kAntiAliasingMethod_MSAAx8;
 	kD3D11_CreateSwapChainBuffers(r);
 	kDListPushBack(&d3d11.resource.swap_chains, r);
 
@@ -574,14 +576,11 @@ static void kD3D11_Present(kSwapChain *swap_chain)
 		kD3D11_Texture           *rt          = &r->targets[kD3D11_RenderTarget_Final];
 		ID3D11ShaderResourceView *resources[] = {dst->srv};
 
-		D3D11_TEXTURE2D_DESC      desc;
-		rt->texture2d->GetDesc(&desc);
-
 		D3D11_VIEWPORT viewport;
 		viewport.TopLeftX = 0;
 		viewport.TopLeftY = 0;
-		viewport.Width    = (float)desc.Width;
-		viewport.Height   = (float)desc.Height;
+		viewport.Width    = (float)rt->size.x;
+		viewport.Height   = (float)rt->size.y;
 		viewport.MinDepth = 0;
 		viewport.MaxDepth = 1;
 

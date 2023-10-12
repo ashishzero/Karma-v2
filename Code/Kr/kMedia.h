@@ -340,9 +340,10 @@ void kCloseWindow(void);
 
 enum kWindowStyleFlags
 {
-	kWindowStyle_Fullscreen      = 0x1,
-	kWindowStyle_FixedBorders    = 0x2,
-	kWindowStyle_DisableCaptions = 0x4,
+	kWindowStyle_Fullscreen        = 0x1,
+	kWindowStyle_FixedBorders      = 0x2,
+	kWindowStyle_ForceSharpCorners = 0x4,
+	kWindowStyle_DisableCaptions   = 0x8,
 };
 
 typedef struct kWindowSpec
