@@ -4,6 +4,10 @@
 #include "winres.h"
 #undef APSTUDIO_READONLY_SYMBOLS
 
+#ifndef RT_MANIFEST
+#define RT_MANIFEST 24
+#endif
+
 //
 // English (United States) resources
 //
@@ -52,4 +56,9 @@ END
 #define K_ICON_PATH "kIcon.ico"
 #endif
 
+#ifndef K_MANIFEST_FILE
+#define K_MANIFEST_FILE "Karma.exe.manifest"
+#endif
+
 IDI_KICON               ICON                    K_ICON_PATH
+1                       RT_MANIFEST             K_MANIFEST_FILE

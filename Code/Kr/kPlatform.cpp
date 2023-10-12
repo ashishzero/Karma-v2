@@ -24,10 +24,7 @@ u64 kGetPerformanceCounter(void)
 	return counter.QuadPart;
 }
 
-void kTerminate(uint code)
-{
-	ExitProcess(code);
-}
+void kTerminate(uint code) { ExitProcess(code); }
 
 //
 //
@@ -76,10 +73,7 @@ kFile kOpenFile(kString mb_path, kFileAccess paccess, kFileShareMode pshare, kFi
 	return file;
 }
 
-void kCloseFile(kFile handle)
-{
-	CloseHandle((HANDLE)handle.resource);
-}
+void kCloseFile(kFile handle) { CloseHandle((HANDLE)handle.resource); }
 
 umem kReadFile(kFile handle, u8 *buffer, umem size)
 {
@@ -105,8 +99,7 @@ umem kReadFile(kFile handle, u8 *buffer, umem size)
 		remaining_bytes_to_read -= read_bytes;
 		total_bytes_read += read_bytes;
 
-		if (read_size > remaining_bytes_to_read)
-			read_size = (DWORD)remaining_bytes_to_read;
+		if (read_size > remaining_bytes_to_read) read_size = (DWORD)remaining_bytes_to_read;
 	}
 
 	return total_bytes_read;
@@ -136,8 +129,7 @@ umem kWriteFile(kFile handle, u8 *buff, umem size)
 		remaining_bytes_to_write -= written;
 		total_bytes_written += written;
 
-		if (write_size > remaining_bytes_to_write)
-			write_size = (DWORD)remaining_bytes_to_write;
+		if (write_size > remaining_bytes_to_write) write_size = (DWORD)remaining_bytes_to_write;
 	}
 
 	return total_bytes_written;
@@ -157,8 +149,7 @@ kString kReadEntireFile(kString path)
 	{
 		umem size = kGetFileSize(handle);
 		u8  *buff = (u8 *)kAlloc(size);
-		if (buff)
-			size = kReadFile(handle, buff, size);
+		if (buff) size = kReadFile(handle, buff, size);
 		kCloseFile(handle);
 		return kString(buff, size);
 	}
@@ -182,26 +173,16 @@ static uint kTranslateAttributes(DWORD attrs)
 	uint translated_attrs = 0;
 	if (attrs != INVALID_FILE_ATTRIBUTES)
 	{
-		if (attrs & FILE_ATTRIBUTE_ARCHIVE)
-			translated_attrs |= kFileAttribute_Archive;
-		if (attrs & FILE_ATTRIBUTE_COMPRESSED)
-			translated_attrs |= kFileAttribute_Compressed;
-		if (attrs & FILE_ATTRIBUTE_DIRECTORY)
-			translated_attrs |= kFileAttribute_Directory;
-		if (attrs & FILE_ATTRIBUTE_ENCRYPTED)
-			translated_attrs |= kFileAttribute_Encrypted;
-		if (attrs & FILE_ATTRIBUTE_HIDDEN)
-			translated_attrs |= kFileAttribute_Hidden;
-		if (attrs & FILE_ATTRIBUTE_NORMAL)
-			translated_attrs |= kFileAttribute_Normal;
-		if (attrs & FILE_ATTRIBUTE_OFFLINE)
-			translated_attrs |= kFileAttribute_Offline;
-		if (attrs & FILE_ATTRIBUTE_READONLY)
-			translated_attrs |= kFileAttribute_ReadOnly;
-		if (attrs & FILE_ATTRIBUTE_SYSTEM)
-			translated_attrs |= kFileAttribute_System;
-		if (attrs & FILE_ATTRIBUTE_TEMPORARY)
-			translated_attrs |= kFileAttribute_Temporary;
+		if (attrs & FILE_ATTRIBUTE_ARCHIVE) translated_attrs |= kFileAttribute_Archive;
+		if (attrs & FILE_ATTRIBUTE_COMPRESSED) translated_attrs |= kFileAttribute_Compressed;
+		if (attrs & FILE_ATTRIBUTE_DIRECTORY) translated_attrs |= kFileAttribute_Directory;
+		if (attrs & FILE_ATTRIBUTE_ENCRYPTED) translated_attrs |= kFileAttribute_Encrypted;
+		if (attrs & FILE_ATTRIBUTE_HIDDEN) translated_attrs |= kFileAttribute_Hidden;
+		if (attrs & FILE_ATTRIBUTE_NORMAL) translated_attrs |= kFileAttribute_Normal;
+		if (attrs & FILE_ATTRIBUTE_OFFLINE) translated_attrs |= kFileAttribute_Offline;
+		if (attrs & FILE_ATTRIBUTE_READONLY) translated_attrs |= kFileAttribute_ReadOnly;
+		if (attrs & FILE_ATTRIBUTE_SYSTEM) translated_attrs |= kFileAttribute_System;
+		if (attrs & FILE_ATTRIBUTE_TEMPORARY) translated_attrs |= kFileAttribute_Temporary;
 	}
 	return translated_attrs;
 }
@@ -273,8 +254,7 @@ bool kCreateDirectories(kString mb_path)
 		if (path[i] == '/' || path[i] == 0)
 		{
 			path[i] = 0;
-			if (!CreateDirectoryW(path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS)
-				break;
+			if (!CreateDirectoryW(path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) break;
 			path[i] = '/';
 			count += 1;
 		}
@@ -327,8 +307,7 @@ static void kTranslateDirectoryItem(kDirectoryItem *dst, WIN32_FIND_DATAW *src, 
 
 	for (int i = 0; i < count; ++i)
 	{
-		if (buffer[i] == '\\')
-			buffer[i] = '/';
+		if (buffer[i] == '\\') buffer[i] = '/';
 	}
 
 	dst->path = kString(buffer, count);
@@ -366,16 +345,14 @@ static bool kVisitDirectories(wchar_t *path, int len, kDirectoryVisitorProc visi
 				int     flen     = lstrlenW(find.cFileName);
 				int     sublen   = len + flen + kArrayCount(append) - 1;
 
-				if (sublen + 1 >= K_MAX_PATH)
-					return false;
+				if (sublen + 1 >= K_MAX_PATH) return false;
 
 				wchar_t subpath[K_MAX_PATH];
 				memcpy(subpath, path, len * sizeof(wchar_t));
 				memcpy(subpath + len, find.cFileName, flen * sizeof(wchar_t));
 				memcpy(subpath + len + flen, append, kArrayCount(append) * sizeof(wchar_t));
 
-				if (!kVisitDirectories(subpath, sublen, visitor, data))
-					return false;
+				if (!kVisitDirectories(subpath, sublen, visitor, data)) return false;
 			}
 			else if (r == kDirectoryVisit_Break)
 			{
@@ -383,8 +360,7 @@ static bool kVisitDirectories(wchar_t *path, int len, kDirectoryVisitorProc visi
 			}
 		}
 
-		if (FindNextFileW(handle, &find) == 0)
-			break;
+		if (FindNextFileW(handle, &find) == 0) break;
 	}
 
 	FindClose(handle);
@@ -394,8 +370,7 @@ static bool kVisitDirectories(wchar_t *path, int len, kDirectoryVisitorProc visi
 
 bool kVisitDirectories(kString mb_path, kDirectoryVisitorProc visitor, void *data)
 {
-	if (!visitor)
-		return false;
+	if (!visitor) return false;
 
 	wchar_t path[K_MAX_PATH];
 	int len   = MultiByteToWideChar(CP_UTF8, 0, (char *)mb_path.data, (int)mb_path.count, path, kArrayCount(path) - 1);
@@ -403,8 +378,7 @@ bool kVisitDirectories(kString mb_path, kDirectoryVisitorProc visitor, void *dat
 
 	wchar_t append[] = L"\\*";
 
-	if (len + kArrayCount(append) >= K_MAX_PATH)
-		return false;
+	if (len + kArrayCount(append) >= K_MAX_PATH) return false;
 
 	memcpy(path + len, append, sizeof(append));
 	len += kArrayCount(append) - 1;
@@ -413,8 +387,7 @@ bool kVisitDirectories(kString mb_path, kDirectoryVisitorProc visitor, void *dat
 
 	for (int i = 0; i < len; ++i)
 	{
-		if (path[i] == '/')
-			path[i] = '\\';
+		if (path[i] == '/') path[i] = '\\';
 	}
 
 	return kVisitDirectories(path, len, visitor, data);
@@ -492,8 +465,7 @@ kThread kLaunchThread(kThreadProc proc, void *arg, kThreadAttribute attr)
 	data.attr     = attr;
 	data.event    = CreateEventW(0, 0, 0, 0);
 	HANDLE handle = CreateThread(NULL, 0, kThreadStartRoutine, &data, 0, NULL);
-	if (handle)
-		WaitForSingleObject(data.event, INFINITE);
+	if (handle) WaitForSingleObject(data.event, INFINITE);
 	CloseHandle(data.event);
 	return handle;
 }
@@ -504,10 +476,7 @@ kThread kGetCurrentThread(void)
 	return handle;
 }
 
-void kDetachThread(kThread thread)
-{
-	CloseHandle((HANDLE)thread.resource);
-}
+void kDetachThread(kThread thread) { CloseHandle((HANDLE)thread.resource); }
 
 void kWaitThread(kThread thread)
 {
@@ -521,15 +490,9 @@ void kTerminateThread(kThread thread, uint code)
 	CloseHandle((HANDLE)thread.resource);
 }
 
-void kSleep(u32 millisecs)
-{
-	Sleep(millisecs);
-}
+void kSleep(u32 millisecs) { Sleep(millisecs); }
 
-void kYield(void)
-{
-	SwitchToThread();
-}
+void kYield(void) { SwitchToThread(); }
 
 void kInitSemaphore(kSemaphore *sem, u32 value, u32 max_value)
 {
@@ -563,10 +526,8 @@ int kWaitSemaphoreTimed(kSemaphore *sem, u32 millisecs)
 {
 	HANDLE handle = sem->_id;
 	DWORD  res    = WaitForSingleObject(handle, millisecs);
-	if (res == WAIT_OBJECT_0)
-		return 1;
-	if (res == WAIT_TIMEOUT)
-		return -1;
+	if (res == WAIT_OBJECT_0) return 1;
+	if (res == WAIT_TIMEOUT) return -1;
 	return 0;
 }
 
@@ -582,20 +543,11 @@ void kFreeMutex(kMutex *mutex)
 	memset(mutex, 0, sizeof(*mutex));
 }
 
-void kLockMutex(kMutex *mutex)
-{
-	EnterCriticalSection((CRITICAL_SECTION *)mutex);
-}
+void kLockMutex(kMutex *mutex) { EnterCriticalSection((CRITICAL_SECTION *)mutex); }
 
-bool kTryLockMutex(kMutex *mutex)
-{
-	return TryEnterCriticalSection((CRITICAL_SECTION *)mutex);
-}
+bool kTryLockMutex(kMutex *mutex) { return TryEnterCriticalSection((CRITICAL_SECTION *)mutex); }
 
-void kUnlockMutex(kMutex *mutex)
-{
-	LeaveCriticalSection((CRITICAL_SECTION *)mutex);
-}
+void kUnlockMutex(kMutex *mutex) { LeaveCriticalSection((CRITICAL_SECTION *)mutex); }
 
 void kInitCondVar(kCondVar *cond)
 {
@@ -603,18 +555,11 @@ void kInitCondVar(kCondVar *cond)
 	InitializeConditionVariable((CONDITION_VARIABLE *)cond);
 }
 
-void kFreeCondVar(kCondVar *cond)
-{}
+void kFreeCondVar(kCondVar *cond) {}
 
-void kSignalCondVar(kCondVar *cond)
-{
-	WakeConditionVariable((CONDITION_VARIABLE *)cond);
-}
+void kSignalCondVar(kCondVar *cond) { WakeConditionVariable((CONDITION_VARIABLE *)cond); }
 
-void kBroadcastCondVar(kCondVar *cond)
-{
-	WakeAllConditionVariable((CONDITION_VARIABLE *)cond);
-}
+void kBroadcastCondVar(kCondVar *cond) { WakeAllConditionVariable((CONDITION_VARIABLE *)cond); }
 
 bool kWaitCondVar(kCondVar *cond, kMutex *mutex)
 {
@@ -623,10 +568,8 @@ bool kWaitCondVar(kCondVar *cond, kMutex *mutex)
 
 int kWaitCondVarTimed(kCondVar *cond, kMutex *mutex, u32 millisecs)
 {
-	if (SleepConditionVariableCS((CONDITION_VARIABLE *)cond, (CRITICAL_SECTION *)mutex, millisecs))
-		return 1;
-	if (GetLastError() == ERROR_TIMEOUT)
-		return -1;
+	if (SleepConditionVariableCS((CONDITION_VARIABLE *)cond, (CRITICAL_SECTION *)mutex, millisecs)) return 1;
+	if (GetLastError() == ERROR_TIMEOUT) return -1;
 	return 0;
 }
 
@@ -640,10 +583,7 @@ kModule kLoadModule(kString mb_path)
 	return res;
 }
 
-void kFreeModule(kModule module)
-{
-	FreeLibrary((HMODULE)module.resource);
-}
+void       kFreeModule(kModule module) { FreeLibrary((HMODULE)module.resource); }
 
 kProcedure kGetProcAddress(kModule module, const char *name)
 {

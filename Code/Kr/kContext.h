@@ -14,11 +14,11 @@ typedef struct kContext
 //
 //
 
-kContext *  kGetContext(void);
+kContext   *kGetContext(void);
 kAllocator *kGetContextAllocator(void);
 
-void *      kAlloc(umem size);
-void *      kRealloc(void *ptr, umem prev, umem size);
+void       *kAlloc(umem size);
+void       *kRealloc(void *ptr, umem prev, umem size);
 void        kFree(void *ptr, umem size);
 
 u32         kRandom(void);
@@ -45,4 +45,4 @@ void        kFatalError(const char *msg);
 void        kDefaultHandleAssertion(const char *file, int line, const char *proc, const char *string);
 void        kDefaultFatalError(const char *message);
 void        kDefaultHandleLog(void *data, kLogLevel level, const u8 *msg, imem len);
-void *      kDefaultHeapAllocator(kAllocatorMode mode, void *ptr, umem prev, umem size, void *context);
+void       *kDefaultHeapAllocator(kAllocatorMode mode, void *ptr, umem prev, umem size, void *context);

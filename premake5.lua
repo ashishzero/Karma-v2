@@ -20,6 +20,8 @@ project "Karma"
 
    includedirs { "Code/Kr" }
 
+   dpiawareness "HighPerMonitor"
+
    filter "configurations:Debug"
       defines { "DEBUG", "K_BUILD_DEBUG" }
       symbols "On"
@@ -37,8 +39,9 @@ project "Karma"
 
    filter "system:windows"
       systemversion "latest"
-      files { "Code/**.natvis", "Code/**.hlsl", "Code/**.rc", "Code/Kr/kWindows.manifest", "Code/Kr/kNavFilter.natstepfilter" }
+      files { "Code/**.natvis", "Code/**.hlsl", "Code/**.rc", "Code/**.manifest", "Code/**.natstepfilter" }
       defines { "_CRT_SECURE_NO_WARNINGS" }
+      flags { "NoManifest" }
       prebuildcommands { "\"%{wks.location}Build\\%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}\\Prebuild.exe\"" }
       filter { "files:**.hlsl" }
         flags { "ExcludeFromBuild" }
@@ -80,5 +83,8 @@ project "Prebuild"
 
    filter "system:windows"
       systemversion "latest"
-      files { "Code/**.natvis", "Code/Kr/kNavFilter.natstepfilter" }
+      files { "Code/**.natvis", "Code/**.hlsl", "Code/**.natstepfilter" }
       defines { "_CRT_SECURE_NO_WARNINGS" }
+      flags { "NoManifest" }
+      filter { "files:**.hlsl" }
+        flags { "ExcludeFromBuild" }

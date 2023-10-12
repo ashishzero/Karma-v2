@@ -55,8 +55,7 @@ static void kHLSL_LoadShaderCompiler()
 	for (int i = 0; i < kArrayCount(compilers); ++i)
 	{
 		handle = LoadLibraryW(compilers[i]);
-		if (handle)
-			break;
+		if (handle) break;
 	}
 
 	if (handle)
@@ -149,8 +148,7 @@ static void kWriteBuffer(kStringBuilder<> *builder, kString buffer, kString name
 
 	for (imem j = 0; j < buffer.count; ++j)
 	{
-		if ((j) % 15 == 0)
-			builder->Write('\n');
+		if ((j) % 15 == 0) builder->Write('\n');
 		builder->Write(buffer[j], "0x%02x");
 		builder->Write(',');
 	}
@@ -195,53 +193,64 @@ static bool kFlushBuilderToFile(kString path, kStringBuilder<> *builder)
 	return rc;
 }
 
+static bool kRebuildShader(kString output, kString input, kSpan<kShaderSource> shaders)
+{
+	bool rebuild = true;
+
+	if (kGetFileAttributes(output))
+	{
+		u64 outtm = kGetFileLastModifiedTime(output);
+		u64 intm  = kGetFileLastModifiedTime(input);
+		rebuild   = (intm > outtm);
+	}
+
+	if (!rebuild)
+	{
+		kLogTrace("Shaders are upto date...\n");
+		return true;
+	}
+
+	kLogTrace("Generating shaders...\n");
+
+	kStringBuilder builder;
+	builder.Write("#pragma once\n");
+	builder.Write("#include \"kCommon.h\"\n\n");
+
+	bool ok = false;
+
+	if (kWriteShaderFile(&builder, input, shaders))
+	{
+		ok = kFlushBuilderToFile(output, &builder);
+	}
+
+	kFreeStringBuilder(&builder);
+
+	return ok;
+}
+
 bool kExecutePrebuild(void)
 {
-	if (!kCreateDirectories("Code/Kr/Generated"))
-		return false;
+	if (!kCreateDirectories("Code/Kr/Generated")) return false;
 
 	bool ok = true;
 
 	if (ok)
 	{
-		kString outpath = "Code/Kr/Generated/kShaders.h";
-		kString inpath  = "Code/Kr/Shaders/kRender2D.hlsl";
+		kShaderSource render2d[] = {
+			{"kQuadVS", "QuadVsMain", kShader_Vertex},
+			{"kQuadPS", "QuadPsMain", kShader_Pixel},
+		};
+		ok = kRebuildShader("Code/Kr/Generated/kRender2D.hlsl.h", "Code/Kr/Shaders/kRender2D.hlsl", render2d);
+	}
 
-		bool    rebuild = true;
-
-		if (kGetFileAttributes(outpath))
-		{
-			u64 outtm = kGetFileLastModifiedTime(outpath);
-			u64 intm  = kGetFileLastModifiedTime(inpath);
-			rebuild   = (intm > outtm);
-		}
-
-		if (rebuild)
-		{
-			kLogTrace("Generating shaders...\n");
-
-			kShaderSource shaders[] = {
-				{"kQuadVS", "QuadVsMain", kShader_Vertex},
-				{"kQuadPS", "QuadPsMain", kShader_Pixel},
-			};
-
-			kStringBuilder builder;
-			builder.Write("#pragma once\n");
-			builder.Write("#include \"kCommon.h\"\n\n");
-
-			ok = kWriteShaderFile(&builder, inpath, shaders);
-
-			if (ok)
-			{
-				ok = kFlushBuilderToFile(outpath, &builder);
-			}
-
-			kFreeStringBuilder(&builder);
-		}
-		else
-		{
-			kLogTrace("Shaders are upto date...\n");
-		}
+	if (ok)
+	{
+		kShaderSource postprocess[] = {
+			{"kRectVS", "RectVs", kShader_Vertex},
+			{"kRectPS", "RectPs", kShader_Pixel},
+		};
+		ok = kRebuildShader("Code/Kr/Generated/kPostProcess.hlsl.h", "Code/Kr/Shaders/kPostProcess.hlsl",
+		                    postprocess);
 	}
 
 	return ok;

@@ -1,12 +1,37 @@
 #pragma once
 #include "kCommon.h"
 
-struct kPlatformWindow;
-struct kPlatformSwapChain;
-struct kPlatformTexture;
+typedef enum kResourceState
+{
+	kResourceState_Error = -1,
+	kResourceState_Unready,
+	kResourceState_Ready,
+} kResourceState;
 
-using kSwapChain = kHandle<kPlatformSwapChain>;
-using kTexture   = kHandle<kPlatformTexture>;
+typedef struct kSwapChain
+{
+	kResourceState state;
+} kSwapChain;
+
+typedef struct kTexture
+{
+	kResourceState state;
+} kTexture;
+
+typedef enum kAntiAliasingMethod
+{
+	kAntiAliasingMethod_None,
+	kAntiAliasingMethod_MSAAx2,
+	kAntiAliasingMethod_MSAAx4,
+	kAntiAliasingMethod_MSAAx8,
+	kAntiAliasingMethod_MSAAx16,
+	kAntiAliasingMethod_Count,
+} kAntiAliasingMethod;
+
+typedef struct kRenderTargetSpec
+{
+	kAntiAliasingMethod antialiasing;
+} kRenderTargetSpec;
 
 typedef enum kFormat
 {
@@ -116,12 +141,12 @@ typedef struct kViewport
 
 typedef struct kRenderParam2D
 {
-	kTexture textures[K_MAX_TEXTURE_SLOTS];
-	kMat4    transform;
-	kRect    rect;
-	i32      vertex;
-	u32      index;
-	u32      count;
+	kTexture *textures[K_MAX_TEXTURE_SLOTS];
+	kMat4     transform;
+	kRect     rect;
+	i32       vertex;
+	u32       index;
+	u32       count;
 } kRenderParam2D;
 
 typedef enum kBlendMode
@@ -163,27 +188,3 @@ typedef struct kRenderClear2D
 	float depth;
 	u8    stencil;
 } kRenderClear2D;
-
-typedef struct kResolveTexture
-{
-	kTexture target;
-	kFormat  format;
-} kResolveTexture;
-
-typedef struct kRenderPass2D
-{
-	kTexture                rt;
-	kTexture                ds;
-	kViewport               viewport;
-	u32                     flags;
-	kRenderClear2D          clear;
-	kSpan<kRenderCommand2D> commands;
-	kResolveTexture         resolve;
-} kRenderPass2D;
-
-typedef struct kRenderData2D
-{
-	kSpan<kRenderPass2D> passes;
-	kSpan<kVertex2D>     vertices;
-	kSpan<kIndex2D>      indices;
-} kRenderData2D;

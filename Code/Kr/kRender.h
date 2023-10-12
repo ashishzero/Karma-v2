@@ -1,5 +1,5 @@
 #pragma once
-#include "kRenderBackend.h"
+#include "kRenderShared.h"
 
 #define K_MAX_CIRCLE_SEGMENTS 512
 
@@ -13,37 +13,18 @@ typedef struct kGlyph
 
 typedef struct kFont
 {
-	kTexture texture;
-	u16     *map;
-	kGlyph  *glyphs;
-	kGlyph  *fallback;
-	u32      height;
-	u32      mincp;
-	u32      maxcp;
-	u32      count;
+	kTexture *texture;
+	u16      *map;
+	kGlyph   *glyphs;
+	kGlyph   *fallback;
+	u32       mincp;
+	u32       maxcp;
+	u32       count;
+	i16       size;
+	i16       ascent;
+	i16       descent;
+	i16       linegap;
 } kFont;
-
-//
-//
-//
-
-enum kRenderFeatureFlagBit
-{
-	kRenderFeature_MSAA = 0x1
-};
-
-typedef struct kRenderFeatureMSAA
-{
-	u32 samples;
-} kRenderFeatureMSAA;
-
-typedef struct kRenderFeatures
-{
-	uint               flags;
-	kRenderFeatureMSAA msaa;
-} kRenderFeatures;
-
-static constexpr kRenderFeatures kDefaultRenderFeatures = {.flags = kRenderFeature_MSAA, .msaa = {.samples = 8}};
 
 //
 //
@@ -78,9 +59,7 @@ static constexpr kRenderSpec kDefaultRenderSpec = {.thickness  = 1,
 //
 //
 
-void kCreateRenderContext(kRenderBackend backend, kSwapChain swap_chain,
-                          const kRenderFeatures &features = kDefaultRenderFeatures,
-                          const kRenderSpec     &spec     = kDefaultRenderSpec);
+void kCreateRenderContext(struct kRenderBackend *backend, const kRenderSpec &spec = kDefaultRenderSpec);
 void kDestroyRenderContext(void);
 
 void kBeginFrame(void);
@@ -90,21 +69,11 @@ void kEndFrame(void);
 //
 //
 
-void kSetRenderFeatures(uint flags);
-bool kIsRenderFeatureEnabled(uint flags);
-void kEnableRenderFeatures(uint flags);
-void kDisableRenderFeatures(uint flags);
-
-u32  kGetMSAASampleCount(void);
-void kSetMSAASampleCount(u32 count);
-void kGetRenderFeatures(kRenderFeatures *features);
-
-void kBeginRenderPass(kTexture texture, kTexture depth_stencil = nullptr, uint flags = kRenderPass_ClearColor,
-                      kVec4 color = kVec4(0), float depth = 1.0f, kResolveTexture *resolve = nullptr);
-void kBeginDefaultRenderPass(uint flags = kRenderPass_ClearColor, kVec4 color = kVec4(0), float depth = 1.0f);
+void kBeginRenderPass(kTexture *texture, kTexture *depth_stencil = nullptr, uint flags = kRenderPass_ClearColor,
+                      kVec4 color = kVec4(0), float depth = 1.0f);
 void kEndRenderPass(void);
 
-void kBeginCameraRect(float left, float right, float bottom, float top);
+void kBeginCameraRect(float left, float right, float top, float bottom);
 void kBeginCamera(float aspect_ratio, float height);
 void kEndCamera(void);
 
@@ -120,8 +89,8 @@ void kSetTextureFilter(kTextureFilter filter);
 
 void kFlushRenderParam(void);
 
-void kSetTexture(kTexture texture, uint idx);
-void kPushTexture(kTexture texture, uint idx);
+void kSetTexture(kTexture *texture, uint idx);
+void kPushTexture(kTexture *texture, uint idx);
 void kPopTexture(uint idx);
 
 void kSetRect(kRect rect);
@@ -239,18 +208,18 @@ void kDrawArcOutline(kVec2 pos, float radius, float theta_a, float theta_b, kVec
 void kDrawPolygonOutline(const kVec2 *vertices, u32 count, float z, kVec4 color);
 void kDrawPolygonOutline(const kVec2 *vertices, u32 count, kVec4 color);
 
-void kDrawTexture(kTexture texture, kVec3 pos, kVec2 dim, kVec4 color = kVec4(1));
-void kDrawTexture(kTexture texture, kVec2 pos, kVec2 dim, kVec4 color = kVec4(1));
-void kDrawTextureCentered(kTexture texture, kVec3 pos, kVec2 dim, kVec4 color = kVec4(1));
-void kDrawTextureCentered(kTexture texture, kVec2 pos, kVec2 dim, kVec4 color = kVec4(1));
-void kDrawTexture(kTexture texture, kVec3 pos, kVec2 dim, kRect rect, kVec4 color = kVec4(1));
-void kDrawTexture(kTexture texture, kVec2 pos, kVec2 dim, kRect rect, kVec4 color = kVec4(1));
-void kDrawTextureCentered(kTexture texture, kVec3 pos, kVec2 dim, kRect rect, kVec4 color = kVec4(1));
-void kDrawTextureCentered(kTexture texture, kVec2 pos, kVec2 dim, kRect rect, kVec4 color = kVec4(1));
-void kDrawTextureMasked(kTexture texture, kTexture mask, kVec3 pos, kVec2 dim, kVec4 color);
-void kDrawTextureCenteredMasked(kTexture texture, kTexture mask, kVec3 pos, kVec2 dim, kVec4 color);
-void kDrawTextureMasked(kTexture texture, kTexture mask, kVec2 pos, kVec2 dim, kVec4 color);
-void kDrawTextureCenteredMasked(kTexture texture, kTexture mask, kVec2 pos, kVec2 dim, kVec4 color);
+void kDrawTexture(kTexture *texture, kVec3 pos, kVec2 dim, kVec4 color = kVec4(1));
+void kDrawTexture(kTexture *texture, kVec2 pos, kVec2 dim, kVec4 color = kVec4(1));
+void kDrawTextureCentered(kTexture *texture, kVec3 pos, kVec2 dim, kVec4 color = kVec4(1));
+void kDrawTextureCentered(kTexture *texture, kVec2 pos, kVec2 dim, kVec4 color = kVec4(1));
+void kDrawTexture(kTexture *texture, kVec3 pos, kVec2 dim, kRect rect, kVec4 color = kVec4(1));
+void kDrawTexture(kTexture *texture, kVec2 pos, kVec2 dim, kRect rect, kVec4 color = kVec4(1));
+void kDrawTextureCentered(kTexture *texture, kVec3 pos, kVec2 dim, kRect rect, kVec4 color = kVec4(1));
+void kDrawTextureCentered(kTexture *texture, kVec2 pos, kVec2 dim, kRect rect, kVec4 color = kVec4(1));
+void kDrawTextureMasked(kTexture *texture, kTexture *mask, kVec3 pos, kVec2 dim, kVec4 color);
+void kDrawTextureCenteredMasked(kTexture *texture, kTexture *mask, kVec3 pos, kVec2 dim, kVec4 color);
+void kDrawTextureMasked(kTexture *texture, kTexture *mask, kVec2 pos, kVec2 dim, kVec4 color);
+void kDrawTextureCenteredMasked(kTexture *texture, kTexture *mask, kVec2 pos, kVec2 dim, kVec4 color);
 
 void kDrawRoundedRect(kVec3 pos, kVec2 dim, kVec4 color, float radius = 1.0f);
 void kDrawRoundedRect(kVec2 pos, kVec2 dim, kVec4 color, float radius = 1.0f);
@@ -258,10 +227,13 @@ void kDrawRoundedRect(kVec2 pos, kVec2 dim, kVec4 color, float radius = 1.0f);
 void kDrawRoundedRectOutline(kVec3 pos, kVec2 dim, kVec4 color, float radius = 1.0f);
 void kDrawRoundedRectOutline(kVec2 pos, kVec2 dim, kVec4 color, float radius = 1.0f);
 
-kGlyph *kFindFontGlyph(kFont *font, u32 codepoint);
-float   kCalculateText(kString text, kFont *font, float scale = 1);
+kGlyph *kFindFontGlyph(const kFont &font, u32 codepoint);
+kVec2   kAdjectCursorToBaseline(const kFont &font, kVec2 cursor, float scale);
+bool    kCalculateGlyphMetrics(const kFont &font, u32 codepoint, float scale, kVec2 *cursor, kVec2 *rpos, kVec2 *rsize,
+                               kRect *rect);
+float   kCalculateText(kString text, const kFont &font, float scale = 1);
 float   kCalculateText(kString text, float scale = 1);
-void    kDrawText(kString text, kVec3 pos, kFont *font, kVec4 color = kVec4(1), float scale = 1);
-void    kDrawText(kString text, kVec2 pos, kFont *font, kVec4 color = kVec4(1), float scale = 1);
+void    kDrawText(kString text, kVec3 pos, const kFont &font, kVec4 color = kVec4(1), float scale = 1);
+void    kDrawText(kString text, kVec2 pos, const kFont &font, kVec4 color = kVec4(1), float scale = 1);
 void    kDrawText(kString text, kVec3 pos, kVec4 color = kVec4(1), float scale = 1);
 void    kDrawText(kString text, kVec2 pos, kVec4 color = kVec4(1), float scale = 1);

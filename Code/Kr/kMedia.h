@@ -1,6 +1,6 @@
 #pragma once
 #include "kCommon.h"
-#include "kRender.h"
+#include "kRenderShared.h"
 
 typedef enum kKey
 {
@@ -218,11 +218,12 @@ using kWindow = kHandle<kPlatformWindow>;
 
 typedef struct kWindowState
 {
-	kWindow window;
-	u32     width;
-	u32     height;
-	float   yfactor;
-	u32     flags[kWindow_FlagCount];
+	kWindow     window;
+	kSwapChain *swap_chain;
+	u32         width;
+	u32         height;
+	float       yfactor;
+	u32         flags[kWindow_FlagCount];
 } kWindowState;
 
 typedef struct kMediaUserEvents
@@ -277,6 +278,7 @@ bool          kIsWindowMaximized(void);
 kVec2i        kGetWindowSize(void);
 float         kGetWindowAspectRatio(void);
 float         kGetWindowDpiScale(void);
+kTexture     *kGetWindowRenderTarget(void);
 
 bool          kIsCursorCaptured(void);
 bool          kIsCursorHovered(void);
@@ -326,6 +328,7 @@ void kResizeWindow(u32 w, u32 h);
 void kToggleWindowFullscreen(void);
 void kReleaseCursor(void);
 void kCaptureCursor(void);
+int  kGetWindowCaptionSize(void);
 void kMaximizeWindow(void);
 void kRestoreWindow(void);
 void kMinimizeWindow(void);
@@ -350,20 +353,13 @@ typedef struct kWindowSpec
 	uint    flags;
 } kWindowSpec;
 
-typedef struct kMediaFeatures
-{
-	kRenderFeatures render;
-} kMediaFeatures;
-
 typedef struct kMediaSpec
 {
-	kWindowSpec    window;
-	kArenaSpec     arena;
-	kMediaFeatures features;
+	kWindowSpec window;
+	kArenaSpec  arena;
 } kMediaSpec;
 
-static const kMediaSpec kDefaultSpec = {.arena    = {.alignment = sizeof(8), .capacity = kMegaByte * 64},
-                                        .features = {.render = kDefaultRenderFeatures}};
+static const kMediaSpec kDefaultSpec = {.arena = {.alignment = sizeof(8), .capacity = kMegaByte * 64}};
 
 int                     kEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user);
 void                    kBreakLoop(int status);

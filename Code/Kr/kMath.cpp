@@ -8,14 +8,8 @@ float kWrap(float min, float a, float max)
 	return result;
 }
 
-kVec2 kArm(float angle)
-{
-	return kVec2(kCos(angle), kSin(angle));
-}
-kVec2 kArmInverse(float angle)
-{
-	return kVec2(kSin(angle), kCos(angle));
-}
+kVec2 kArm(float angle) { return kVec2(kCos(angle), kSin(angle)); }
+kVec2 kArmInverse(float angle) { return kVec2(kSin(angle), kCos(angle)); }
 
 // https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
 bool kAlmostEqual(float a, float b, float delta)
@@ -26,8 +20,7 @@ bool kAlmostEqual(float a, float b, float delta)
 
 	float larger = (b > a) ? b : a;
 
-	if (diff <= larger * delta)
-		return true;
+	if (diff <= larger * delta) return true;
 	return false;
 }
 
@@ -47,45 +40,20 @@ bool kAlmostEqual(kVec4 a, kVec4 b, float delta)
 	       kAlmostEqual(a.w, b.w, delta);
 }
 
-bool kIsNull(float a)
-{
-	return kAlmostEqual(a, 0.0f);
-}
-bool kIsNull(kVec2 a)
-{
-	return kAlmostEqual(a, kVec2(0.0f));
-}
-bool kIsNull(kVec3 a)
-{
-	return kAlmostEqual(a, kVec3(0.0f));
-}
-bool kIsNull(kVec4 a)
-{
-	return kAlmostEqual(a, kVec4(0.0f));
-}
-bool kIsNull(int32_t a)
-{
-	return a == 0;
-}
-bool kIsNull(kVec2i a)
-{
-	return a.x == 0 && a.y == 0;
-}
-bool kIsNull(kVec3i a)
-{
-	return a.x == 0 && a.y == 0 && a.z == 0;
-}
-bool kIsNull(kVec4i a)
-{
-	return a.x == 0 && a.y == 0 && a.z == 0 && a.w == 0;
-}
+bool  kIsNull(float a) { return kAlmostEqual(a, 0.0f); }
+bool  kIsNull(kVec2 a) { return kAlmostEqual(a, kVec2(0.0f)); }
+bool  kIsNull(kVec3 a) { return kAlmostEqual(a, kVec3(0.0f)); }
+bool  kIsNull(kVec4 a) { return kAlmostEqual(a, kVec4(0.0f)); }
+bool  kIsNull(int32_t a) { return a == 0; }
+bool  kIsNull(kVec2i a) { return a.x == 0 && a.y == 0; }
+bool  kIsNull(kVec3i a) { return a.x == 0 && a.y == 0 && a.z == 0; }
+bool  kIsNull(kVec4i a) { return a.x == 0 && a.y == 0 && a.z == 0 && a.w == 0; }
 
 kVec2 kNormalizeZ(kVec2 v)
 {
 	kVec2 res(0);
 	float len = kLength(v);
-	if (len != 0)
-		res = v / len;
+	if (len != 0) res = v / len;
 	return res;
 }
 
@@ -93,8 +61,7 @@ kVec3 kNormalizeZ(kVec3 v)
 {
 	kVec3 res(0);
 	float len = kLength(v);
-	if (len != 0)
-		res = v / len;
+	if (len != 0) res = v / len;
 	return res;
 }
 
@@ -102,8 +69,7 @@ kVec4 kNormalizeZ(kVec4 v)
 {
 	kVec4 res(0);
 	float len = kLength(v);
-	if (len != 0)
-		res = v * (1.0f / len);
+	if (len != 0) res = v * (1.0f / len);
 	return res;
 }
 
@@ -203,10 +169,7 @@ float kSignedAngleBetweenNormalized(kVec3 a, kVec3 b, kVec3 n)
 	return kSignedAngleBetween(a, b, n);
 }
 
-float kDeterminant(const kMat2 &mat)
-{
-	return mat.m2[0][0] * mat.m2[1][1] - mat.m2[0][1] * mat.m2[1][0];
-}
+float kDeterminant(const kMat2 &mat) { return mat.m2[0][0] * mat.m2[1][1] - mat.m2[0][1] * mat.m2[1][0]; }
 
 kMat2 kInverse(const kMat2 &mat)
 {
@@ -592,26 +555,11 @@ kMat4 &operator*=(kMat4 &t, kMat4 &o)
 	return t;
 }
 
-kQuat operator-(kQuat q)
-{
-	return kQuat(-q.x, -q.y, -q.z, -q.w);
-}
-kQuat operator-(kQuat r1, kQuat r2)
-{
-	return kQuat(r1.x - r2.x, r1.y - r2.y, r1.z - r2.z, r1.w - r2.w);
-}
-kQuat operator+(kQuat r1, kQuat r2)
-{
-	return kQuat(r1.x + r2.x, r1.y + r2.y, r1.z + r2.z, r1.w + r2.w);
-}
-kQuat operator*(kQuat q, float s)
-{
-	return kQuat(q.x * s, q.y * s, q.z * s, q.w * s);
-}
-kQuat operator*(float s, kQuat q)
-{
-	return kQuat(q.x * s, q.y * s, q.z * s, q.w * s);
-}
+kQuat  operator-(kQuat q) { return kQuat(-q.x, -q.y, -q.z, -q.w); }
+kQuat  operator-(kQuat r1, kQuat r2) { return kQuat(r1.x - r2.x, r1.y - r2.y, r1.z - r2.z, r1.w - r2.w); }
+kQuat  operator+(kQuat r1, kQuat r2) { return kQuat(r1.x + r2.x, r1.y + r2.y, r1.z + r2.z, r1.w + r2.w); }
+kQuat  operator*(kQuat q, float s) { return kQuat(q.x * s, q.y * s, q.z * s, q.w * s); }
+kQuat  operator*(float s, kQuat q) { return kQuat(q.x * s, q.y * s, q.z * s, q.w * s); }
 
 kQuat &operator-=(kQuat &q, kQuat other)
 {
@@ -624,14 +572,8 @@ kQuat &operator+=(kQuat &q, kQuat other)
 	return q;
 }
 
-float kDotProduct(kQuat q1, kQuat q2)
-{
-	return q1.x * q2.x + q1.y * q2.y + q1.z * q2.z + q1.w * q2.w;
-}
-float kLength(kQuat q)
-{
-	return kSquareRoot(kDotProduct(q, q));
-}
+float kDotProduct(kQuat q1, kQuat q2) { return q1.x * q2.x + q1.y * q2.y + q1.z * q2.z + q1.w * q2.w; }
+float kLength(kQuat q) { return kSquareRoot(kDotProduct(q, q)); }
 
 kQuat kNormalize(kQuat q)
 {
@@ -640,10 +582,7 @@ kQuat kNormalize(kQuat q)
 	return q * (1.0f / len);
 }
 
-kQuat kConjugate(kQuat q)
-{
-	return kQuat(-q.x, -q.y, -q.z, q.w);
-}
+kQuat kConjugate(kQuat q) { return kQuat(-q.x, -q.y, -q.z, q.w); }
 
 kQuat operator*(kQuat q1, kQuat q2)
 {
@@ -673,10 +612,7 @@ kVec3 operator*(kQuat q, kVec3 v)
 	return kVec3(res.x, res.y, res.z);
 }
 
-kVec3 kRotate(kQuat q, kVec3 v)
-{
-	return q * v;
-}
+kVec3 kRotate(kQuat q, kVec3 v) { return q * v; }
 
 //
 //
@@ -874,10 +810,7 @@ kQuat kAngleAxisToQuat(kVec3 axis, float angle)
 	return kQuat(i, j, k, r);
 }
 
-kQuat kAngleAxisNormalizedToQuat(kVec3 axis, float angle)
-{
-	return kAngleAxisToQuat(kNormalize(axis), angle);
-}
+kQuat kAngleAxisNormalizedToQuat(kVec3 axis, float angle) { return kAngleAxisToQuat(kNormalize(axis), angle); }
 
 kQuat kMat4ToQuat(const kMat4 &m)
 {
@@ -948,19 +881,13 @@ kQuat kEulerAnglesToQuat(float pitch, float yaw, float roll)
 	return q;
 }
 
-kQuat kEulerAnglesToQuat(kVec3 euler)
-{
-	return kEulerAnglesToQuat(euler.x, euler.y, euler.z);
-}
+kQuat kEulerAnglesToQuat(kVec3 euler) { return kEulerAnglesToQuat(euler.x, euler.y, euler.z); }
 
 //
 //
 //
 
-kMat2 kIdentity2x2()
-{
-	return kMat2(1);
-}
+kMat2 kIdentity2x2() { return kMat2(1); }
 
 kMat2 kDiagonal2x2(float x, float y)
 {
@@ -978,10 +905,7 @@ kMat2 kDiagonal2x2(kVec2 s)
 	return m;
 }
 
-kMat3 kIdentity3x3()
-{
-	return kMat3(1);
-}
+kMat3 kIdentity3x3() { return kMat3(1); }
 
 kMat2 kRotation2x2(kVec2 arm)
 {
@@ -1014,20 +938,11 @@ kMat3 kDiagonal3x3(float S_1, float S_2, float S_3)
 	return m;
 }
 
-kMat3 kDiagonal3x3(kVec3 s)
-{
-	return kDiagonal3x3(s.x, s.y, s.z);
-}
+kMat3 kDiagonal3x3(kVec3 s) { return kDiagonal3x3(s.x, s.y, s.z); }
 
-kMat3 kScale3x3(float x, float y)
-{
-	return kDiagonal3x3(x, y, 1.0f);
-}
+kMat3 kScale3x3(float x, float y) { return kDiagonal3x3(x, y, 1.0f); }
 
-kMat3 kScale3x3(kVec2 s)
-{
-	return kDiagonal3x3(s.x, s.y, 1.0f);
-}
+kMat3 kScale3x3(kVec2 s) { return kDiagonal3x3(s.x, s.y, 1.0f); }
 
 kMat3 kTranslation3x3(float T_x, float T_y)
 {
@@ -1038,10 +953,7 @@ kMat3 kTranslation3x3(float T_x, float T_y)
 	return m;
 }
 
-kMat3 kTranslation3x3(kVec2 t)
-{
-	return kTranslation3x3(t.x, t.y);
-}
+kMat3 kTranslation3x3(kVec2 t) { return kTranslation3x3(t.x, t.y); }
 
 kMat3 kRotation3x3(kVec2 arm)
 {
@@ -1080,10 +992,7 @@ kMat3 kLookAt3x3(kVec2 from, kVec2 to, kVec2 forward)
 	return m;
 }
 
-kMat4 kIdentity()
-{
-	return kMat4(1);
-}
+kMat4 kIdentity() { return kMat4(1); }
 
 kMat4 kDiagonal(float x, float y, float z, float w)
 {
@@ -1095,15 +1004,9 @@ kMat4 kDiagonal(float x, float y, float z, float w)
 	return m;
 }
 
-kMat4 kScale(float S_1, float S_2, float S_3)
-{
-	return kDiagonal(S_1, S_2, S_3, 1.0f);
-}
+kMat4 kScale(float S_1, float S_2, float S_3) { return kDiagonal(S_1, S_2, S_3, 1.0f); }
 
-kMat4 kScale(kVec3 s)
-{
-	return kDiagonal(s.x, s.y, s.z, 1.0f);
-}
+kMat4 kScale(kVec3 s) { return kDiagonal(s.x, s.y, s.z, 1.0f); }
 
 kMat4 kTranslation(float T_x, float T_y, float T_z)
 {
@@ -1115,10 +1018,7 @@ kMat4 kTranslation(float T_x, float T_y, float T_z)
 	return m;
 }
 
-kMat4 kTranslation(kVec3 t)
-{
-	return kTranslation(t.x, t.y, t.z);
-}
+kMat4 kTranslation(kVec3 t) { return kTranslation(t.x, t.y, t.z); }
 
 kMat4 kRotationX(float c, float s)
 {
@@ -1188,20 +1088,11 @@ kMat4 kRotation(float x, float y, float z, kVec2 arm)
 	return m;
 }
 
-kMat4 kRotation(float x, float y, float z, float angle)
-{
-	return kRotation(x, y, z, kArm(angle));
-}
+kMat4 kRotation(float x, float y, float z, float angle) { return kRotation(x, y, z, kArm(angle)); }
 
-kMat4 kRotation(kVec3 axis, kVec2 arm)
-{
-	return kRotation(axis.x, axis.y, axis.z, arm);
-}
+kMat4 kRotation(kVec3 axis, kVec2 arm) { return kRotation(axis.x, axis.y, axis.z, arm); }
 
-kMat4 kRotation(kVec3 axis, float angle)
-{
-	return kRotation(axis.x, axis.y, axis.z, angle);
-}
+kMat4 kRotation(kVec3 axis, float angle) { return kRotation(axis.x, axis.y, axis.z, angle); }
 
 kMat4 kLookAt(kVec3 from, kVec3 to, kVec3 world_up)
 {
@@ -1291,10 +1182,7 @@ kMat4 kPerspectiveLH(float fov, float aspect_ratio, float n, float f)
 	return m;
 }
 
-kQuat kQuatIdentity()
-{
-	return kQuat(0, 0, 0, 1);
-}
+kQuat kQuatIdentity() { return kQuat(0, 0, 0, 1); }
 
 kQuat kQuatBetween(kVec3 from, kVec3 to)
 {
@@ -1331,15 +1219,9 @@ kQuat kQuatLookAt(kVec3 from, kVec3 to, kVec3 world_forward)
 //
 //
 
-kVec2 kSlerp(kVec2 from, kVec2 to, float t)
-{
-	return kSlerp(from, to, kAngleBetween(from, to), t);
-}
+kVec2 kSlerp(kVec2 from, kVec2 to, float t) { return kSlerp(from, to, kAngleBetween(from, to), t); }
 
-kVec3 kSlerp(kVec3 from, kVec3 to, float t)
-{
-	return kSlerp(from, to, kAngleBetween(from, to), t);
-}
+kVec3 kSlerp(kVec3 from, kVec3 to, float t) { return kSlerp(from, to, kAngleBetween(from, to), t); }
 
 kQuat kSlerp(kQuat from, kQuat to, float t)
 {
@@ -1369,10 +1251,7 @@ kQuat kSlerp(kQuat from, kQuat to, float t)
 	return (s0 * from) + (s1 * to);
 }
 
-float kStep(float edge, float val)
-{
-	return val < edge ? 0.0f : 1.0f;
-}
+float kStep(float edge, float val) { return val < edge ? 0.0f : 1.0f; }
 
 kVec2 kStep(kVec2 edge, kVec2 val)
 {
@@ -1411,10 +1290,7 @@ kQuat kStep(kQuat edge, kQuat val)
 	return res;
 }
 
-float kInverseSmoothStep(float x)
-{
-	return 0.5f - kSin(kArcSin(1.0f - 2.0f * x) / 3.0f);
-}
+float kInverseSmoothStep(float x) { return 0.5f - kSin(kArcSin(1.0f - 2.0f * x) / 3.0f); }
 
 float kMoveTowards(float from, float to, float factor)
 {
@@ -1689,12 +1565,6 @@ kVec3 kRgbToHsv(kVec3 c)
 	return res;
 }
 
-kVec4 kHsvToRgb(kVec4 c)
-{
-	return kVec4(kHsvToRgb(c.xyz), c.w);
-}
+kVec4 kHsvToRgb(kVec4 c) { return kVec4(kHsvToRgb(c.xyz), c.w); }
 
-kVec4 kRgbToHsv(kVec4 c)
-{
-	return kVec4(kRgbToHsv(c.xyz), c.w);
-}
+kVec4 kRgbToHsv(kVec4 c) { return kVec4(kRgbToHsv(c.xyz), c.w); }

@@ -2,44 +2,54 @@
 #include "kCommon.h"
 #include "kRenderShared.h"
 
-typedef void (*kSwapChainResizeCbProc)(kSwapChain, uint, uint, void *);
-
-typedef kSwapChain (*kSwapChainCreateProc)(void *);
-typedef void (*kSwapChainDestroyProc)(kSwapChain);
-typedef void (*kSwapChainResizeProc)(kSwapChain, uint, uint);
-typedef void (*kSwapChainResizedCbProc)(kSwapChain, kSwapChainResizeCbProc, void *);
-typedef kTexture (*kSwapChainTargetProc)(kSwapChain);
-typedef void (*kSwapChainPresentProc)(kSwapChain);
-
-typedef struct kSwapChainBackend
+typedef struct kRenderPass2D
 {
-	kSwapChainCreateProc    create;
-	kSwapChainDestroyProc   destroy;
-	kSwapChainResizeProc    resize;
-	kSwapChainResizedCbProc resizecb;
-	kSwapChainTargetProc    target;
-	kSwapChainPresentProc   present;
-} kSwapChainBackend;
+	kTexture               *rt;
+	kTexture               *ds;
+	kViewport               viewport;
+	u32                     flags;
+	kRenderClear2D          clear;
+	kSpan<kRenderCommand2D> commands;
+} kRenderPass2D;
 
-typedef kTexture (*kRenderBackendTextureCreateProc)(const kTextureSpec &);
-typedef void (*kkRenderBackendTextureDestroyProc)(kTexture);
-typedef void (*kkRenderBackendTextureSizeProc)(kTexture, u32 *, u32 *);
-typedef void (*kkRenderBackendTextureResizeProc)(kTexture, u32, u32);
-typedef void (*kRenderBackendCommitProc)(const kRenderData2D &);
+typedef struct kRenderData2D
+{
+	kSpan<kRenderPass2D> passes;
+	kSpan<kVertex2D>     vertices;
+	kSpan<kIndex2D>      indices;
+} kRenderData2D;
+
+typedef kSwapChain *(*kSwapChainCreateProc)(void *);
+typedef void (*kSwapChainDestroyProc)(kSwapChain *);
+typedef void (*kSwapChainResizeProc)(kSwapChain *, uint, uint);
+typedef kTexture *(*kSwapChainTargetProc)(kSwapChain *);
+typedef void (*kSwapChainPresentProc)(kSwapChain *);
+
+typedef kTexture *(*kRenderBackendTextureCreateProc)(const kTextureSpec &);
+typedef void (*kkRenderBackendTextureDestroyProc)(kTexture *);
+typedef kVec2i (*kRenderBackendTextureSizeProc)(kTexture *);
+typedef void (*kkRenderBackendTextureResizeProc)(kTexture *, u32, u32);
+
+typedef void (*kRenderBackendExecuteCommandsProc)(const kRenderData2D &);
 typedef void (*kRenderBackendDestroyProc)(void);
 
 typedef struct kRenderBackend
 {
-	kSwapChainBackend                 swap_chain;
+	kSwapChainCreateProc              CreateSwapChain;
+	kSwapChainDestroyProc             DestroySwapChain;
+	kSwapChainResizeProc              ResizeSwapChain;
+	kSwapChainTargetProc              SwapChainRenderTarget;
+	kSwapChainPresentProc             Present;
 
-	kRenderBackendTextureCreateProc   create_texture;
-	kkRenderBackendTextureDestroyProc destroy_texture;
-	kkRenderBackendTextureSizeProc    texture_size;
-	kkRenderBackendTextureResizeProc  resize_texture;
+	kRenderBackendTextureCreateProc   CreateTexture;
+	kkRenderBackendTextureDestroyProc DestroyTexture;
+	kRenderBackendTextureSizeProc     GetTextureSize;
+	kkRenderBackendTextureResizeProc  ResizeTexture;
 
-	kRenderBackendCommitProc          commit;
+	kRenderBackendExecuteCommandsProc ExecuteCommands;
 
-	kRenderBackendDestroyProc         destroy;
+	kRenderBackendDestroyProc         Destroy;
 } kRenderBackend;
 
+void        kFallbackRenderBackend(kRenderBackend *backend);
 extern void kCreateRenderBackend(kRenderBackend *backend);

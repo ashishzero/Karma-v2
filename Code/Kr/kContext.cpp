@@ -32,72 +32,22 @@ void kHandleAssertion(const char *file, int line, const char *proc, const char *
 //
 //
 
-kContext *kGetContext(void)
-{
-	return &context;
-}
+kContext   *kGetContext(void) { return &context; }
+kAllocator *kGetContextAllocator(void) { return &context.allocator; }
+void       *kAlloc(umem size) { return kAlloc(&context.allocator, size); }
+void       *kRealloc(void *ptr, umem prev, umem size) { return kRealloc(&context.allocator, ptr, prev, size); }
+void        kFree(void *ptr, umem size) { kFree(&context.allocator, ptr, size); }
 
-kAllocator *kGetContextAllocator(void)
-{
-	return &context.allocator;
-}
+u32         kRandom(void) { return kRandom(&context.random); }
+u32         kRandomBound(u32 bound) { return kRandomBound(&context.random, bound); }
+u32         kRandomRange(u32 min, u32 max) { return kRandomRange(&context.random, min, max); }
+float       kRandomFloat01(void) { return kRandomFloat01(&context.random); }
+float       kRandomFloatBound(float bound) { return kRandomFloatBound(&context.random, bound); }
+float       kRandomFloatRange(float min, float max) { return kRandomFloatRange(&context.random, min, max); }
+float       kRandomFloat(void) { return kRandomFloat(&context.random); }
+void        kRandomSourceSeed(u64 state, u64 seq) { kRandomSourceSeed(&context.random, state, seq); }
 
-void *kAlloc(umem size)
-{
-	return kAlloc(&context.allocator, size);
-}
-
-void *kRealloc(void *ptr, umem prev, umem size)
-{
-	return kRealloc(&context.allocator, ptr, prev, size);
-}
-
-void kFree(void *ptr, umem size)
-{
-	kFree(&context.allocator, ptr, size);
-}
-
-u32 kRandom(void)
-{
-	return kRandom(&context.random);
-}
-
-u32 kRandomBound(u32 bound)
-{
-	return kRandomBound(&context.random, bound);
-}
-
-u32 kRandomRange(u32 min, u32 max)
-{
-	return kRandomRange(&context.random, min, max);
-}
-
-float kRandomFloat01(void)
-{
-	return kRandomFloat01(&context.random);
-}
-
-float kRandomFloatBound(float bound)
-{
-	return kRandomFloatBound(&context.random, bound);
-}
-
-float kRandomFloatRange(float min, float max)
-{
-	return kRandomFloatRange(&context.random, min, max);
-}
-
-float kRandomFloat(void)
-{
-	return kRandomFloat(&context.random);
-}
-
-void kRandomSourceSeed(u64 state, u64 seq)
-{
-	kRandomSourceSeed(&context.random, state, seq);
-}
-
-void kLogPrintV(kLogLevel level, const char *fmt, va_list list)
+void        kLogPrintV(kLogLevel level, const char *fmt, va_list list)
 {
 	if (level >= context.logger.level)
 	{
@@ -107,20 +57,9 @@ void kLogPrintV(kLogLevel level, const char *fmt, va_list list)
 	}
 }
 
-void kLogTraceV(const char *fmt, va_list list)
-{
-	kLogPrintV(kLogLevel_Verbose, fmt, list);
-}
-
-void kLogWarningV(const char *fmt, va_list list)
-{
-	kLogPrintV(kLogLevel_Warning, fmt, list);
-}
-
-void kLogErrorV(const char *fmt, va_list list)
-{
-	kLogPrintV(kLogLevel_Error, fmt, list);
-}
+void kLogTraceV(const char *fmt, va_list list) { kLogPrintV(kLogLevel_Verbose, fmt, list); }
+void kLogWarningV(const char *fmt, va_list list) { kLogPrintV(kLogLevel_Warning, fmt, list); }
+void kLogErrorV(const char *fmt, va_list list) { kLogPrintV(kLogLevel_Error, fmt, list); }
 
 void kLogPrint(kLogLevel level, const char *fmt, ...)
 {
@@ -154,10 +93,7 @@ void kLogError(const char *fmt, ...)
 	va_end(args);
 }
 
-void kFatalError(const char *msg)
-{
-	context.fatal(msg);
-}
+void kFatalError(const char *msg) { context.fatal(msg); }
 
 //
 //
@@ -219,8 +155,7 @@ void kDefaultHandleLog(void *data, kLogLevel level, const u8 *msg, imem msg_len)
 	fwprintf(out, L"%s", buff);
 #endif
 
-	if (IsDebuggerPresent())
-		OutputDebugStringW(buff);
+	if (IsDebuggerPresent()) OutputDebugStringW(buff);
 
 	kAtomicUnlock(&Guard);
 }

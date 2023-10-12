@@ -28,7 +28,7 @@ struct kStringBuilder
 
 	imem Write(u8 *buffer, imem size)
 	{
-		u8 * data = buffer;
+		u8  *data = buffer;
 		imem rc   = 0;
 
 		while (size > 0)
@@ -36,8 +36,7 @@ struct kStringBuilder
 			if (tail->written == N)
 			{
 				kStringsBucket<N> *new_buk = (kStringsBucket<N> *)kAlloc(sizeof(kStringsBucket<N>));
-				if (!new_buk)
-					break;
+				if (!new_buk) break;
 
 				new_buk->next    = 0;
 				new_buk->written = 0;
@@ -60,15 +59,9 @@ struct kStringBuilder
 		return rc;
 	}
 
-	imem Write(kString string)
-	{
-		return Write(string.data, string.count);
-	}
+	imem Write(kString string) { return Write(string.data, string.count); }
 
-	imem Write(char value)
-	{
-		return Write((u8 *)&value, 1);
-	}
+	imem Write(char value) { return Write((u8 *)&value, 1); }
 
 	imem Write(u8 value, const char *fmt = "%u")
 	{
@@ -121,15 +114,13 @@ struct kStringBuilder
 
 	kString ToString(kAllocator *allocator = nullptr)
 	{
-		if (written == 0)
-			return kString("");
+		if (written == 0) return kString("");
 
 		kString string;
 		string.data  = allocator ? (uint8_t *)kAlloc(allocator, written + 1) : (uint8_t *)kAlloc(written + 1);
 		string.count = 0;
 
-		if (!string.data)
-			return string;
+		if (!string.data) return string;
 
 		for (kStringsBucket<N> *bucket = &head; bucket; bucket = bucket->next)
 		{

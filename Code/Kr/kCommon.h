@@ -199,10 +199,7 @@
 	__assume(false);
 }
 #else // ???
-inproc void kUnreachable()
-{
-	kTriggerBreakpoint();
-}
+inproc void kUnreachable() { kTriggerBreakpoint(); }
 #endif
 
 #define kNoDefaultCase()                                                                                               \
@@ -225,12 +222,8 @@ template <typename Item>
 struct kExitScope
 {
 	Item lambda;
-	kExitScope(Item lambda) : lambda(lambda)
-	{}
-	~kExitScope()
-	{
-		lambda();
-	}
+	kExitScope(Item lambda) : lambda(lambda) {}
+	~kExitScope() { lambda(); }
 };
 struct kExitScope2
 {
@@ -332,8 +325,7 @@ constexpr Item kIPower(Item v, U p)
 template <typename Item>
 constexpr static Item kNextPowerOf2(Item n)
 {
-	if (kIsPower2(n))
-		return n;
+	if (kIsPower2(n)) return n;
 	Item count = 0;
 	while (n != 0)
 	{
@@ -343,10 +335,7 @@ constexpr static Item kNextPowerOf2(Item n)
 	return (Item)1 << (Item)count;
 }
 
-inproc u16 constexpr kBSwap16(u16 a)
-{
-	return ((((a)&0x00FF) << 8) | (((a)&0xFF00) >> 8));
-}
+inproc u16 constexpr kBSwap16(u16 a) { return ((((a)&0x00FF) << 8) | (((a)&0xFF00) >> 8)); }
 
 inproc u32 constexpr kBSwap32(u32 a)
 {
@@ -383,8 +372,7 @@ void kHandleAssertion(const char *file, int line, const char *proc, const char *
 #define kAssert(x)                                                                                                     \
 	do                                                                                                                 \
 	{                                                                                                                  \
-		if (!(x))                                                                                                      \
-			kHandleAssertion(__FILE__, __LINE__, __PROCEDURE__, #x);                                                   \
+		if (!(x)) kHandleAssertion(__FILE__, __LINE__, __PROCEDURE__, #x);                                             \
 	} while (0)
 #else
 #define kDebugTriggerbreakpoint()
@@ -410,12 +398,9 @@ struct kVec2T
 		T m[2];
 	};
 
-	constexpr kVec2T() : x(0), y(0)
-	{}
-	explicit constexpr kVec2T(T a) : x(a), y(a)
-	{}
-	explicit constexpr kVec2T(T a, T b) : x(a), y(b)
-	{}
+	constexpr kVec2T() : x(0), y(0) {}
+	explicit constexpr kVec2T(T a) : x(a), y(a) {}
+	explicit constexpr kVec2T(T a, T b) : x(a), y(b) {}
 };
 
 template <typename T>
@@ -439,16 +424,11 @@ struct kVec3T
 		};
 	};
 
-	constexpr kVec3T() : x(0), y(0), z(0)
-	{}
-	explicit constexpr kVec3T(T a) : x(a), y(a), z(a)
-	{}
-	explicit constexpr kVec3T(T a, T b, T c) : x(a), y(b), z(c)
-	{}
-	explicit constexpr kVec3T(kVec2T<T> ab, T c) : x(ab.x), y(ab.y), z(c)
-	{}
-	explicit constexpr kVec3T(T a, kVec2T<T> cd) : x(a), y(cd.x), z(cd.y)
-	{}
+	constexpr kVec3T() : x(0), y(0), z(0) {}
+	explicit constexpr kVec3T(T a) : x(a), y(a), z(a) {}
+	explicit constexpr kVec3T(T a, T b, T c) : x(a), y(b), z(c) {}
+	explicit constexpr kVec3T(kVec2T<T> ab, T c) : x(ab.x), y(ab.y), z(c) {}
+	explicit constexpr kVec3T(T a, kVec2T<T> cd) : x(a), y(cd.x), z(cd.y) {}
 };
 
 template <typename T>
@@ -477,20 +457,13 @@ struct kVec4T
 		};
 	};
 
-	constexpr kVec4T() : x(0), y(0), z(0), w(0)
-	{}
-	explicit constexpr kVec4T(T a) : x(a), y(a), z(a), w(a)
-	{}
-	explicit constexpr kVec4T(T a, T b, T c, T d) : x(a), y(b), z(c), w(d)
-	{}
-	explicit constexpr kVec4T(kVec2T<T> ab, kVec2T<T> cd) : x(ab.x), y(ab.y), z(cd.x), w(cd.y)
-	{}
-	explicit constexpr kVec4T(kVec2T<T> ab, T c, T d) : x(ab.x), y(ab.y), z(c), w(d)
-	{}
-	explicit constexpr kVec4T(kVec3T<T> abc, T d) : x(abc.x), y(abc.y), z(abc.z), w(d)
-	{}
-	explicit constexpr kVec4T(T a, kVec3T<T> bcd) : x(a), y(bcd.x), z(bcd.y), w(bcd.z)
-	{}
+	constexpr kVec4T() : x(0), y(0), z(0), w(0) {}
+	explicit constexpr kVec4T(T a) : x(a), y(a), z(a), w(a) {}
+	explicit constexpr kVec4T(T a, T b, T c, T d) : x(a), y(b), z(c), w(d) {}
+	explicit constexpr kVec4T(kVec2T<T> ab, kVec2T<T> cd) : x(ab.x), y(ab.y), z(cd.x), w(cd.y) {}
+	explicit constexpr kVec4T(kVec2T<T> ab, T c, T d) : x(ab.x), y(ab.y), z(c), w(d) {}
+	explicit constexpr kVec4T(kVec3T<T> abc, T d) : x(abc.x), y(abc.y), z(abc.z), w(d) {}
+	explicit constexpr kVec4T(T a, kVec3T<T> bcd) : x(a), y(bcd.x), z(bcd.y), w(bcd.z) {}
 };
 
 using kVec2  = kVec2T<float>;
@@ -505,10 +478,8 @@ typedef union kMat2 {
 	float m[4];
 	float m2[2][2];
 
-	inline kMat2()
-	{}
-	explicit inline kMat2(kVec2 a, kVec2 b) : rows{a, b}
-	{}
+	inline kMat2() {}
+	explicit inline kMat2(kVec2 a, kVec2 b) : rows{a, b} {}
 	explicit inline kMat2(float a)
 	{
 		rows[0] = kVec2(a, 0);
@@ -528,10 +499,8 @@ typedef union kMat3 {
 	float m[9];
 	float m2[3][3];
 
-	inline kMat3()
-	{}
-	explicit inline kMat3(kVec3 a, kVec3 b, kVec3 c) : rows{a, b, c}
-	{}
+	inline kMat3() {}
+	explicit inline kMat3(kVec3 a, kVec3 b, kVec3 c) : rows{a, b, c} {}
 	explicit inline kMat3(float a)
 	{
 		rows[0] = kVec3(a, 0, 0);
@@ -545,10 +514,8 @@ typedef union kMat4 {
 	float m[16];
 	float m2[4][4];
 
-	inline kMat4()
-	{}
-	explicit inline kMat4(kVec4 a, kVec4 b, kVec4 c, kVec4 d) : rows{a, b, c, d}
-	{}
+	inline kMat4() {}
+	explicit inline kMat4(kVec4 a, kVec4 b, kVec4 c, kVec4 d) : rows{a, b, c, d} {}
 	explicit inline kMat4(float a)
 	{
 		rows[0] = kVec4(a, 0, 0, 0);
@@ -565,8 +532,7 @@ typedef union kQuat {
 	};
 	kVec4 vector;
 
-	kQuat() : x(0), y(0), z(0), w(0)
-	{}
+	kQuat() : x(0), y(0), z(0), w(0) {}
 	kQuat(kVec4 v)
 	{
 		x = v.x;
@@ -588,8 +554,7 @@ typedef struct kRect
 	kVec2 min;
 	kVec2 max;
 
-	kRect()
-	{}
+	kRect() {}
 
 	kRect(float minx, float miny, float maxx, float maxy)
 	{
@@ -614,10 +579,8 @@ struct kSpan
 	imem  count;
 	Item *data;
 
-	inline kSpan() : count(0), data(nullptr)
-	{}
-	inline kSpan(const Item *p, imem n) : count(n), data((Item *)p)
-	{}
+	inline kSpan() : count(0), data(nullptr) {}
+	inline kSpan(const Item *p, imem n) : count(n), data((Item *)p) {}
 	template <imem _Count>
 	constexpr kSpan(const Item (&a)[_Count]) : count(_Count), data((Item *)a)
 	{}
@@ -626,24 +589,12 @@ struct kSpan
 		kAssert(index < count);
 		return data[index];
 	}
-	inline Item *begin()
-	{
-		return data;
-	}
-	inline Item *end()
-	{
-		return data + count;
-	}
-	inline const Item *begin() const
-	{
-		return data;
-	}
-	inline const Item *end() const
-	{
-		return data + count;
-	}
+	inline Item       *begin() { return data; }
+	inline Item       *end() { return data + count; }
+	inline const Item *begin() const { return data; }
+	inline const Item *end() const { return data + count; }
 
-	Item &First(void)
+	Item              &First(void)
 	{
 		kAssert(count);
 		return data[0];
@@ -680,23 +631,13 @@ struct kHandle
 {
 	T *resource;
 
-	kHandle() : resource(0)
-	{}
+	kHandle() : resource(0) {}
 
-	kHandle(void *p)
-	{
-		resource = (T *)p;
-	}
+	kHandle(void *p) { resource = (T *)p; }
 
-	kHandle(nullptr_t)
-	{
-		resource = 0;
-	}
+	kHandle(nullptr_t) { resource = 0; }
 
-	operator bool()
-	{
-		return resource != 0;
-	}
+	operator bool() { return resource != 0; }
 };
 
 template <typename T>
@@ -720,19 +661,14 @@ struct kString
 	imem count;
 	u8  *data;
 
-	kString() : count(0), data(0)
-	{}
-	kString(kSpan<u8> av) : count(av.count), data(av.data)
-	{}
-	kString(kSpan<char> av) : count(av.count), data((u8 *)av.data)
-	{}
+	kString() : count(0), data(0) {}
+	kString(kSpan<u8> av) : count(av.count), data(av.data) {}
+	kString(kSpan<char> av) : count(av.count), data((u8 *)av.data) {}
 	template <imem _Length>
 	constexpr kString(const char (&a)[_Length]) : count(_Length - 1), data((u8 *)a)
 	{}
-	kString(const u8 *_Data, imem _Length) : count(_Length), data((u8 *)_Data)
-	{}
-	kString(const char *_Data, imem _Length) : count(_Length), data((u8 *)_Data)
-	{}
+	kString(const u8 *_Data, imem _Length) : count(_Length), data((u8 *)_Data) {}
+	kString(const char *_Data, imem _Length) : count(_Length), data((u8 *)_Data) {}
 	const u8 &operator[](const imem index) const
 	{
 		kAssert(index < count);
@@ -743,26 +679,11 @@ struct kString
 		kAssert(index < count);
 		return data[index];
 	}
-	inline u8 *begin()
-	{
-		return data;
-	}
-	inline u8 *end()
-	{
-		return data + count;
-	}
-	inline const u8 *begin() const
-	{
-		return data;
-	}
-	inline const u8 *end() const
-	{
-		return data + count;
-	}
-	operator kSpan<u8>()
-	{
-		return kSpan<u8>(data, count);
-	}
+	inline u8       *begin() { return data; }
+	inline u8       *end() { return data + count; }
+	inline const u8 *begin() const { return data; }
+	inline const u8 *end() const { return data + count; }
+	operator kSpan<u8>() { return kSpan<u8>(data, count); }
 };
 
 //
@@ -862,10 +783,7 @@ typedef struct kLogger
 //
 //
 
-inproc void *kFallbackAllocatorProc(kAllocatorMode mode, void *ptr, umem prev, umem nsize, void *data)
-{
-	return ptr;
-}
+inproc void *kFallbackAllocatorProc(kAllocatorMode mode, void *ptr, umem prev, umem nsize, void *data) { return ptr; }
 
 static const kAllocator kFallbackAllocator = {kFallbackAllocatorProc};
 static const kArena     kFallbackArena     = {};

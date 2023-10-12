@@ -47,10 +47,7 @@ static void kCmdLineArg(kString key, kString desc, kSpan<kString> opts, kArgType
 	arg->def  = def;
 }
 
-void kCmdLineFlag(kString key, bool *val, kString desc)
-{
-	kCmdLineArg(key, desc, {}, kArgType_Flag, val, {});
-}
+void kCmdLineFlag(kString key, bool *val, kString desc) { kCmdLineArg(key, desc, {}, kArgType_Flag, val, {}); }
 
 void kCmdLineBoolean(kString key, bool def, bool *val, kString desc)
 {
@@ -85,8 +82,7 @@ void kCmdLinePrintUsage(void)
 	{
 		printf("  -%-8s: " kStrFmt "\n", arg.key.data, kStrArg(arg.desc));
 
-		if (arg.type != kArgType_Flag && arg.type != kArgType_Options)
-			printf("    Default: ");
+		if (arg.type != kArgType_Flag && arg.type != kArgType_Options) printf("    Default: ");
 
 		if (arg.type == kArgType_Boolean)
 		{
@@ -101,20 +97,17 @@ void kCmdLinePrintUsage(void)
 			printf(kStrFmt, kStrArg(arg.def.str));
 		}
 
-		if (arg.type != kArgType_Flag && arg.type != kArgType_Options)
-			printf("\n");
+		if (arg.type != kArgType_Flag && arg.type != kArgType_Options) printf("\n");
 
 		if (arg.type == kArgType_Options && arg.opts.count)
 		{
 			printf("    Values : " kStrFmt, kStrArg(arg.opts[0]));
-			if (arg.def.num == 0)
-				printf(" (default)");
+			if (arg.def.num == 0) printf(" (default)");
 
 			for (imem i = 1; i < arg.opts.count; ++i)
 			{
 				printf(", " kStrFmt, kStrArg(arg.opts[i]));
-				if (arg.def.num == i)
-					printf(" (default)");
+				if (arg.def.num == i) printf(" (default)");
 			}
 			printf("\n");
 		}
@@ -272,8 +265,7 @@ void kCmdLineParse(int *argc, const char ***argv, bool ignore_invalids)
 			{
 				for (kArg &carg : cmd_args)
 				{
-					if (carg.type == kArgType_Flag)
-						continue;
+					if (carg.type == kArgType_Flag) continue;
 					if (carg.key == key)
 					{
 						kHandleArg(&carg, value);
@@ -287,8 +279,7 @@ void kCmdLineParse(int *argc, const char ***argv, bool ignore_invalids)
 		{
 			for (kArg &carg : cmd_args)
 			{
-				if (carg.type != kArgType_Flag)
-					continue;
+				if (carg.type != kArgType_Flag) continue;
 				if (carg.key == arg)
 				{
 					bool *dst = (bool *)carg.dst;

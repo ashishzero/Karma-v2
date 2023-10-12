@@ -10,18 +10,11 @@ struct kArray
 	imem allocated;
 	T   *data;
 
-	kArray() : count(0), allocated(0), data(nullptr)
-	{}
+	kArray() : count(0), allocated(0), data(nullptr) {}
 
-	operator kSpan<T>()
-	{
-		return kSpan<T>(data, count);
-	}
+	operator kSpan<T>() { return kSpan<T>(data, count); }
 
-	operator const kSpan<T>() const
-	{
-		return kSpan<T>(data, count);
-	}
+	operator const kSpan<T>() const { return kSpan<T>(data, count); }
 
 	T &operator[](ptrdiff_t i)
 	{
@@ -35,27 +28,15 @@ struct kArray
 		return data[i];
 	}
 
-	T *begin()
-	{
-		return data;
-	}
+	T       *begin() { return data; }
 
-	T *end()
-	{
-		return data + count;
-	}
+	T       *end() { return data + count; }
 
-	const T *begin() const
-	{
-		return data;
-	}
+	const T *begin() const { return data; }
 
-	const T *end() const
-	{
-		return data + count;
-	}
+	const T *end() const { return data + count; }
 
-	imem NextCapacity(imem count)
+	imem     NextCapacity(imem count)
 	{
 		imem new_cap = allocated ? (allocated << 1) : 8;
 		return new_cap > count ? new_cap : count;
@@ -100,10 +81,7 @@ struct kArray
 		count -= 1;
 	}
 
-	void Reset(void)
-	{
-		count = 0;
-	}
+	void Reset(void) { count = 0; }
 
 	void Remove(imem index)
 	{
@@ -121,8 +99,7 @@ struct kArray
 
 	bool Reserve(imem req_cap)
 	{
-		if (req_cap <= allocated)
-			return true;
+		if (req_cap <= allocated) return true;
 
 		void *mem = kRealloc(data, allocated * sizeof(T), req_cap * sizeof(T));
 		if (mem)
@@ -181,16 +158,12 @@ struct kArray
 		return 0;
 	}
 
-	T *Add(void)
-	{
-		return Extend(1);
-	}
+	T   *Add(void) { return Extend(1); }
 
 	void Add(const T &src)
 	{
 		T *dst = Add();
-		if (dst)
-			*dst = src;
+		if (dst) *dst = src;
 	}
 
 	bool CopyBuffer(T *src, imem src_count)
@@ -198,8 +171,7 @@ struct kArray
 		if (count + src_count > allocated)
 		{
 			imem new_cap = NextCapacity(allocated + src_count);
-			if (!Reserve(new_cap))
-				return false;
+			if (!Reserve(new_cap)) return false;
 		}
 
 		memcpy(data + count, src, src_count * sizeof(T));
