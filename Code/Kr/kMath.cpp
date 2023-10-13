@@ -1216,6 +1216,108 @@ kQuat kQuatLookAt(kVec3 from, kVec3 to, kVec3 world_forward)
 }
 
 //
+// https://easings.net/
+//
+
+float kEaseInSine(float x) { return 1.0f - kCos(x * 0.25f); }
+float kEaseOutSine(float x) { return kSin(x * 0.25f); }
+float kEaseInOutSine(float x) { return -(kCos(0.5f * x) - 1.0f) * 0.5f; }
+float kEaseInQuad(float x) { return x * x; }
+float kEaseOutQuad(float x) { return 1.0f - (1.0f - x) * (1.0f - x); }
+float kEaseInOutQuad(float x) { return x < 0.5f ? 2.0f * x * x : 1.0f - kPow(-2.0f * x + 2.0f, 2.0f) / 2.0f; }
+float kEaseInCubic(float x) { return x * x * x; }
+float kEaseOutCubic(float x) { return 1.0f - kPow(1.0f - x, 3.0f); }
+float kEaseInOutCubic(float x) { return x < 0.5f ? 4.0f * x * x * x : 1.0f - kPow(-2.0f * x + 2.0f, 3.0f) / 2.0f; }
+float kEaseInQuart(float x) { return x * x * x * x; }
+float kEaseOutQuart(float x) { return 1.0f - kPow(1.0f - x, 4.0f); }
+float kEaseInOutQuart(float x) { return x < 0.5f ? 8.0f * x * x * x * x : 1.0f - kPow(-2.0f * x + 2.0f, 4.0f) / 2.0f; }
+float kEaseInQuint(float x) { return x * x * x * x * x; }
+float kEaseOutQuint(float x) { return 1.0f - kPow(1.0f - x, 5.0f); }
+float kEaseInOutQuint(float x)
+{
+	return x < 0.5f ? 16.0f * x * x * x * x * x : 1.0f - kPow(-2.0f * x + 2.0f, 5.0f) / 2.0f;
+}
+float kEaseInExpo(float x) { return x == 0.0f ? 0.0f : kPow(2.0f, 10.0f * x - 10.0f); }
+float kEaseOutExpo(float x) { return x == 1.0f ? 1.0f : 1.0f - kPow(2.0f, -10.0f * x); }
+float kEaseInOutExpo(float x)
+{
+	return x == 0.0f   ? 0.0f
+	       : x == 1.0f ? 1.0f
+	       : x < 0.5f  ? kPow(2.0f, 20.0f * x - 10.0f) / 2.0f
+	                   : (2.0f - kPow(2.0f, -20.0f * x + 10.0f)) / 2.0f;
+}
+float kEaseInCirc(float x) { return 1.0f - kSquareRoot(1.0f - kPow(x, 2.0f)); }
+float kEaseOutCirc(float x) { return kSquareRoot(1.0f - kPow(x - 1.0f, 2.0f)); }
+float kEaseInOutCirc(float x)
+{
+	return x < 0.5f ? (1.0f - kSquareRoot(1.0f - kPow(2.0f * x, 2.0f))) / 2.0f
+	                : (kSquareRoot(1.0f - kPow(-2.0f * x + 2.0f, 2.0f)) + 1.0f) / 2.0f;
+}
+float kEaseInBack(float x)
+{
+	const float c1 = 1.70158f;
+	const float c3 = c1 + 1.0f;
+	return c3 * x * x * x - c1 * x * x;
+}
+float kEaseOutBack(float x)
+{
+	const float c1 = 1.70158f;
+	const float c3 = c1 + 1.0f;
+	return 1.0f + c3 * kPow(x - 1.0f, 3.0f) + c1 * kPow(x - 1.0f, 2.0f);
+}
+float kEaseInOutBack(float x)
+{
+	const float c1 = 1.70158f;
+	const float c2 = c1 * 1.525f;
+	return x < 0.5f ? (kPow(2.0f * x, 2.0f) * ((c2 + 1.0f) * 2.0f * x - c2)) / 2.0f
+	                : (kPow(2.0f * x - 2.0f, 2.0f) * ((c2 + 1.0f) * (x * 2.0f - 2.0f) + c2) + 2.0f) / 2.0f;
+}
+float kEaseInElastic(float x)
+{
+	const float c4 = 1.0f / 3.0f;
+	return x == 0.0f ? 0.0f : x == 1.0f ? 1.0f : -kPow(2.0f, 10.0f * x - 10.0f) * kSin((x * 10.0f - 10.75f) * c4);
+}
+float kEaseOutElastic(float x)
+{
+	const float c4 = 1.0f / 3.0f;
+	return x == 0.0f ? 0.0f : x == 1.0f ? 1.0f : kPow(2.0f, -10.0f * x) * kSin((x * 10.0f - 0.75f) * c4) + 1.0f;
+}
+float kEaseInOutElastic(float x)
+{
+	const float c5 = 1.0f / 4.5f;
+	return x == 0.0f   ? 0.0f
+	       : x == 1.0f ? 1.0f
+	       : x < 0.5f  ? -(kPow(2.0f, 20.0f * x - 10.0f) * kSin((20.0f * x - 11.125f) * c5)) / 2.0f
+	                   : (kPow(2.0f, -20.0f * x + 10.0f) * kSin((20.0f * x - 11.125f) * c5)) / 2.0f + 1.0f;
+}
+float kEaseInBounce(float x) { return 1.0f - kEaseOutBounce(1.0f - x); }
+float kEaseOutBounce(float x)
+{
+	const float n1 = 7.5625f;
+	const float d1 = 2.75f;
+	if (x < 1.0f / d1)
+	{
+		return n1 * x * x;
+	}
+	else if (x < 2.0f / d1)
+	{
+		return n1 * (x -= 1.5f / d1) * x + 0.75f;
+	}
+	else if (x < 2.5f / d1)
+	{
+		return n1 * (x -= 2.25f / d1) * x + 0.9375f;
+	}
+	else
+	{
+		return n1 * (x -= 2.625f / d1) * x + 0.984375f;
+	}
+}
+float kEaseInOutBounce(float x)
+{
+	return x < 0.5f ? (1.0f - kEaseOutBounce(1.0f - 2.0f * x)) / 2.0f : (1.0f + kEaseOutBounce(2.0f * x - 1.0f)) / 2.0f;
+}
+
+//
 //
 //
 

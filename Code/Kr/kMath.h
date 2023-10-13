@@ -664,6 +664,41 @@ kQuat kQuatLookAt(kVec3 from, kVec3 to, kVec3 world_forward);
 //
 //
 
+float kEaseInSine(float x);
+float kEaseOutSine(float x);
+float kEaseInOutSine(float x);
+float kEaseInQuad(float x);
+float kEaseOutQuad(float x);
+float kEaseInOutQuad(float x);
+float kEaseInCubic(float x);
+float kEaseOutCubic(float x);
+float kEaseInOutCubic(float x);
+float kEaseInQuart(float x);
+float kEaseOutQuart(float x);
+float kEaseInOutQuart(float x);
+float kEaseInQuint(float x);
+float kEaseOutQuint(float x);
+float kEaseInOutQuint(float x);
+float kEaseInExpo(float x);
+float kEaseOutExpo(float x);
+float kEaseInOutExpo(float x);
+float kEaseInCirc(float x);
+float kEaseOutCirc(float x);
+float kEaseInOutCirc(float x);
+float kEaseInBack(float x);
+float kEaseOutBack(float x);
+float kEaseInOutBack(float x);
+float kEaseInElastic(float x);
+float kEaseOutElastic(float x);
+float kEaseInOutElastic(float x);
+float kEaseInBounce(float x);
+float kEaseOutBounce(float x);
+float kEaseInOutBounce(float x);
+
+//
+//
+//
+
 template <typename type>
 type kLerp(type from, type to, float t)
 {

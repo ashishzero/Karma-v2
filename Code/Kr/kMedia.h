@@ -247,9 +247,9 @@ void kFallbackUserUpdateProc(float dt);
 //
 
 kSpan<kEvent> kGetEvents(void);
-kArena *      kGetFrameArena(void);
+kArena       *kGetFrameArena(void);
 
-void *        kGetUserEventData(void);
+void         *kGetUserEventData(void);
 void          kSetUserEventData(void *);
 void          kGetUserEvents(kMediaUserEvents *user);
 void          kSetUserEvents(const kMediaUserEvents &user);
@@ -278,7 +278,7 @@ bool          kIsWindowMaximized(void);
 kVec2i        kGetWindowSize(void);
 float         kGetWindowAspectRatio(void);
 float         kGetWindowDpiScale(void);
-kTexture *    kGetWindowRenderTarget(void);
+kTexture     *kGetWindowRenderTarget(void);
 
 bool          kIsCursorCaptured(void);
 bool          kIsCursorHovered(void);
@@ -363,8 +363,9 @@ typedef struct kMediaSpec
 	kArenaSpec  arena;
 } kMediaSpec;
 
-static const kMediaSpec kDefaultSpec = {.window = {.rt = {.antialiasing = kAntiAliasingMethod_MSAAx8}},
-                                        .arena  = {.alignment = sizeof(8), .capacity = kMegaByte * 64}};
+static const kMediaSpec kDefaultSpec = {
+	.window = {.rt = {.antialiasing = kAntiAliasingMethod_MSAAx8, .tonemapping = kToneMappingMethod_HDR_AES}},
+	.arena  = {.alignment = sizeof(8), .capacity = kMegaByte * 64}};
 
-int                     kEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user);
-void                    kBreakLoop(int status);
+int  kEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user);
+void kBreakLoop(int status);
