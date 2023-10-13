@@ -1,18 +1,6 @@
 #include "kPrebuild.h"
-
-enum kShaderKind
-{
-	kShader_Vertex,
-	kShader_Pixel,
-	kShader_Compute
-};
-
-struct kShaderSource
-{
-	const char *name;
-	const char *proc;
-	kShaderKind kind;
-};
+#include "kArray.h"
+#include "kPlatform.h"
 
 #if K_PLATFORM_WINDOWS == 1
 
@@ -81,41 +69,48 @@ static HRESULT kHLSL_Compile(LPCVOID pSrcData, SIZE_T SrcDataSize, LPCSTR pSourc
 	                        Flags2, ppCode, ppErrorMsgs);
 }
 
-bool kCompileShader(const kShaderSource &shader, kString src, kString path, kString *compiled)
+bool kCompileShader(const char *proc, kString src, kString path, kString *compiled)
 {
-	ID3DBlob   *compiled_blob = nullptr;
-	ID3DBlob   *err           = nullptr;
+	ID3DBlob *  compiled_blob = nullptr;
+	ID3DBlob *  err           = nullptr;
 	bool        succeeded     = true;
 	HRESULT     hr            = S_OK;
 
 	const char *version       = "";
 
-	if (shader.kind == kShader_Vertex)
+	kString     name          = kString(proc, strlen(proc));
+
+	if (kEndsWith(name, "VS"))
 	{
-		version = "vs_4_0";
+		version = "vs_5_0";
 	}
-	else if (shader.kind == kShader_Pixel)
+	else if (kEndsWith(name, "PS"))
 	{
-		version = "ps_4_0";
+		version = "ps_5_0";
 	}
-	else if (shader.kind == kShader_Compute)
+	else if (kEndsWith(name, "CS"))
 	{
-		version = "cs_4_0";
+		version = "cs_5_0";
+	}
+	else
+	{
+		kLogError("HLSL: Failed to detect shader type: %s\n", proc);
+		return false;
 	}
 
-	hr = kHLSL_Compile(src.data, src.count, (char *)path.data, 0, 0, shader.proc, version, 0, 0, &compiled_blob, &err);
+	hr = kHLSL_Compile(src.data, src.count, (char *)path.data, 0, 0, proc, version, 0, 0, &compiled_blob, &err);
 
 	if (FAILED(hr))
 	{
 		if (err)
 		{
-			kLogError("HLSL: Failed to compile shader: %s, Reason:\n%s\n", shader.name, err->GetBufferPointer());
+			kLogError("HLSL: Failed to compile shader: %s, Reason:\n%s\n", proc, err->GetBufferPointer());
 			err->Release();
 			err = nullptr;
 		}
 		else
 		{
-			kLogError("HLSL: Failed to compile shader: %s, Reason: Unimplemented\n", shader.name);
+			kLogError("HLSL: Failed to compile shader: %s, Reason: Unimplemented\n", proc);
 		}
 		succeeded = false;
 	}
@@ -156,7 +151,7 @@ static void kWriteBuffer(kStringBuilder<> *builder, kString buffer, kString name
 	builder->Write(kString("};\n\n"));
 }
 
-static bool kWriteShaderFile(kStringBuilder<> *builder, kString path, kSpan<kShaderSource> shaders)
+static bool kWriteShaderFile(kStringBuilder<> *builder, kString path, kSpan<const char *> shaders)
 {
 	kString source = kReadEntireFile(path);
 	if (!source.count)
@@ -166,14 +161,14 @@ static bool kWriteShaderFile(kStringBuilder<> *builder, kString path, kSpan<kSha
 
 	imem count = 0;
 
-	for (kShaderSource &src : shaders)
+	for (const char *src : shaders)
 	{
-		kLogTrace("Compiling shader: %.*s:%s...\n", kStrArg(path), src.name);
+		kLogTrace("Compiling shader: %.*s:%s...\n", kStrArg(path), src);
 
 		kString compiled;
 		if (kCompileShader(src, source, path, &compiled))
 		{
-			kWriteBuffer(builder, compiled, kString(src.name, strlen(src.name)));
+			kWriteBuffer(builder, compiled, kString(src, strlen(src)));
 			kFree(compiled.data, compiled.count);
 			count += 1;
 		}
@@ -186,6 +181,9 @@ static bool kWriteShaderFile(kStringBuilder<> *builder, kString path, kSpan<kSha
 
 static bool kFlushBuilderToFile(kString path, kStringBuilder<> *builder)
 {
+	kString dir = kGetDirectoryPath(path);
+	kCreateDirectories(dir);
+
 	kString buffer = builder->ToString();
 	bool    rc     = kWriteEntireFile(path, buffer.data, buffer.count);
 	kFree(buffer.data, buffer.count + 1);
@@ -193,8 +191,14 @@ static bool kFlushBuilderToFile(kString path, kStringBuilder<> *builder)
 	return rc;
 }
 
-static bool kRebuildShader(kString output, kString input, kSpan<kShaderSource> shaders)
+static bool kRebuildShader(kString input, kSpan<const char *> shaders)
 {
+	kString path   = kGetDirectoryPath(input);
+	kString name   = kGetFileName(input);
+	kString output = kFormatString(kStrFmt "/Generated/" kStrFmt ".h", kStrArg(path), kStrArg(name));
+
+	kDefer { kFree(output.data, output.count + 1); };
+
 	bool rebuild = true;
 
 	if (kGetFileAttributes(output))
@@ -206,11 +210,11 @@ static bool kRebuildShader(kString output, kString input, kSpan<kShaderSource> s
 
 	if (!rebuild)
 	{
-		kLogTrace("Shaders are upto date...\n");
+		kLogTrace("Shaders are upto date : %.*s...\n", kStrArg(input));
 		return true;
 	}
 
-	kLogTrace("Generating shaders...\n");
+	kLogTrace("Generating shaders :%.*s...\n", kStrArg(input));
 
 	kStringBuilder builder;
 	builder.Write("#pragma once\n");
@@ -228,30 +232,34 @@ static bool kRebuildShader(kString output, kString input, kSpan<kShaderSource> s
 	return ok;
 }
 
+struct kShaderSource
+{
+	kString             path;
+	kSpan<const char *> shaders;
+};
+
 bool kExecutePrebuild(void)
 {
-	if (!kCreateDirectories("Code/Kr/Generated")) return false;
+	kArray<kShaderSource> sources;
 
-	bool ok = true;
+	const char *          render2d[] = {"kQuadVS", "kQuadPS"};
+	sources.Add({"Code/Kr/Shaders/kRender2D.hlsl", render2d});
 
-	if (ok)
+	const char *ppvs[] = {"kPostProcessVS"};
+	sources.Add({"Code/Kr/Shaders/kPostProcessVS.hlsl", ppvs});
+
+	const char *tm[] = {"kToneMapSdrPS", "kToneMapAcesApproxPS"};
+	sources.Add({"Code/Kr/Shaders/kToneMapping.hlsl", tm});
+
+	for (kShaderSource &src : sources)
 	{
-		kShaderSource render2d[] = {
-			{"kQuadVS", "QuadVsMain", kShader_Vertex},
-			{"kQuadPS", "QuadPsMain", kShader_Pixel},
-		};
-		ok = kRebuildShader("Code/Kr/Generated/kRender2D.hlsl.h", "Code/Kr/Shaders/kRender2D.hlsl", render2d);
+		if (!kRebuildShader(src.path, src.shaders))
+		{
+			return false;
+		}
 	}
 
-	if (ok)
-	{
-		kShaderSource postprocess[] = {
-			{"kRectVS", "RectVs", kShader_Vertex},
-			{"kRectPS", "RectPs", kShader_Pixel},
-		};
-		ok = kRebuildShader("Code/Kr/Generated/kPostProcess.hlsl.h", "Code/Kr/Shaders/kPostProcess.hlsl",
-		                    postprocess);
-	}
+	kFree(&sources);
 
-	return ok;
+	return true;
 }

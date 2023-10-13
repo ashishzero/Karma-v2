@@ -247,9 +247,9 @@ void kFallbackUserUpdateProc(float dt);
 //
 
 kSpan<kEvent> kGetEvents(void);
-kArena       *kGetFrameArena(void);
+kArena *      kGetFrameArena(void);
 
-void         *kGetUserEventData(void);
+void *        kGetUserEventData(void);
 void          kSetUserEventData(void *);
 void          kGetUserEvents(kMediaUserEvents *user);
 void          kSetUserEvents(const kMediaUserEvents &user);
@@ -278,7 +278,7 @@ bool          kIsWindowMaximized(void);
 kVec2i        kGetWindowSize(void);
 float         kGetWindowAspectRatio(void);
 float         kGetWindowDpiScale(void);
-kTexture     *kGetWindowRenderTarget(void);
+kTexture *    kGetWindowRenderTarget(void);
 
 bool          kIsCursorCaptured(void);
 bool          kIsCursorHovered(void);
@@ -324,15 +324,17 @@ void kAddWindowDpiChangedEvent(float scale);
 //
 //
 
-void kResizeWindow(u32 w, u32 h);
-void kToggleWindowFullscreen(void);
-void kReleaseCursor(void);
-void kCaptureCursor(void);
-int  kGetWindowCaptionSize(void);
-void kMaximizeWindow(void);
-void kRestoreWindow(void);
-void kMinimizeWindow(void);
-void kCloseWindow(void);
+void                kResizeWindow(u32 w, u32 h);
+void                kToggleWindowFullscreen(void);
+void                kReleaseCursor(void);
+void                kCaptureCursor(void);
+int                 kGetWindowCaptionSize(void);
+void                kMaximizeWindow(void);
+void                kRestoreWindow(void);
+void                kMinimizeWindow(void);
+void                kCloseWindow(void);
+kRenderTargetConfig kGetRenderTargetConfig(void);
+void                kApplyRenderTargetConfig(const kRenderTargetConfig &config);
 
 //
 //
@@ -348,10 +350,11 @@ enum kWindowStyleFlags
 
 typedef struct kWindowSpec
 {
-	kString title;
-	u32     width;
-	u32     height;
-	uint    flags;
+	kString             title;
+	u32                 width;
+	u32                 height;
+	uint                flags;
+	kRenderTargetConfig rt;
 } kWindowSpec;
 
 typedef struct kMediaSpec
@@ -360,7 +363,8 @@ typedef struct kMediaSpec
 	kArenaSpec  arena;
 } kMediaSpec;
 
-static const kMediaSpec kDefaultSpec = {.arena = {.alignment = sizeof(8), .capacity = kMegaByte * 64}};
+static const kMediaSpec kDefaultSpec = {.window = {.rt = {.antialiasing = kAntiAliasingMethod_MSAAx8}},
+                                        .arena  = {.alignment = sizeof(8), .capacity = kMegaByte * 64}};
 
 int                     kEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user);
 void                    kBreakLoop(int status);

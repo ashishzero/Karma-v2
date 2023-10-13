@@ -66,7 +66,7 @@ kFile kOpenFile(kString mb_path, kFileAccess paccess, kFileShareMode pshare, kFi
 	HANDLE file = CreateFileW(path, access, share_mode, NULL, disposition, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (file == INVALID_HANDLE_VALUE)
 	{
-		kLogHresultError(GetLastError(), "Windows", "Failed to open file: \"%s\"", mb_path);
+		kLogHresultError(GetLastError(), "Windows", "Failed to open file: \"" kStrFmt "\"", kStrArg(mb_path));
 		return nullptr;
 	}
 
@@ -185,6 +185,36 @@ static uint kTranslateAttributes(DWORD attrs)
 		if (attrs & FILE_ATTRIBUTE_TEMPORARY) translated_attrs |= kFileAttribute_Temporary;
 	}
 	return translated_attrs;
+}
+
+kString kGetFileName(kString path)
+{
+	while (path[path.count - 1] == '/' || path[path.count - 1] == '\\')
+		path = kRemoveSuffix(path, 1);
+
+	imem pos = path.count - 1;
+	for (; pos >= 0; --pos)
+	{
+		if (path[pos] == '/' || path[pos] == '\\')
+		{
+			return kSubRight(path, pos + 1);
+		}
+	}
+
+	return path;
+}
+
+kString kGetDirectoryPath(kString path)
+{
+	imem pos = path.count - 1;
+	for (; pos >= 0; --pos)
+	{
+		if (path[pos] == '/' || path[pos] == '\\')
+		{
+			return kSubLeft(path, pos);
+		}
+	}
+	return path;
 }
 
 uint kGetFileAttributes(kString mb_path)

@@ -11,7 +11,7 @@ typedef struct kMediaBackend
 
 typedef struct kMedia
 {
-	kArena          *arena;
+	kArena *         arena;
 	kArray<kEvent>   events;
 	kKeyboardState   keyboard;
 	kMouseState      mouse;
@@ -30,8 +30,8 @@ void          kFallbackUserLoadProc(void) {}
 void          kFallbackUserReleaseProc(void) {}
 void          kFallbackUserUpdateProc(float dt) {}
 kSpan<kEvent> kGetEvents(void) { return media.events; }
-kArena       *kGetFrameArena(void) { return media.arena; }
-void         *kGetUserEventData(void) { return media.user.data; }
+kArena *      kGetFrameArena(void) { return media.arena; }
+void *        kGetUserEventData(void) { return media.user.data; }
 void          kSetUserEventData(void *data) { media.user.data = data; }
 void          kGetUserEvents(kMediaUserEvents *user) { memcpy(user, &media.user, sizeof(media.user)); }
 
@@ -317,16 +317,18 @@ void kAddWindowDpiChangedEvent(float yfactor)
 
 typedef struct kPlatformWindow
 {
-	HWND            wnd;
-	u32             hsurrogate;
-	bool            raw;
-	bool            resized;
-	bool            captions;
-	bool            dpi_changed;
-	bool            fullscreen;
-	RECT            border;
-	DWORD           style;
-	WINDOWPLACEMENT placement;
+	HWND                wnd;
+	u32                 hsurrogate;
+	bool                raw;
+	bool                resized;
+	bool                captions;
+	bool                dpi_changed;
+	bool                fullscreen;
+	bool                rt_apply;
+	RECT                border;
+	DWORD               style;
+	WINDOWPLACEMENT     placement;
+	kRenderTargetConfig rt_config;
 } kPlatformWindow;
 
 //
@@ -349,6 +351,8 @@ static DWORD kGetWindowStyleFromFlags(u32 flags)
 
 static void kWin32_ResizeWindow(kWindow id, u32 w, u32 h)
 {
+	kLogTrace("Windows: Resizing window to size %ux%u.\n", w, h);
+
 	kPlatformWindow *window = id.resource;
 	DWORD            style  = (DWORD)GetWindowLongPtrW(window->wnd, GWL_STYLE);
 	RECT             rect   = {.left = 0, .top = 0, .right = (LONG)w, .bottom = (LONG)h};
@@ -363,6 +367,8 @@ static void kWin32_ToggleWindowFullscreen(kWindow id)
 	kPlatformWindow *window = id.resource;
 	if (!window->fullscreen)
 	{
+		kLogTrace("Windows: Switching to fullscreen mode.\n");
+
 		DWORD       style = (DWORD)GetWindowLongPtrW(window->wnd, GWL_STYLE);
 		MONITORINFO mi    = {.cbSize = sizeof(mi)};
 		if (GetWindowPlacement(window->wnd, &window->placement) &&
@@ -378,6 +384,8 @@ static void kWin32_ToggleWindowFullscreen(kWindow id)
 	}
 	else
 	{
+		kLogTrace("Windows: Restoring window from fullscreen mode.\n");
+
 		SetWindowLongPtrW(window->wnd, GWL_STYLE, window->style);
 		SetWindowPlacement(window->wnd, &window->placement);
 		SetWindowPos(window->wnd, NULL, 0, 0, 0, 0,
@@ -389,6 +397,8 @@ static void kWin32_ToggleWindowFullscreen(kWindow id)
 
 static void kWin32_ClipCursorToWindow(kWindow id)
 {
+	kLogTrace("Windows: Clipping cursor to window.\n");
+
 	kPlatformWindow *window = id.resource;
 
 	RECT             rect;
@@ -409,6 +419,8 @@ static void kWin32_ClipCursorToWindow(kWindow id)
 
 static void kWin32_ForceReleaseCursor(kWindow id)
 {
+	kLogTrace("Windows: Releasing cursor from window.\n");
+
 	kPlatformWindow *window = id.resource;
 
 	ShowCursor(TRUE);
@@ -422,6 +434,8 @@ static void kWin32_ForceReleaseCursor(kWindow id)
 
 static void kWin32_ForceCaptureCursor(kWindow id)
 {
+	kLogTrace("Windows: Capturing cursor in window.\n");
+
 	kPlatformWindow *window = id.resource;
 	if (GetActiveWindow() == window->wnd)
 	{
@@ -452,26 +466,43 @@ static int  kWin32_GetWindowCaptionSize(kWindow id) { return id.resource->border
 
 static void kWin32_MaximizeWindow(kWindow id)
 {
+	kLogTrace("Windows: Maximizing window.\n");
 	kPlatformWindow *window = id.resource;
 	ShowWindow(window->wnd, SW_MAXIMIZE);
 }
 
 static void kWin32_RestoreWindow(kWindow id)
 {
+	kLogTrace("Windows: Restoring window.\n");
 	kPlatformWindow *window = id.resource;
 	ShowWindow(window->wnd, SW_RESTORE);
 }
 
 static void kWin32_MinimizeWindow(kWindow id)
 {
+	kLogTrace("Windows: Minimizing window.\n");
 	kPlatformWindow *window = id.resource;
 	ShowWindow(window->wnd, SW_MINIMIZE);
 }
 
 static void kWin32_CloseWindow(kWindow id)
 {
+	kLogTrace("Windows: Closing window.\n");
 	kPlatformWindow *window = id.resource;
 	PostMessageW(window->wnd, WM_CLOSE, 0, 0);
+}
+
+static kRenderTargetConfig kWin32_GetRenderTargetConfig(kWindow id)
+{
+	kPlatformWindow *window = id.resource;
+	return window->rt_config;
+}
+
+static void kWin32_ApplyRenderTargetConfig(kWindow id, const kRenderTargetConfig &config)
+{
+	kPlatformWindow *window = id.resource;
+	window->rt_apply        = true;
+	window->rt_config       = config;
 }
 
 //
@@ -502,6 +533,7 @@ static LRESULT CALLBACK kWin32_ServerServiceWndProc(HWND wnd, UINT msg, WPARAM w
 			CREATESTRUCTW *cs = (CREATESTRUCTW *)wparam;
 			res = (LRESULT)CreateWindowExW(cs->dwExStyle, cs->lpszClass, cs->lpszName, cs->style, cs->x, cs->y, cs->cx,
 			                               cs->cy, cs->hwndParent, cs->hMenu, cs->hInstance, cs->lpCreateParams);
+			SetFocus((HWND)res);
 		}
 		break;
 
@@ -619,7 +651,7 @@ static LRESULT CALLBACK kWin32_ServerWndProc(HWND wnd, UINT msg, WPARAM wparam, 
 		case WM_SYSKEYUP:
 		case WM_SYSKEYDOWN:
 		{
-			PostThreadMessageW(server.client, msg, (WPARAM)wnd, lparam);
+			PostThreadMessageW(server.client, msg, wparam, lparam);
 			res = DefWindowProcW(wnd, msg, wparam, lparam);
 		}
 		break;
@@ -974,6 +1006,8 @@ static LRESULT kWin32_ClientWndProc(HWND wnd, UINT msg, WPARAM wparam, LPARAM lp
 				}
 			}
 
+			kLogTrace("Windows: Window focus %s.\n", focused ? "gained" : "lost");
+
 			return 0;
 		}
 
@@ -1187,6 +1221,8 @@ static void kWin32_DestroyWindow(kWindowState *ws)
 
 	if (window)
 	{
+		kLogTrace("Windows: Destroying window.\n");
+
 		media.backend.render.DestroySwapChain(ws->swap_chain);
 		kWin32_RequestDestroyWindow(window->wnd);
 		kFree(window, sizeof(*window));
@@ -1203,9 +1239,11 @@ static void kWin32_CreateWindow(kWindowState *ws, const kWindowSpec &spec)
 	if (spec.title.count)
 	{
 		int len    = MultiByteToWideChar(CP_UTF8, 0, (char *)spec.title.data, (int)spec.title.count, title,
-		                                 kArrayCount(title) - 1);
+                                      kArrayCount(title) - 1);
 		title[len] = 0;
 	}
+
+	kLogTrace("Windows: Creating window: %S.\n", title);
 
 	int width  = CW_USEDEFAULT;
 	int height = CW_USEDEFAULT;
@@ -1243,9 +1281,11 @@ static void kWin32_CreateWindow(kWindowState *ws, const kWindowSpec &spec)
 
 	memset(window, 0, sizeof(*window));
 
-	ws->window       = window;
-	window->style    = style;
-	window->captions = (spec.flags & kWindowStyle_DisableCaptions);
+	ws->window        = window;
+	window->style     = style;
+	window->captions  = (spec.flags & kWindowStyle_DisableCaptions);
+	window->rt_apply  = false;
+	window->rt_config = spec.rt;
 
 	window->wnd = kWin32_RequestCreateWindow(WS_EX_APPWINDOW, title, style, CW_USEDEFAULT, CW_USEDEFAULT, width, height,
 	                                         0, 0, instance, 0);
@@ -1283,7 +1323,7 @@ static void kWin32_CreateWindow(kWindowState *ws, const kWindowSpec &spec)
 		kWin32_ToggleWindowFullscreen(window);
 	}
 
-	ws->swap_chain = media.backend.render.CreateSwapChain(window->wnd);
+	ws->swap_chain = media.backend.render.CreateSwapChain(window->wnd, spec.rt);
 
 	//
 	//
@@ -1308,6 +1348,9 @@ static void kWin32_CreateWindow(kWindowState *ws, const kWindowSpec &spec)
 	{
 		ws->flags[kWindow_Hovered] = true;
 	}
+
+	TRACKMOUSEEVENT tme = {.cbSize = sizeof(tme), .dwFlags = TME_LEAVE, .hwndTrack = window->wnd};
+	TrackMouseEvent(&tme);
 
 	ws->flags[kWindow_Fullscreen] = window->fullscreen;
 	ws->yfactor                   = (float)dpi / USER_DEFAULT_SCREEN_DPI;
@@ -1365,6 +1408,12 @@ static int kWin32_EventLoop(void)
 			window->resized = false;
 		}
 
+		if (window->rt_apply)
+		{
+			media.backend.render.ApplyRenderTargetConfig(media.window.swap_chain, window->rt_config);
+			window->rt_apply = false;
+		}
+
 		media.keyboard.mods = kWin32_GetKeyModFlags();
 
 		{
@@ -1392,17 +1441,22 @@ static int kWin32_EventLoop(void)
 //
 //
 
-void kResizeWindow(u32 w, u32 h) { kWin32_ResizeWindow(media.window.window, w, h); }
-void kToggleWindowFullscreen(void) { kWin32_ToggleWindowFullscreen(media.window.window); }
-void kReleaseCursor(void) { kWin32_ReleaseCursor(media.window.window); }
-void kCaptureCursor(void) { kWin32_CaptureCursor(media.window.window); }
-int  kGetWindowCaptionSize(void) { return kWin32_GetWindowCaptionSize(media.window.window); }
-void kMaximizeWindow(void) { kWin32_MaximizeWindow(media.window.window); }
-void kRestoreWindow(void) { kWin32_RestoreWindow(media.window.window); }
-void kMinimizeWindow(void) { kWin32_MinimizeWindow(media.window.window); }
-void kCloseWindow(void) { kWin32_CloseWindow(media.window.window); }
+void                kResizeWindow(u32 w, u32 h) { kWin32_ResizeWindow(media.window.window, w, h); }
+void                kToggleWindowFullscreen(void) { kWin32_ToggleWindowFullscreen(media.window.window); }
+void                kReleaseCursor(void) { kWin32_ReleaseCursor(media.window.window); }
+void                kCaptureCursor(void) { kWin32_CaptureCursor(media.window.window); }
+int                 kGetWindowCaptionSize(void) { return kWin32_GetWindowCaptionSize(media.window.window); }
+void                kMaximizeWindow(void) { kWin32_MaximizeWindow(media.window.window); }
+void                kRestoreWindow(void) { kWin32_RestoreWindow(media.window.window); }
+void                kMinimizeWindow(void) { kWin32_MinimizeWindow(media.window.window); }
+void                kCloseWindow(void) { kWin32_CloseWindow(media.window.window); }
+kRenderTargetConfig kGetRenderTargetConfig(void) { return kWin32_GetRenderTargetConfig(media.window.window); }
+void                kApplyRenderTargetConfig(const kRenderTargetConfig &config)
+{
+	kWin32_ApplyRenderTargetConfig(media.window.window, config);
+}
 
-int  kEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user)
+int kEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user)
 {
 	DWORD  task_index  = 0;
 	HANDLE avrt_handle = AvSetMmThreadCharacteristicsW(L"Games", &task_index);
@@ -1416,7 +1470,9 @@ int  kEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user)
 
 	memset(&media, 0, sizeof(media));
 
+	kLogTrace("Windows: Creating render backend.\n");
 	kCreateRenderBackend(&media.backend.render);
+
 	kWin32_CreateWindow(&media.window, spec.window);
 
 	if (!media.window.window)
@@ -1466,10 +1522,12 @@ int  kEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user)
 
 	kCreateRenderContext(&media.backend.render);
 
+	kLogTrace("Windows: Calling user load.\n");
 	media.user.load();
 
 	int status = kWin32_EventLoop();
 
+	kLogTrace("Windows: Calling user release.\n");
 	media.user.release();
 
 	kFreeArena(media.arena, allocator);

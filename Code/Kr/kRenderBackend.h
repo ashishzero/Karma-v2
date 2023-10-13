@@ -19,10 +19,12 @@ typedef struct kRenderData2D
 	kSpan<kIndex2D>      indices;
 } kRenderData2D;
 
-typedef kSwapChain *(*kSwapChainCreateProc)(void *);
+typedef kSwapChain *(*kSwapChainCreateProc)(void *, const kRenderTargetConfig &);
 typedef void (*kSwapChainDestroyProc)(kSwapChain *);
 typedef void (*kSwapChainResizeProc)(kSwapChain *, uint, uint);
 typedef kTexture *(*kSwapChainTargetProc)(kSwapChain *);
+typedef kRenderTargetConfig(*kSwapChainRenderTargetConfig)(kSwapChain *);
+typedef void (*kApplySwapChainRenderTargetConfig)(kSwapChain *, const kRenderTargetConfig &);
 typedef void (*kSwapChainPresentProc)(kSwapChain *);
 
 typedef kTexture *(*kRenderBackendTextureCreateProc)(const kTextureSpec &);
@@ -39,6 +41,8 @@ typedef struct kRenderBackend
 	kSwapChainDestroyProc             DestroySwapChain;
 	kSwapChainResizeProc              ResizeSwapChain;
 	kSwapChainTargetProc              SwapChainRenderTarget;
+	kSwapChainRenderTargetConfig      GetRenderTargetConfig;
+	kApplySwapChainRenderTargetConfig ApplyRenderTargetConfig;
 	kSwapChainPresentProc             Present;
 
 	kRenderBackendTextureCreateProc   CreateTexture;

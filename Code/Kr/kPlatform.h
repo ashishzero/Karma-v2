@@ -124,6 +124,8 @@ umem    kWriteFile(kFile handle, u8 *buff, umem size);
 umem    kGetFileSize(kFile handle);
 kString kReadEntireFile(kString filepath);
 bool    kWriteEntireFile(kString filepath, u8 *buffer, umem size);
+kString kGetFileName(kString path);
+kString kGetDirectoryPath(kString path);
 uint    kGetFileAttributes(kString mb_filepath);
 u64     kGetFileLastModifiedTime(kString mb_filepath);
 bool    kSetWorkingDirectory(kString mb_path);

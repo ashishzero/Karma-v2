@@ -25,7 +25,7 @@ SamplerState Sampler : register(s0);
 
 ////////////////////////////////////////////////
 
-kVertexOutput QuadVsMain(kVertexInput vertex)
+kVertexOutput kQuadVS(kVertexInput vertex)
 {
 	kVertexOutput ouput;
 	ouput.pos = mul(Transform, float4(vertex.pos, 1.0f));
@@ -36,7 +36,7 @@ kVertexOutput QuadVsMain(kVertexInput vertex)
 
 ////////////////////////////////////////////////
 
-float4 QuadPsMain(kVertexOutput input) : SV_Target
+float4 kQuadPS(kVertexOutput input) : SV_Target
 {
 	float4 sampled = SrcTexture.Sample(Sampler, input.tex);
 	float4 masked  = MaskTexture.Sample(Sampler, input.tex);
