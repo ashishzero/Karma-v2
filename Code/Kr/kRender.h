@@ -231,8 +231,8 @@ kGlyph *kFindFontGlyph(const kFont &font, u32 codepoint);
 kVec2   kAdjectCursorToBaseline(const kFont &font, kVec2 cursor, float scale);
 bool    kCalculateGlyphMetrics(const kFont &font, u32 codepoint, float scale, kVec2 *cursor, kVec2 *rpos, kVec2 *rsize,
                                kRect *rect);
-float   kCalculateText(kString text, const kFont &font, float scale = 1);
-float   kCalculateText(kString text, float scale = 1);
+kVec2   kCalculateText(kString text, const kFont &font, float scale = 1);
+kVec2   kCalculateText(kString text, float scale = 1);
 void    kDrawText(kString text, kVec3 pos, const kFont &font, kVec4 color = kVec4(1), float scale = 1);
 void    kDrawText(kString text, kVec2 pos, const kFont &font, kVec4 color = kVec4(1), float scale = 1);
 void    kDrawText(kString text, kVec3 pos, kVec4 color = kVec4(1), float scale = 1);

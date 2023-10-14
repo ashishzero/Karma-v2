@@ -3,10 +3,10 @@
 
 static constexpr int kEmFontAtlasWidth   = 512;
 static constexpr int kEmFontAtlasHeight  = 1078;
-static constexpr int kEmFontSize         = 32;
-static constexpr int kEmFontAscent       = 15;
-static constexpr int kEmFontDescent      = -5;
-static constexpr int kEmFontLineGap      = 32;
+static constexpr int kEmFontAscent       = 33;
+static constexpr int kEmFontDescent      = -10;
+static constexpr int kEmFontLineGap      = 42;
+static constexpr int kEmFontSize         = 43;
 static constexpr int kEmFontMinCodepoint = 32;
 static constexpr int kEmFontMaxCodepoint = 255;
 static constexpr int kEmFontGlyphCount   = 192;

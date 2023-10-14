@@ -18,8 +18,8 @@ typedef struct kRenderState2D
 	u32            param;
 	u32            command;
 	u32            pass;
-	kTexture      *render_target;
-	kTexture      *depth_stenil;
+	kTexture      *rt;
+	kTexture      *ds;
 	kViewport      viewport;
 	u32            flags;
 	kRenderClear2D clear;
@@ -131,7 +131,7 @@ static float kCosLookup(float turns)
 void kBeginRenderPass(kTexture *texture, kTexture *depth_stencil, uint flags, kVec4 color, float depth)
 {
 	kRenderContext2D *ctx = kGetRenderContext2D();
-	kAssert(ctx->state.render_target == 0 && ctx->state.depth_stenil == 0);
+	kAssert(ctx->state.rt == 0 && ctx->state.ds == 0);
 
 	kVec2i    size = render.backend.GetTextureSize(texture);
 
@@ -143,8 +143,8 @@ void kBeginRenderPass(kTexture *texture, kTexture *depth_stencil, uint flags, kV
 	viewport.n               = 0;
 	viewport.f               = 1;
 
-	ctx->state.render_target = texture;
-	ctx->state.depth_stenil  = depth_stencil;
+	ctx->state.rt = texture;
+	ctx->state.ds  = depth_stencil;
 	ctx->state.viewport      = viewport;
 	ctx->state.clear.color   = color;
 	ctx->state.clear.depth   = depth;
@@ -165,8 +165,8 @@ void kEndRenderPass(void)
 	if (ctx->state.command != ctx->commands.count)
 	{
 		kRenderPass2D *pass  = ctx->passes.Add();
-		pass->rt             = ctx->state.render_target;
-		pass->ds             = ctx->state.depth_stenil;
+		pass->rt             = ctx->state.rt;
+		pass->ds             = ctx->state.ds;
 		pass->viewport       = ctx->state.viewport;
 		pass->flags          = ctx->state.flags;
 		pass->clear          = ctx->state.clear;
@@ -175,8 +175,8 @@ void kEndRenderPass(void)
 		ctx->state.command   = (u32)ctx->commands.count;
 	}
 
-	ctx->state.render_target = nullptr;
-	ctx->state.depth_stenil  = nullptr;
+	ctx->state.rt = nullptr;
+	ctx->state.ds  = nullptr;
 	ctx->state.flags         = 0;
 }
 
@@ -1418,7 +1418,7 @@ kGlyph *kFindFontGlyph(const kFont &font, u32 codepoint)
 
 kVec2 kAdjectCursorToBaseline(const kFont &font, kVec2 cursor, float scale)
 {
-	cursor.y += (float)(font.size + font.descent) * scale;
+	cursor.y += (float)(font.ascent) * scale;
 	return cursor;
 }
 
@@ -1436,10 +1436,12 @@ bool kCalculateGlyphMetrics(const kFont &font, u32 codepoint, float scale, kVec2
 
 	kGlyph *glyph = kFindFontGlyph(font, codepoint);
 
-	rpos->x       = kRound(cursor->x + scale * (float)glyph->bearing.x);
-	rpos->y       = kRound(cursor->y - scale * (float)(glyph->bearing.y + glyph->size.y));
-	rsize->x      = kRound(scale * (float)glyph->size.x);
-	rsize->y      = kRound(scale * (float)glyph->size.y);
+	rpos->x       = (cursor->x + scale * (float)glyph->bearing.x);
+	rpos->y       = (cursor->y - scale * (float)(glyph->bearing.y + glyph->size.y));
+	//rpos->y = (cursor->y + scale * (float)glyph->bearing.y);
+
+	rsize->x      = (scale * (float)glyph->size.x);
+	rsize->y      = (scale * (float)glyph->size.y);
 	*rect         = glyph->rect;
 
 	cursor->x += scale * glyph->advance.x;
@@ -1447,7 +1449,7 @@ bool kCalculateGlyphMetrics(const kFont &font, u32 codepoint, float scale, kVec2
 	return true;
 }
 
-float kCalculateText(kString text, const kFont &font, float scale)
+kVec2 kCalculateText(kString text, const kFont &font, float scale)
 {
 	u32   codepoint;
 	u8   *ptr = text.begin();
@@ -1465,10 +1467,14 @@ float kCalculateText(kString text, const kFont &font, float scale)
 		kCalculateGlyphMetrics(font, codepoint, scale, &cursor, &rpos, &rsize, &rect);
 	}
 
-	return cursor.x;
+	kVec2 r;
+	r.x = cursor.x;
+	r.y = scale * font.size;
+
+	return r;
 }
 
-float kCalculateText(kString text, float scale)
+kVec2 kCalculateText(kString text, float scale)
 {
 	kFont &font = render.builtin.font;
 	return kCalculateText(text, font, scale);

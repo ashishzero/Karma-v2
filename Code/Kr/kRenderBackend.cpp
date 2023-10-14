@@ -1,5 +1,6 @@
 #include "kRenderBackend.h"
 #include "kLinkedList.h"
+#include <math.h>
 
 #if defined(K_BUILD_DEBUG) || defined(K_BUILD_DEVELOPER)
 static bool EnableDebugLayer = true;
@@ -20,12 +21,12 @@ static kSwapChain *kCreateSwapChainFallback(void *, const kRenderTargetConfig &)
 }
 static void                kDestroySwapChainFallback(kSwapChain *) {}
 static void                kResizeSwapChainFallback(kSwapChain *, uint, uint) {}
-static kTexture *          kSwapChainRenderTargetFallback(kSwapChain *) { return (kTexture *)&kFallbackTexture; }
+static kTexture           *kSwapChainRenderTargetFallback(kSwapChain *) { return (kTexture *)&kFallbackTexture; }
 static kRenderTargetConfig kGetRenderTargetConfigFallback(kSwapChain *) { return kRenderTargetConfig{}; }
 static void                kApplyRenderTargetConfigFallback(kSwapChain *, const kRenderTargetConfig &) {}
 static void                kPresentFallback(kSwapChain *) {}
 
-static kTexture *          kCreateTextureFallback(const kTextureSpec &) { return (kTexture *)&kFallbackTexture; }
+static kTexture           *kCreateTextureFallback(const kTextureSpec &) { return (kTexture *)&kFallbackTexture; }
 static void                kDestroyTextureFallback(kTexture *) {}
 static kVec2i              kGetTextureSizeFallback(kTexture *) { return kVec2i(0); }
 static void                kResizeTextureFallback(kTexture *, u32, u32) {}
@@ -54,13 +55,13 @@ constexpr uint K_TEXTURE_MAX_PER_BLOCK = 32;
 typedef struct kD3D11_Texture : kTexture
 {
 	kVec2i                     size;
-	ID3D11ShaderResourceView * srv;
-	ID3D11RenderTargetView *   rtv;
-	ID3D11DepthStencilView *   dsv;
+	ID3D11ShaderResourceView  *srv;
+	ID3D11RenderTargetView    *rtv;
+	ID3D11DepthStencilView    *dsv;
 	ID3D11UnorderedAccessView *uav;
-	ID3D11Texture2D *          texture2d;
-	kD3D11_Texture *           prev;
-	kD3D11_Texture *           next;
+	ID3D11Texture2D           *texture2d;
+	kD3D11_Texture            *prev;
+	kD3D11_Texture            *next;
 } kD3D11_Texture;
 
 typedef enum kD3D11_RenderTarget
@@ -68,17 +69,18 @@ typedef enum kD3D11_RenderTarget
 	kD3D11_RenderTarget_Final,
 	kD3D11_RenderTarget_MSAA,
 	kD3D11_RenderTarget_Resolved,
+	kD3D11_RenderTarget_ToneMapping,
 	kD3D11_RenderTarget_Count
 } kD3D11_RenderTarget;
 
 typedef struct kD3D11_SwapChain : kSwapChain
 {
-	IDXGISwapChain1 *   native;
+	IDXGISwapChain1    *native;
 	kD3D11_Texture      targets[kD3D11_RenderTarget_Count];
 	kD3D11_RenderTarget rt;
 	kRenderTargetConfig rt_config;
-	kD3D11_SwapChain *  prev;
-	kD3D11_SwapChain *  next;
+	kD3D11_SwapChain   *prev;
+	kD3D11_SwapChain   *next;
 } kD3D11_SwapChain;
 
 typedef struct kD3D11_TextureBlock
@@ -90,7 +92,7 @@ typedef struct kD3D11_TextureBlock
 typedef struct kD3D11_TexturePool
 {
 	kD3D11_Texture       first;
-	kD3D11_Texture *     free;
+	kD3D11_Texture      *free;
 	kD3D11_TextureBlock *blocks;
 } kD3D11_TexturePool;
 
@@ -98,26 +100,27 @@ typedef struct kD3D11_Render2D
 {
 	uint                   vertex_sz;
 	uint                   index_sz;
-	ID3D11Buffer *         vertex;
-	ID3D11Buffer *         index;
-	ID3D11Buffer *         constant;
-	ID3D11VertexShader *   vs;
-	ID3D11PixelShader *    ps;
-	ID3D11InputLayout *    input;
+	ID3D11Buffer          *vertex;
+	ID3D11Buffer          *index;
+	ID3D11Buffer          *constant;
+	ID3D11VertexShader    *vs;
+	ID3D11PixelShader     *ps;
+	ID3D11InputLayout     *input;
 	ID3D11RasterizerState *rasterizer;
 } kD3D11_Render2D;
 
 typedef struct kD3D11_PostProcess
 {
-	ID3D11VertexShader *vs;
-	ID3D11PixelShader * tonemapping[kToneMappingMethod_Count];
+	ID3D11VertexShader  *vs;
+	ID3D11PixelShader   *tonemapping[kToneMappingMethod_Count];
+	ID3D11ComputeShader *tonemapping_cs;
 } kD3D11_PostProcess;
 
 typedef struct kD3D11_DeferredResource
 {
 	ID3D11DepthStencilState *depth;
-	ID3D11SamplerState *     samplers[kTextureFilter_Count];
-	ID3D11BlendState *       blends[kBlendMode_Count];
+	ID3D11SamplerState      *samplers[kTextureFilter_Count];
+	ID3D11BlendState        *blends[kBlendMode_Count];
 	kD3D11_PostProcess       postprocess;
 } kD3D11_DeferredResource;
 
@@ -131,9 +134,9 @@ typedef struct kD3D11_Resource
 
 typedef struct kD3D11_Backend
 {
-	ID3D11Device1 *       device;
+	ID3D11Device1        *device;
 	ID3D11DeviceContext1 *device_context;
-	IDXGIFactory2 *       factory;
+	IDXGIFactory2        *factory;
 	kD3D11_Resource       resource;
 } kD3D11_Backend;
 
@@ -163,6 +166,7 @@ static void kD3D11_Flush(void)
 #include "Shaders/Generated/kRender2D.hlsl.h"
 #include "Shaders/Generated/kPostProcessVS.hlsl.h"
 #include "Shaders/Generated/kToneMapping.hlsl.h"
+#include "Shaders/Generated/kToneMappingCS.hlsl.h"
 
 static constexpr UINT kD3D11_SampleCountMap[] = {1, 2, 4, 8};
 static_assert(kArrayCount(kD3D11_SampleCountMap) == kAntiAliasingMethod_Count, "");
@@ -190,7 +194,7 @@ static_assert(kArrayCount(kD3D11_UsageMap) == kUsage_Count, "");
 static constexpr D3D11_FILTER kD3D11_FilterMap[] = {D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_FILTER_MIN_MAG_MIP_POINT};
 static_assert(kArrayCount(kD3D11_FilterMap) == kTextureFilter_Count, "");
 
-static const char *  kD3D11_ToneMappingPSNames[] = {"standard dynamic range", "HDR AES"};
+static const char   *kD3D11_ToneMappingPSNames[] = {"standard dynamic range", "HDR AES"};
 static const kString kD3D11_ToneMappingPS[]      = {kString(kToneMapSdrPS), kString(kToneMapAcesApproxPS)};
 static_assert(kArrayCount(kD3D11_ToneMappingPS) == kToneMappingMethod_Count, "");
 static_assert(kArrayCount(kD3D11_ToneMappingPSNames) == kToneMappingMethod_Count, "");
@@ -306,6 +310,27 @@ static ID3D11VertexShader *kD3D11_GetPostProcessVertexShader(void)
 	}
 
 	return d3d11.resource.deferred.postprocess.vs;
+}
+
+static ID3D11ComputeShader *kD3D11_GetPostProcessToneMappingComputeShader(void)
+{
+	if (d3d11.resource.deferred.postprocess.tonemapping_cs)
+	{
+		return d3d11.resource.deferred.postprocess.tonemapping_cs;
+	}
+
+	kString ps = kString(kToneMapAcesCS);
+
+	kLogTrace("Direct3D11: Compiling tone mapping compute shader.\n");
+
+	HRESULT hr =
+		d3d11.device->CreateComputeShader(ps.data, ps.count, 0, &d3d11.resource.deferred.postprocess.tonemapping_cs);
+	if (FAILED(hr))
+	{
+		kLogHresultError(hr, "DirectX11", "Failed to create tone mapping compute shader");
+	}
+
+	return d3d11.resource.deferred.postprocess.tonemapping_cs;
 }
 
 static ID3D11PixelShader *kD3D11_GetPostProcessToneMappingShader(kToneMappingMethod method)
@@ -569,9 +594,10 @@ static void kD3D11_PrepareSwapChainFeatureTextures(kD3D11_SwapChain *r)
 	if (r->rt_config.antialiasing == kAntiAliasingMethod_None && r->rt_config.tonemapping == kToneMappingMethod_SDR)
 		return;
 
-	kVec2i          size     = kD3D11_GetTextureSize(rt);
-	kD3D11_Texture *msaa     = &r->targets[kD3D11_RenderTarget_MSAA];
-	kD3D11_Texture *resolved = &r->targets[kD3D11_RenderTarget_Resolved];
+	kVec2i          size        = kD3D11_GetTextureSize(rt);
+	kD3D11_Texture *msaa        = &r->targets[kD3D11_RenderTarget_MSAA];
+	kD3D11_Texture *resolved    = &r->targets[kD3D11_RenderTarget_Resolved];
+	kD3D11_Texture *tonemapping = &r->targets[kD3D11_RenderTarget_ToneMapping];
 
 	if (r->rt_config.antialiasing != kAntiAliasingMethod_None)
 	{
@@ -610,10 +636,10 @@ static void kD3D11_PrepareSwapChainFeatureTextures(kD3D11_SwapChain *r)
 		desc.Usage                = D3D11_USAGE_DEFAULT;
 		desc.BindFlags            = D3D11_BIND_SHADER_RESOURCE;
 
-		if (r->rt_config.antialiasing == kAntiAliasingMethod_None)
+		/*if (r->rt_config.tonemapping == kToneMappingMethod_HDR_AES)
 		{
-			desc.BindFlags |= D3D11_BIND_RENDER_TARGET;
-		}
+		    desc.BindFlags |= D3D11_BIND_UNORDERED_ACCESS;
+		}*/
 
 		HRESULT hr = d3d11.device->CreateTexture2D(&desc, 0, &resolved->texture2d);
 
@@ -625,6 +651,30 @@ static void kD3D11_PrepareSwapChainFeatureTextures(kD3D11_SwapChain *r)
 		}
 
 		kD3D11_PrepareTexture(resolved, desc.BindFlags);
+	}
+
+	if (r->rt_config.tonemapping == kToneMappingMethod_HDR_AES)
+	{
+		D3D11_TEXTURE2D_DESC desc = {};
+		desc.Width                = size.x;
+		desc.Height               = size.y;
+		desc.MipLevels            = 1;
+		desc.ArraySize            = 1;
+		desc.Format               = DXGI_FORMAT_R11G11B10_FLOAT;
+		desc.SampleDesc.Count     = 1;
+		desc.Usage                = D3D11_USAGE_DEFAULT;
+		desc.BindFlags            = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
+
+		HRESULT hr                = d3d11.device->CreateTexture2D(&desc, 0, &tonemapping->texture2d);
+
+		if (FAILED(hr))
+		{
+			rt->state = kResourceState_Error;
+			kLogHresultError(hr, "DirectX11", "Failed to create MSAA resolution render target");
+			return;
+		}
+
+		kD3D11_PrepareTexture(tonemapping, desc.BindFlags);
 	}
 
 	if (msaa->state == kResourceState_Ready && resolved->state == kResourceState_Ready)
@@ -790,8 +840,30 @@ static void kD3D11_Present(kSwapChain *swap_chain)
 
 	if (rt == kD3D11_RenderTarget_Resolved)
 	{
-		kD3D11_Texture *resolved = &r->targets[kD3D11_RenderTarget_Resolved];
-		kD3D11_Texture *target   = &r->targets[kD3D11_RenderTarget_Final];
+		kD3D11_Texture            *resolved    = &r->targets[kD3D11_RenderTarget_Resolved];
+		kD3D11_Texture            *tonemapping = &r->targets[kD3D11_RenderTarget_ToneMapping];
+
+		ID3D11ComputeShader       *cs          = kD3D11_GetPostProcessToneMappingComputeShader();
+
+		ID3D11ShaderResourceView  *srvs[]      = {resolved->srv};
+		ID3D11UnorderedAccessView *uavs[]      = {tonemapping->uav};
+
+		d3d11.device_context->CSSetShader(cs, 0, 0);
+		d3d11.device_context->CSSetShaderResources(0, 1, srvs);
+		d3d11.device_context->CSSetUnorderedAccessViews(0, 1, uavs, 0);
+
+		UINT x_thrd_group = (UINT)ceilf(tonemapping->size.x / 32.0f);
+		UINT y_thrd_group = (UINT)ceilf(tonemapping->size.y / 16.0f);
+		d3d11.device_context->Dispatch(x_thrd_group, y_thrd_group, 1);
+		d3d11.device_context->ClearState();
+
+		rt = kD3D11_RenderTarget_ToneMapping;
+	}
+
+	if (rt == kD3D11_RenderTarget_ToneMapping)
+	{
+		kD3D11_Texture *tonemapping = &r->targets[kD3D11_RenderTarget_ToneMapping];
+		kD3D11_Texture *target      = &r->targets[kD3D11_RenderTarget_Final];
 
 		D3D11_VIEWPORT  viewport;
 		viewport.TopLeftX = 0;
@@ -804,16 +876,16 @@ static void kD3D11_Present(kSwapChain *swap_chain)
 		float clear[]     = {0.0f, 0.0f, 0.0f, 0.0f};
 		d3d11.device_context->ClearRenderTargetView(target->rtv, clear);
 
-		ID3D11VertexShader *      vs          = kD3D11_GetPostProcessVertexShader();
-		ID3D11PixelShader *       tonemapping = kD3D11_GetPostProcessToneMappingShader(r->rt_config.tonemapping);
-		ID3D11SamplerState *      sampler     = kD3D11_GetSampleState(kTextureFilter_Linear);
-		ID3D11BlendState *        blend       = kD3D11_GetBlendState(kBlendMode_None);
-		ID3D11ShaderResourceView *resources[] = {resolved->srv};
+		ID3D11VertexShader       *vs          = kD3D11_GetPostProcessVertexShader();
+		ID3D11PixelShader        *ps          = kD3D11_GetPostProcessToneMappingShader(kToneMappingMethod_SDR);
+		ID3D11SamplerState       *sampler     = kD3D11_GetSampleState(kTextureFilter_Linear);
+		ID3D11BlendState         *blend       = kD3D11_GetBlendState(kBlendMode_None);
+		ID3D11ShaderResourceView *resources[] = {tonemapping->srv};
 
 		d3d11.device_context->OMSetRenderTargets(1, &target->rtv, 0);
 		d3d11.device_context->RSSetViewports(1, &viewport);
 		d3d11.device_context->VSSetShader(vs, 0, 0);
-		d3d11.device_context->PSSetShader(tonemapping, 0, 0);
+		d3d11.device_context->PSSetShader(ps, 0, 0);
 		d3d11.device_context->PSSetShaderResources(0, 1, resources);
 		d3d11.device_context->PSSetSamplers(0, 1, &sampler);
 		d3d11.device_context->OMSetBlendState(blend, 0, 0xffffffff);
@@ -887,10 +959,10 @@ static void kD3D11_ExecuteCommands(const kRenderData2D &data)
 
 	D3D11_MAPPED_SUBRESOURCE mapped;
 
-	ID3D11DeviceContext1 *   dc = d3d11.device_context;
-	ID3D11Buffer *           vb = d3d11.resource.render2d.vertex;
-	ID3D11Buffer *           ib = d3d11.resource.render2d.index;
-	ID3D11Buffer *           cb = d3d11.resource.render2d.constant;
+	ID3D11DeviceContext1    *dc = d3d11.device_context;
+	ID3D11Buffer            *vb = d3d11.resource.render2d.vertex;
+	ID3D11Buffer            *ib = d3d11.resource.render2d.index;
+	ID3D11Buffer            *cb = d3d11.resource.render2d.constant;
 	HRESULT                  hr = S_OK;
 
 	hr                          = dc->Map(vb, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
@@ -983,8 +1055,8 @@ static void kD3D11_ExecuteCommands(const kRenderData2D &data)
 
 				ID3D11SamplerState *sampler = kD3D11_GetSampleState(cmd.filter);
 
-				kD3D11_Texture *    r1      = (kD3D11_Texture *)param.textures[0];
-				kD3D11_Texture *    r2      = (kD3D11_Texture *)param.textures[1];
+				kD3D11_Texture     *r1      = (kD3D11_Texture *)param.textures[0];
+				kD3D11_Texture     *r2      = (kD3D11_Texture *)param.textures[1];
 
 				if (r1->state != kResourceState_Ready || r2->state != kResourceState_Ready) continue;
 
@@ -1242,7 +1314,7 @@ static bool kD3D11_CreateGraphicsDevice(void)
 	{
 		ID3D11Device *device = nullptr;
 		HRESULT       hr     = D3D11CreateDevice(adapter, D3D_DRIVER_TYPE_UNKNOWN, NULL, device_flags, FeatureLevels,
-                                       kArrayCount(FeatureLevels), D3D11_SDK_VERSION, &device, nullptr, nullptr);
+		                                         kArrayCount(FeatureLevels), D3D11_SDK_VERSION, &device, nullptr, nullptr);
 		kAssert(hr != E_INVALIDARG);
 
 		if (FAILED(hr))

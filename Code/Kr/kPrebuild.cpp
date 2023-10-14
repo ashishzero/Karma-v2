@@ -251,6 +251,9 @@ bool kExecutePrebuild(void)
 	const char *tm[] = {"kToneMapSdrPS", "kToneMapAcesApproxPS"};
 	sources.Add({"Code/Kr/Shaders/kToneMapping.hlsl", tm});
 
+	const char *tmcs[] = { "kToneMapAcesCS" };
+	sources.Add({"Code/Kr/Shaders/kToneMappingCS.hlsl", tmcs});
+
 	for (kShaderSource &src : sources)
 	{
 		if (!kRebuildShader(src.path, src.shaders))

@@ -3,9 +3,11 @@
 #include "kRender.h"
 #include "kStrings.h"
 
-void Update(float dt)
+static float stabilized_dt = 0;
+
+void         Update(float dt)
 {
-	kArena *            arena     = kGetFrameArena();
+	kArena             *arena     = kGetFrameArena();
 
 	kRenderTargetConfig rt_config = kGetRenderTargetConfig();
 
@@ -41,9 +43,15 @@ void Update(float dt)
 	kString   tm      = kFormatString(arena, "ToneMapping : %s", kToneMappingMethodStrings[rt_config.tonemapping]);
 	kString   aa      = kFormatString(arena, "AntiAliasing: %s", kAntiAliasingMethodStrings[rt_config.antialiasing]);
 
+	stabilized_dt     = kLerp(dt, stabilized_dt, 0.9f);
+
+	int     fps       = (int)(1.0f / stabilized_dt);
+	kString pf        = kFormatString(arena, "FPS: %d (%.2fms)", fps, 1000*stabilized_dt);
+
 	kBeginRenderPass(rt, 0, kRenderPass_ClearColor, clear);
 
 	kBeginCameraRect(0, (float)size.x, 0, (float)size.y);
+	kDrawText(pf, kVec2(0), kVec4(1, 1, 0, 1), yfactor);
 	kDrawText(aa, kVec2(50, 100), kVec4(1, 1, 1, 1), yfactor);
 	kDrawText(tm, kVec2(50, 150), kVec4(1, 1, 1, 1), yfactor);
 	kEndCamera();
@@ -51,10 +59,17 @@ void Update(float dt)
 	kBeginCamera(ar, 100);
 	kVec2 pos1 = kVec2(ar * 50, 50) - kVec2(10);
 	kVec2 pos2 = -kVec2(ar * 50, 50);
-	//kDrawRect(pos1, kVec2(10), kVec4(0, 1, 1, 1));
-	//kDrawRect(pos2, kVec2(10), kVec4(1, 1, 0, 1));
-	//kDrawRect(kVec2(0), kVec2(10), kVec4(50, 50, 0, 1));
-	kDrawText("mjk", kVec2(0), kVec4(1, 1, 0, 1), 1.0f);
+	// kDrawRect(pos1, kVec2(10), kVec4(0, 1, 1, 1));
+	// kDrawRect(pos2, kVec2(10), kVec4(1, 1, 0, 1));
+	// kDrawRect(kVec2(0), kVec2(10), kVec4(50, 50, 0, 1));
+
+	kString text = "Karma";
+
+	kVec2   ts   = kCalculateText(text);
+
+	// kDrawRect(kVec2(0), ts, kVec4(1));
+	// kDrawRect(kVec2(0, -32), kVec2(32, 33), kVec4(1, 0, 1, 1));
+	kDrawText(text, kVec2(0), kVec4(1, 1, 0, 1), 1.0f);
 	// kDrawLine(kVec2(-30), kVec2(50, 70), kVec4(1));
 	kEndCamera();
 
