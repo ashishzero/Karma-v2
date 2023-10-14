@@ -636,10 +636,10 @@ static void kD3D11_PrepareSwapChainFeatureTextures(kD3D11_SwapChain *r)
 		desc.Usage                = D3D11_USAGE_DEFAULT;
 		desc.BindFlags            = D3D11_BIND_SHADER_RESOURCE;
 
-		/*if (r->rt_config.tonemapping == kToneMappingMethod_HDR_AES)
+		if (r->rt_config.antialiasing == kAntiAliasingMethod_None)
 		{
-		    desc.BindFlags |= D3D11_BIND_UNORDERED_ACCESS;
-		}*/
+			desc.BindFlags |= D3D11_BIND_RENDER_TARGET;
+		}
 
 		HRESULT hr = d3d11.device->CreateTexture2D(&desc, 0, &resolved->texture2d);
 
@@ -838,7 +838,7 @@ static void kD3D11_Present(kSwapChain *swap_chain)
 		rt = kD3D11_RenderTarget_Resolved;
 	}
 
-	if (rt == kD3D11_RenderTarget_Resolved)
+	if (rt == kD3D11_RenderTarget_Resolved && r->rt_config.tonemapping != kToneMappingMethod_SDR)
 	{
 		kD3D11_Texture            *resolved    = &r->targets[kD3D11_RenderTarget_Resolved];
 		kD3D11_Texture            *tonemapping = &r->targets[kD3D11_RenderTarget_ToneMapping];
@@ -860,10 +860,10 @@ static void kD3D11_Present(kSwapChain *swap_chain)
 		rt = kD3D11_RenderTarget_ToneMapping;
 	}
 
-	if (rt == kD3D11_RenderTarget_ToneMapping)
+	if (rt != kD3D11_RenderTarget_Final)
 	{
-		kD3D11_Texture *tonemapping = &r->targets[kD3D11_RenderTarget_ToneMapping];
-		kD3D11_Texture *target      = &r->targets[kD3D11_RenderTarget_Final];
+		kD3D11_Texture *src    = &r->targets[rt];
+		kD3D11_Texture *target = &r->targets[kD3D11_RenderTarget_Final];
 
 		D3D11_VIEWPORT  viewport;
 		viewport.TopLeftX = 0;
@@ -880,7 +880,7 @@ static void kD3D11_Present(kSwapChain *swap_chain)
 		ID3D11PixelShader        *ps          = kD3D11_GetPostProcessToneMappingShader(kToneMappingMethod_SDR);
 		ID3D11SamplerState       *sampler     = kD3D11_GetSampleState(kTextureFilter_Linear);
 		ID3D11BlendState         *blend       = kD3D11_GetBlendState(kBlendMode_None);
-		ID3D11ShaderResourceView *resources[] = {tonemapping->srv};
+		ID3D11ShaderResourceView *resources[] = {src->srv};
 
 		d3d11.device_context->OMSetRenderTargets(1, &target->rtv, 0);
 		d3d11.device_context->RSSetViewports(1, &viewport);
@@ -1391,6 +1391,103 @@ static bool kD3D11_CreateRenderBackend(kRenderBackend *backend)
 
 	backend->ExecuteCommands         = kD3D11_ExecuteCommands;
 	backend->Destroy                 = kD3D11_DestroyGraphicsDevice;
+
+	return true;
+}
+
+//
+//
+//
+
+#include <d3d12.h>
+#include <dxgi1_5.h>
+
+#pragma comment(lib, "D3D12.lib")
+#pragma comment(lib, "DXGI.lib")
+
+struct kD3D12_Backend
+{
+	IDXGIFactory2      *factory;
+	ID3D12Device2      *device2;
+	ID3D12CommandQueue *queue;
+};
+
+static kD3D12_Backend d3d12;
+
+static IDXGIAdapter1 *kD3D12_FindAdapter(IDXGIFactory2 *factory, UINT flags)
+{
+	IDXGIAdapter1 *adapter              = nullptr;
+	size_t         max_dedicated_memory = 0;
+	IDXGIAdapter1 *adapter_it           = 0;
+
+	u32            it_index             = 0;
+	while (factory->EnumAdapters1(it_index, &adapter_it) != DXGI_ERROR_NOT_FOUND)
+	{
+		it_index += 1;
+
+		DXGI_ADAPTER_DESC1 desc;
+		adapter_it->GetDesc1(&desc);
+
+		HRESULT hr = D3D11CreateDevice(adapter_it, D3D_DRIVER_TYPE_UNKNOWN, 0, flags, FeatureLevels,
+		                               kArrayCount(FeatureLevels), D3D11_SDK_VERSION, NULL, NULL, NULL);
+
+		if (SUCCEEDED(hr) && desc.DedicatedVideoMemory > max_dedicated_memory)
+		{
+			max_dedicated_memory = desc.DedicatedVideoMemory;
+			adapter              = adapter_it;
+		}
+		else
+		{
+			adapter_it->Release();
+		}
+	}
+
+	return adapter;
+}
+
+static void kD3D12_DestroyGraphicsDevice(void)
+{
+	// CreateDXGIFactory2(
+}
+
+static bool kD3D12_CreateGraphicsDevice(void) { return false; }
+
+static bool kD3D12_CreateRenderBackend(kRenderBackend *backend)
+{
+	kLogTrace("Direct3D11: Creating graphics devices\n");
+	if (!kD3D12_CreateGraphicsDevice())
+	{
+		kD3D12_DestroyGraphicsDevice();
+		return false;
+	}
+
+	/*
+	kLogTrace("Direct3D11: Creating render 2d resources.\n");
+	if (!kD3D11_CreateRenderResources2D())
+	{
+	    kD3D11_DestroyGraphicsDevice();
+	    return false;
+	}*/
+
+	kLogTrace("Direct3D11: Registering render backend.\n");
+
+	// kDListInit(&d3d11.resource.textures.first);
+	// kDListInit(&d3d11.resource.swap_chains);
+
+	backend->CreateSwapChain         = kCreateSwapChainFallback;
+	backend->DestroySwapChain        = kDestroySwapChainFallback;
+	backend->ResizeSwapChain         = kResizeSwapChainFallback;
+	backend->SwapChainRenderTarget   = kSwapChainRenderTargetFallback;
+	backend->GetRenderTargetConfig   = kGetRenderTargetConfigFallback;
+	backend->ApplyRenderTargetConfig = kApplyRenderTargetConfigFallback;
+	backend->Present                 = kPresentFallback;
+
+	backend->CreateTexture           = kCreateTextureFallback;
+	backend->DestroyTexture          = kDestroyTextureFallback;
+	backend->GetTextureSize          = kGetTextureSizeFallback;
+	backend->ResizeTexture           = kResizeTextureFallback;
+	backend->ExecuteCommands         = kExecuteCommandsFallback;
+	backend->Destroy                 = kDestroyFallback;
 
 	return true;
 }
