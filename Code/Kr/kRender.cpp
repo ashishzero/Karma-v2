@@ -1476,7 +1476,8 @@ float kCalculateText(kString text, float scale)
 
 void kDrawText(kString text, kVec3 pos, const kFont &font, kVec4 color, float scale)
 {
-	kPushTexture(font.texture, 0);
+	kPushTexture(render.builtin.texture, 0);
+	kPushTexture(font.texture, 1);
 
 	u32   codepoint;
 	u8   *ptr  = text.begin();
@@ -1499,6 +1500,7 @@ void kDrawText(kString text, kVec3 pos, const kFont &font, kVec4 color, float sc
 		}
 	}
 
+	kPopTexture(1);
 	kPopTexture(0);
 }
 
@@ -1548,12 +1550,12 @@ static void kCreateBuiltinResources(void)
 
 		kTextureSpec spec = {};
 		spec.num_samples  = 1;
-		spec.format       = kFormat_RGBA8_UNORM;
+		spec.format       = kFormat_R8_UNORM;
 		spec.bind_flags   = kBind_ShaderResource;
 		spec.usage        = kUsage_Default;
 		spec.width        = kEmFontAtlasWidth;
 		spec.height       = kEmFontAtlasHeight;
-		spec.pitch        = kEmFontAtlasWidth * 4;
+		spec.pitch        = kEmFontAtlasWidth;
 		spec.pixels       = (u8 *)kEmFontAtlasPixels;
 
 		font->texture     = render.backend.CreateTexture(spec);

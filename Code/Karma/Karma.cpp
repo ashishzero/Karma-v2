@@ -48,13 +48,13 @@ void Update(float dt)
 	kDrawText(tm, kVec2(50, 150), kVec4(1, 1, 1, 1), yfactor);
 	kEndCamera();
 
-	kBeginCamera(ar, -100);
+	kBeginCamera(ar, 100);
 	kVec2 pos1 = kVec2(ar * 50, 50) - kVec2(10);
 	kVec2 pos2 = -kVec2(ar * 50, 50);
-	kDrawRect(pos1, kVec2(10), kVec4(0, 1, 1, 1));
-	kDrawRect(pos2, kVec2(10), kVec4(1, 1, 0, 1));
-	kDrawRect(kVec2(0), kVec2(10), kVec4(50, 50, 0, 1));
-	// kDrawText("Cake", kVec2(0), kVec4(1, 1, 0, 1), 100.0f / (float)size.y);
+	//kDrawRect(pos1, kVec2(10), kVec4(0, 1, 1, 1));
+	//kDrawRect(pos2, kVec2(10), kVec4(1, 1, 0, 1));
+	//kDrawRect(kVec2(0), kVec2(10), kVec4(50, 50, 0, 1));
+	kDrawText("mjk", kVec2(0), kVec4(1, 1, 0, 1), 1.0f);
 	// kDrawLine(kVec2(-30), kVec2(50, 70), kVec4(1));
 	kEndCamera();
 
