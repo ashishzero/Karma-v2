@@ -53,7 +53,7 @@ extern bool kD3D12_CreateRenderBackend(kRenderBackend *backend);
 
 void kCreateRenderBackend(kRenderBackend *backend)
 {
-	if (kD3D11_CreateRenderBackend(backend)) return;
 	if (kD3D12_CreateRenderBackend(backend)) return;
+	if (kD3D11_CreateRenderBackend(backend)) return;
 	kFallbackRenderBackend(backend);
 }

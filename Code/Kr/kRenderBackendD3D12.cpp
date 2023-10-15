@@ -16,13 +16,13 @@ static constexpr uint K_BACK_BUFFER_COUNT = 3;
 
 struct kD3D12_Frame
 {
-	UINT                       index;
-	HANDLE                     event;
-	ID3D12Fence               *fence;
-	UINT64                     values[K_FRAME_COUNT];
-	ID3D12CommandAllocator    *allocators[K_FRAME_COUNT];
-	ID3D12GraphicsCommandList *commands;
-	ID3D12CommandQueue        *queue;
+	UINT                        index;
+	HANDLE                      event;
+	ID3D12Fence                *fence;
+	UINT64                      values[K_FRAME_COUNT];
+	ID3D12CommandAllocator     *allocators[K_FRAME_COUNT];
+	ID3D12GraphicsCommandList4 *commands;
+	ID3D12CommandQueue         *queue;
 };
 
 struct kD3D12_Upload
@@ -768,6 +768,139 @@ static ID3D12Resource *kD3D12_IndexBuffer2D(uint sz)
 }
 
 //
+//
+//
+
+static void kD3D12_ExecuteCommands(const kRenderData2D &data)
+{
+	if (data.vertices.count == 0 || data.indices.count == 0) return;
+
+	uint            vb_size = (uint)kArrSizeInBytes(data.vertices);
+	uint            ib_size = (uint)kArrSizeInBytes(data.indices);
+
+	ID3D12Resource *vb      = kD3D12_VertexBuffer2D(vb_size);
+	ID3D12Resource *ib      = kD3D12_IndexBuffer2D(ib_size);
+	HRESULT         hr      = S_OK;
+
+	void           *mapped;
+
+	hr = vb->Map(0, 0, &mapped);
+	if (FAILED(hr))
+	{
+		kLogHresultError(hr, "Direct3D12", "Failed to map vertex buffer");
+		return;
+	}
+	memcpy(mapped, data.vertices.data, vb_size);
+	vb->Unmap(0, 0);
+
+	hr = ib->Map(0, 0, &mapped);
+	if (FAILED(hr))
+	{
+		kLogHresultError(hr, "Direct3D12", "Failed to map index buffer");
+		return;
+	}
+	memcpy(mapped, data.vertices.data, ib_size);
+	ib->Unmap(0, 0);
+
+	d3d12.frame.allocators[d3d12.frame.index]->Reset();
+	d3d12.frame.commands->Reset(d3d12.frame.allocators[d3d12.frame.index], 0);
+
+	ID3D12GraphicsCommandList4 *gc = d3d12.frame.commands;
+
+	D3D12_VERTEX_BUFFER_VIEW    vbv;
+	vbv.BufferLocation = vb->GetGPUVirtualAddress();
+	vbv.SizeInBytes    = vb_size;
+	vbv.StrideInBytes  = sizeof(kVertex2D);
+
+	D3D12_INDEX_BUFFER_VIEW ibv;
+	ibv.BufferLocation            = ib->GetGPUVirtualAddress();
+	ibv.SizeInBytes               = ib_size;
+	ibv.Format                    = sizeof(kIndex2D) == 4 ? DXGI_FORMAT_R32_UINT : DXGI_FORMAT_R16_UINT;
+
+	ID3D12RootSignature *root_sig = kD3D12_RootSignature2D();
+
+	gc->IASetVertexBuffers(0, 1, &vbv);
+	gc->IASetIndexBuffer(&ibv);
+	gc->SetGraphicsRootSignature(root_sig);
+	gc->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	D3D12_DESCRIPTOR_HEAP_DESC desc = {};
+	desc.Type                       = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
+
+	for (const kRenderPass2D &pass : data.passes)
+	{
+		kD3D12_Texture *rt = (kD3D12_Texture *)pass.rt;
+		kD3D12_Texture *ds = (kD3D12_Texture *)pass.ds;
+
+		if (rt->state != kResourceState_Ready) continue;
+		if (ds && ds->state != kResourceState_Ready) continue;
+
+		D3D12_CPU_DESCRIPTOR_HANDLE rtv = ? ;
+		D3D12_CPU_DESCRIPTOR_HANDLE dsv = ? ;
+
+		if (pass.flags & kRenderPass_ClearColor)
+		{
+			gc->ClearRenderTargetView(rtv, pass.clear.color.m, 0, 0);
+		}
+
+		if (ds)
+		{
+			UINT flags = 0;
+			if (pass.flags & kRenderPass_ClearDepth) flags |= D3D12_CLEAR_FLAG_DEPTH;
+			if (pass.flags & kRenderPass_ClearStencil) flags |= D3D12_CLEAR_FLAG_STENCIL;
+			if (flags)
+			{
+				gc->ClearDepthStencilView(dsv, (D3D12_CLEAR_FLAGS)flags, pass.clear.depth, pass.clear.stencil, 0, 0);
+			}
+		}
+
+		D3D12_VIEWPORT viewport;
+		viewport.TopLeftX = pass.viewport.x;
+		viewport.TopLeftY = pass.viewport.y;
+		viewport.Width    = pass.viewport.w;
+		viewport.Height   = pass.viewport.h;
+		viewport.MinDepth = pass.viewport.n;
+		viewport.MaxDepth = pass.viewport.f;
+
+		gc->OMSetRenderTargets(1, &rtv, TRUE, ds ? &dsv : nullptr);
+		gc->RSSetViewports(1, &viewport);
+		gc->SetDescriptorHeaps(?, ?);
+
+		for (const kRenderCommand2D &cmd : pass.commands)
+		{
+			ID3D12PipelineState *ps = kD3D12_PipelineState2D(cmd.shader.blend);
+			gc->SetPipelineState(ps);
+
+			for (const kRenderParam2D &param : cmd.params)
+			{
+				kD3D12_Texture *r1 = (kD3D12_Texture *)param.textures[0];
+				kD3D12_Texture *r2 = (kD3D12_Texture *)param.textures[1];
+
+				D3D12_RECT      rect;
+				rect.left   = (LONG)(param.rect.min.x);
+				rect.top    = (LONG)(param.rect.min.y);
+				rect.right  = (LONG)(param.rect.max.x);
+				rect.bottom = (LONG)(param.rect.max.y);
+
+				if (r1->state != kResourceState_Ready || r2->state != kResourceState_Ready) continue;
+
+				gc->SetGraphicsRoot32BitConstants(0, 16, param.transform.m, 0);
+				gc->SetGraphicsRootShaderResourceView(0, ?);
+				gc->SetGraphicsRootShaderResourceView(1, ?);
+				gc->RSSetScissorRects(1, &rect);
+				gc->PSSetSamplers(0, 1, &sampler);
+				gc->DrawIndexedInstanced(param.count, 1, param.index, param.vertex, 0);
+			}
+		}
+	}
+
+	gc->Close();
+
+	ID3D12CommandList *commands[] = {gc};
+	d3d12.frame.queue->ExecuteCommandLists(kArrayCount(commands), commands);
+}
+
+//
 // Device
 //
 
@@ -979,7 +1112,7 @@ bool kD3D12_CreateRenderBackend(kRenderBackend *backend)
 	backend->ResizeTexture           = kD3D12_ResizeTexture;
 
 	backend->ExecuteCommands         = kExecuteCommandsFallback;
-	backend->NextFrame               = kD3D12_MoveToNextFrame;
+	backend->NextFrame               = kD3D12_MoveToNextFrame; //? this before kD3D12_Present??
 
 	backend->Destroy                 = kD3D12_DestroyGraphicsDevice;
 
