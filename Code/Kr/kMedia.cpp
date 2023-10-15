@@ -1426,6 +1426,7 @@ static int kWin32_EventLoop(void)
 			kEndFrame();
 
 			media.backend.render.Present(media.window.swap_chain);
+			media.backend.render.NextFrame();
 		}
 
 		u64 new_counter = kGetPerformanceCounter();

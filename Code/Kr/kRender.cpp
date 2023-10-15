@@ -143,8 +143,8 @@ void kBeginRenderPass(kTexture *texture, kTexture *depth_stencil, uint flags, kV
 	viewport.n               = 0;
 	viewport.f               = 1;
 
-	ctx->state.rt = texture;
-	ctx->state.ds  = depth_stencil;
+	ctx->state.rt            = texture;
+	ctx->state.ds            = depth_stencil;
 	ctx->state.viewport      = viewport;
 	ctx->state.clear.color   = color;
 	ctx->state.clear.depth   = depth;
@@ -175,9 +175,9 @@ void kEndRenderPass(void)
 		ctx->state.command   = (u32)ctx->commands.count;
 	}
 
-	ctx->state.rt = nullptr;
-	ctx->state.ds  = nullptr;
-	ctx->state.flags         = 0;
+	ctx->state.rt    = nullptr;
+	ctx->state.ds    = nullptr;
+	ctx->state.flags = 0;
 }
 
 void kBeginCameraRect(float left, float right, float top, float bottom)
@@ -1438,11 +1438,11 @@ bool kCalculateGlyphMetrics(const kFont &font, u32 codepoint, float scale, kVec2
 
 	rpos->x       = (cursor->x + scale * (float)glyph->bearing.x);
 	rpos->y       = (cursor->y - scale * (float)(glyph->bearing.y + glyph->size.y));
-	//rpos->y = (cursor->y + scale * (float)glyph->bearing.y);
+	// rpos->y = (cursor->y + scale * (float)glyph->bearing.y);
 
-	rsize->x      = (scale * (float)glyph->size.x);
-	rsize->y      = (scale * (float)glyph->size.y);
-	*rect         = glyph->rect;
+	rsize->x = (scale * (float)glyph->size.x);
+	rsize->y = (scale * (float)glyph->size.y);
+	*rect    = glyph->rect;
 
 	cursor->x += scale * glyph->advance.x;
 
@@ -1544,8 +1544,7 @@ static void kCreateBuiltinResources(void)
 		spec.num_samples       = 1;
 		spec.pitch             = 1 * sizeof(u32);
 		spec.format            = kFormat_RGBA8_UNORM;
-		spec.bind_flags        = kBind_ShaderResource;
-		spec.usage             = kUsage_Default;
+		spec.flags             = 0;
 		spec.pixels            = pixels;
 
 		render.builtin.texture = render.backend.CreateTexture(spec);
@@ -1557,8 +1556,7 @@ static void kCreateBuiltinResources(void)
 		kTextureSpec spec = {};
 		spec.num_samples  = 1;
 		spec.format       = kFormat_R8_UNORM;
-		spec.bind_flags   = kBind_ShaderResource;
-		spec.usage        = kUsage_Default;
+		spec.flags        = 0;
 		spec.width        = kEmFontAtlasWidth;
 		spec.height       = kEmFontAtlasHeight;
 		spec.pitch        = kEmFontAtlasWidth;

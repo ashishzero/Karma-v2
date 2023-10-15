@@ -73,25 +73,13 @@ typedef enum kFormat
 	kFormat_Count
 } kFormat;
 
-enum kBindFlags
+enum kResourceFlags
 {
-	kBind_VertexBuffer    = 0x1,
-	kBind_IndexBuffer     = 0x2,
-	kBind_ConstantBuffer  = 0x4,
-	kBind_ShaderResource  = 0x8,
-	kBind_RenderTarget    = 0x10,
-	kBind_DepthStencil    = 0x20,
-	kBind_UnorderedAccess = 0x40,
+	kResource_DenyShaderResource   = 0x1,
+	kResource_AllowRenderTarget    = 0x2,
+	kResource_AllowDepthStencil    = 0x4,
+	kResource_AllowUnorderedAccess = 0x8,
 };
-
-typedef enum kUsage
-{
-	kUsage_Default,
-	kUsage_Immutable,
-	kUsage_Dynamic,
-	kUsage_Staging,
-	kUsage_Count
-} kUsage;
 
 typedef struct kTextureSpec
 {
@@ -100,35 +88,9 @@ typedef struct kTextureSpec
 	u32     height;
 	u32     pitch;
 	u8     *pixels;
-	u32     bind_flags;
-	kUsage  usage;
+	u32     flags;
 	u32     num_samples;
 } kTextureSpec;
-
-typedef enum kCpuAccess
-{
-	kCpuAccess_None,
-	kCpuAccess_Read,
-	kCpuAccess_Write,
-	kCpuAccess_ReadWrite
-} kCpuAccess;
-
-typedef struct kBufferSpec
-{
-	u32        size;
-	kUsage     usage;
-	u32        bind_flags;
-	kCpuAccess cpu_access;
-} kBufferSpec;
-
-typedef enum kMap
-{
-	kMap_Read,
-	kMap_Write,
-	kMap_ReadWrite,
-	kMap_WriteDiscard,
-	kMap_Count
-} kMap;
 
 //
 //

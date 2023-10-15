@@ -2,6 +2,10 @@
 #include "kCommon.h"
 #include "kRenderShared.h"
 
+extern bool             kEnableDebugLayer;
+static const kSwapChain kFallbackSwapChain;
+static const kTexture   kFallbackTexture;
+
 typedef struct kRenderPass2D
 {
 	kTexture               *rt;
@@ -23,7 +27,7 @@ typedef kSwapChain *(*kSwapChainCreateProc)(void *, const kRenderTargetConfig &)
 typedef void (*kSwapChainDestroyProc)(kSwapChain *);
 typedef void (*kSwapChainResizeProc)(kSwapChain *, uint, uint);
 typedef kTexture *(*kSwapChainTargetProc)(kSwapChain *);
-typedef kRenderTargetConfig(*kSwapChainRenderTargetConfig)(kSwapChain *);
+typedef kRenderTargetConfig (*kSwapChainRenderTargetConfig)(kSwapChain *);
 typedef void (*kApplySwapChainRenderTargetConfig)(kSwapChain *, const kRenderTargetConfig &);
 typedef void (*kSwapChainPresentProc)(kSwapChain *);
 
@@ -33,6 +37,8 @@ typedef kVec2i (*kRenderBackendTextureSizeProc)(kTexture *);
 typedef void (*kkRenderBackendTextureResizeProc)(kTexture *, u32, u32);
 
 typedef void (*kRenderBackendExecuteCommandsProc)(const kRenderData2D &);
+typedef void (*kRenderBackendNextFrame)(void);
+
 typedef void (*kRenderBackendDestroyProc)(void);
 
 typedef struct kRenderBackend
@@ -51,9 +57,25 @@ typedef struct kRenderBackend
 	kkRenderBackendTextureResizeProc  ResizeTexture;
 
 	kRenderBackendExecuteCommandsProc ExecuteCommands;
+	kRenderBackendNextFrame           NextFrame;
 
 	kRenderBackendDestroyProc         Destroy;
 } kRenderBackend;
 
-void        kFallbackRenderBackend(kRenderBackend *backend);
-extern void kCreateRenderBackend(kRenderBackend *backend);
+kSwapChain         *kCreateSwapChainFallback(void *, const kRenderTargetConfig &);
+void                kDestroySwapChainFallback(kSwapChain *);
+void                kResizeSwapChainFallback(kSwapChain *, uint, uint);
+kTexture           *kSwapChainRenderTargetFallback(kSwapChain *);
+kRenderTargetConfig kGetRenderTargetConfigFallback(kSwapChain *);
+void                kApplyRenderTargetConfigFallback(kSwapChain *, const kRenderTargetConfig &);
+void                kPresentFallback(kSwapChain *);
+kTexture           *kCreateTextureFallback(const kTextureSpec &);
+void                kDestroyTextureFallback(kTexture *);
+kVec2i              kGetTextureSizeFallback(kTexture *);
+void                kResizeTextureFallback(kTexture *, u32, u32);
+void                kExecuteCommandsFallback(const kRenderData2D &);
+void                kNextFrameFallback(void);
+void                kDestroyFallback(void);
+
+void                kFallbackRenderBackend(kRenderBackend *backend);
+extern void         kCreateRenderBackend(kRenderBackend *backend);
