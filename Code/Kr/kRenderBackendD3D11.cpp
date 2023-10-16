@@ -862,22 +862,190 @@ static kTexture *kD3D11_GetSwapChainRenderTarget(kSwapChain *swap_chain)
 // Render2D
 //
 
-#include "kArray.h"
-
 static void kD3D11_ExecuteCommands2(const kRenderData2_Version2 &data)
 {
 	if (data.vertices.count == 0 || data.indices.count == 0) return;
 
-	kRenderData2D v1 = {};
-	v1.vertices      = data.vertices;
-	v1.indices       = data.indices;
+	uint vb_size = (uint)data.vertices.Size();
+	uint ib_size = (uint)data.indices.Size();
 
-	kArray<kRenderPass2D> pass1;
-
-	for (const kRenderPass2D_Version2 &pass2 : data.passes)
+	if (vb_size > d3d11.resource.render2d.vertex_sz)
 	{
-		kRenderPass2D dst = {};
+		kRelease(&d3d11.resource.render2d.vertex);
+		d3d11.resource.render2d.vertex_sz = 0;
+
+		D3D11_BUFFER_DESC vb_desc         = {};
+		vb_desc.ByteWidth                 = vb_size;
+		vb_desc.Usage                     = D3D11_USAGE_DYNAMIC;
+		vb_desc.BindFlags                 = D3D11_BIND_VERTEX_BUFFER;
+		vb_desc.CPUAccessFlags            = D3D11_CPU_ACCESS_WRITE;
+
+		HRESULT hr                        = d3d11.device->CreateBuffer(&vb_desc, 0, &d3d11.resource.render2d.vertex);
+		if (FAILED(hr))
+		{
+			kLogHresultError(hr, "DirectX11", "Failed to allocate vertex buffer");
+			return;
+		}
+
+		d3d11.resource.render2d.vertex_sz = vb_size;
 	}
+
+	if (ib_size > d3d11.resource.render2d.index_sz)
+	{
+		kRelease(&d3d11.resource.render2d.index);
+		d3d11.resource.render2d.index_sz = 0;
+
+		D3D11_BUFFER_DESC ib_desc        = {};
+		ib_desc.ByteWidth                = ib_size;
+		ib_desc.Usage                    = D3D11_USAGE_DYNAMIC;
+		ib_desc.BindFlags                = D3D11_BIND_INDEX_BUFFER;
+		ib_desc.CPUAccessFlags           = D3D11_CPU_ACCESS_WRITE;
+
+		HRESULT hr                       = d3d11.device->CreateBuffer(&ib_desc, 0, &d3d11.resource.render2d.index);
+		if (FAILED(hr))
+		{
+			kLogHresultError(hr, "DirectX11", "Failed to allocate index buffer");
+			return;
+		}
+
+		d3d11.resource.render2d.index_sz = ib_size;
+	}
+
+	D3D11_MAPPED_SUBRESOURCE mapped;
+
+	ID3D11DeviceContext1    *dc = d3d11.device_context;
+	ID3D11Buffer            *vb = d3d11.resource.render2d.vertex;
+	ID3D11Buffer            *ib = d3d11.resource.render2d.index;
+	ID3D11Buffer            *cb = d3d11.resource.render2d.constant;
+	HRESULT                  hr = S_OK;
+
+	hr                          = dc->Map(vb, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+	if (FAILED(hr))
+	{
+		kLogHresultError(hr, "DirectX11", "Failed to map vertex2d buffer");
+		return;
+	}
+	memcpy(mapped.pData, data.vertices.data, vb_size);
+	dc->Unmap(vb, 0);
+
+	hr = dc->Map(ib, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+	if (FAILED(hr))
+	{
+		kLogHresultError(hr, "DirectX11", "Failed to map index2d buffer");
+		return;
+	}
+	memcpy(mapped.pData, data.indices.data, ib_size);
+	dc->Unmap(ib, 0);
+
+	UINT                     stride = sizeof(kVertex2D);
+	UINT                     offset = 0;
+	DXGI_FORMAT              format = sizeof(kIndex2D) == 4 ? DXGI_FORMAT_R32_UINT : DXGI_FORMAT_R16_UINT;
+
+	ID3D11DepthStencilState *dss    = kD3D11_GetDepthStencilState();
+
+	dc->IASetVertexBuffers(0, 1, &d3d11.resource.render2d.vertex, &stride, &offset);
+	dc->IASetIndexBuffer(d3d11.resource.render2d.index, format, 0);
+	dc->VSSetShader(d3d11.resource.render2d.vs, nullptr, 0);
+	dc->PSSetShader(d3d11.resource.render2d.ps, nullptr, 0);
+	dc->IASetInputLayout(d3d11.resource.render2d.input);
+	dc->RSSetState(d3d11.resource.render2d.rasterizer);
+	dc->OMSetDepthStencilState(dss, 0);
+	dc->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	for (const kRenderPass2D_Version2 &pass : data.passes)
+	{
+		kD3D11_Texture *rt = (kD3D11_Texture *)pass.rt;
+		kD3D11_Texture *ds = (kD3D11_Texture *)pass.ds;
+
+		if (rt->state != kResourceState_Ready) continue;
+		if (ds && ds->state != kResourceState_Ready) continue;
+
+		if (pass.flags & kRenderPass_ClearColor)
+		{
+			dc->ClearRenderTargetView(rt->rtv, pass.clear.color.m);
+		}
+
+		if (ds)
+		{
+			UINT flags = 0;
+			if (pass.flags & kRenderPass_ClearDepth) flags |= D3D11_CLEAR_DEPTH;
+			if (pass.flags & kRenderPass_ClearStencil) flags |= D3D11_CLEAR_STENCIL;
+
+			if (flags)
+			{
+				dc->ClearDepthStencilView(ds->dsv, flags, pass.clear.depth, pass.clear.stencil);
+			}
+		}
+
+		D3D11_VIEWPORT viewport;
+		viewport.TopLeftX = pass.viewport.x;
+		viewport.TopLeftY = pass.viewport.y;
+		viewport.Width    = pass.viewport.w;
+		viewport.Height   = pass.viewport.h;
+		viewport.MinDepth = pass.viewport.n;
+		viewport.MaxDepth = pass.viewport.f;
+
+		dc->OMSetRenderTargets(1, &rt->rtv, ds ? ds->dsv : nullptr);
+		dc->RSSetViewports(1, &viewport);
+
+		u8 blend = pass.commands[0].key.decoded.blend;
+
+		{
+			ID3D11BlendState *blend = kD3D11_GetBlendState((kBlendMode)blend);
+			dc->OMSetBlendState(blend, 0, 0xffffffff);
+		}
+
+		for (const kRenderCommand2D_Version2 &cmd : pass.commands)
+		{
+			if (cmd.key.decoded.blend ^ blend)
+			{
+				blend = cmd.key.decoded.blend;
+				ID3D11BlendState *blend = kD3D11_GetBlendState((kBlendMode)key.decoded.blend);
+				dc->OMSetBlendState(blend, 0, 0xffffffff);
+			}
+
+			ID3D11ShaderResourceView *ps_resources[2];
+
+			for (const kRenderParam2D &param : cmd.params)
+			{
+				hr = dc->Map(cb, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+				if (FAILED(hr))
+				{
+					kLogHresultError(hr, "DirectX11", "Failed to map constant buffer");
+					continue;
+				}
+				memcpy(mapped.pData, param.transform.m, sizeof(kMat4));
+				dc->Unmap(cb, 0);
+
+				ID3D11SamplerState *sampler = kD3D11_GetSampleState(cmd.filter);
+
+				kD3D11_Texture     *r1      = (kD3D11_Texture *)param.textures[0];
+				kD3D11_Texture     *r2      = (kD3D11_Texture *)param.textures[1];
+
+				if (r1->state != kResourceState_Ready || r2->state != kResourceState_Ready) continue;
+
+				ps_resources[0] = r1->srv;
+				ps_resources[1] = r2->srv;
+
+				D3D11_RECT rect;
+				rect.left   = (LONG)(param.rect.min.x);
+				rect.top    = (LONG)(param.rect.min.y);
+				rect.right  = (LONG)(param.rect.max.x);
+				rect.bottom = (LONG)(param.rect.max.y);
+
+				dc->VSSetConstantBuffers(0, 1, &cb);
+				dc->PSSetShaderResources(0, kArrayCount(ps_resources), ps_resources);
+				dc->PSSetSamplers(0, 1, &sampler);
+				dc->RSSetScissorRects(1, &rect);
+				dc->DrawIndexed(param.count, param.index, param.vertex);
+			}
+		}
+
+		dc->PSSetSamplers(0, 0, nullptr);
+		dc->PSSetShaderResources(0, 0, nullptr);
+	}
+
+	dc->ClearState();
 }
 
 static void kD3D11_ExecuteCommands(const kRenderData2D &data)

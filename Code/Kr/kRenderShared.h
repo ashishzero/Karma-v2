@@ -124,7 +124,7 @@ typedef struct kRenderParam2D
 	u32       count;
 } kRenderParam2D;
 
-typedef enum kBlendMode
+typedef enum kBlendMode : u8
 {
 	kBlendMode_None,
 	kBlendMode_Alpha,
@@ -136,7 +136,7 @@ typedef struct kRenderShader2D
 	kBlendMode blend;
 } kRenderShader2D;
 
-typedef enum kTextureFilter
+typedef enum kTextureFilter : u8
 {
 	kTextureFilter_Linear,
 	kTextureFilter_Point,
@@ -164,20 +164,24 @@ typedef struct kRenderClear2D
 	u8    stencil;
 } kRenderClear2D;
 
-typedef struct kRenderCommandDecoded
-{
-	u16 textures[2];
-	u16 transform;
-	u8  rect;
-	u8  filter;
-	u8  blend;
-	u8  padding;
-} kRenderCommandDecoded;
+typedef union kRenderCommandKey2D {
+	struct
+	{
+		u16            textures[2];
+		u8             transform;
+		u8             rect;
+		kTextureFilter filter;
+		kBlendMode     blend;
+	} decoded;
+	u64 value;
+} kRenderCommandKey2D;
+
+static_assert(sizeof(kRenderCommandKey2D) <= sizeof(u64), "");
 
 typedef struct kRenderCommand2D_Version2
 {
-	u64 key;
-	i32 vertex;
-	u32 index;
-	u32 count;
+	kRenderCommandKey2D key;
+	i32                 vertex;
+	u32                 index;
+	u32                 count;
 } kRenderCommand2D_Version2;

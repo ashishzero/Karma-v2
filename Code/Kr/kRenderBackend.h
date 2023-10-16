@@ -18,12 +18,12 @@ typedef struct kRenderPass2D
 
 typedef struct kRenderPass2D_Version2
 {
-	kTexture               *rt;
-	kTexture               *ds;
-	kViewport               viewport;
-	u32                     flags;
-	kRenderClear2D          clear;
-	kSpan<kRenderCommand2D> commands;
+	kTexture                        *rt;
+	kTexture                        *ds;
+	kViewport                        viewport;
+	u32                              flags;
+	kRenderClear2D                   clear;
+	kSpan<kRenderCommand2D_Version2> commands;
 } kRenderPass2D_Version2;
 
 typedef struct kRenderData2D
