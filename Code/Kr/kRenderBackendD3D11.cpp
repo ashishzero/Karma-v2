@@ -423,14 +423,10 @@ static kTexture *kD3D11_CreateTexture(const kTextureSpec &spec)
 
 	desc.BindFlags            = 0;
 
-	if (spec.flags & kResource_AllowRenderTarget)
-		desc.BindFlags |= D3D11_BIND_RENDER_TARGET;
-	if (spec.flags & kResource_AllowDepthStencil)
-		desc.BindFlags |= D3D11_BIND_DEPTH_STENCIL;
-	if (spec.flags & kResource_AllowUnorderedAccess)
-		desc.BindFlags |= D3D11_BIND_UNORDERED_ACCESS;
-	if ((spec.flags & kResource_DenyShaderResource) == 0)
-		desc.BindFlags |= D3D11_BIND_SHADER_RESOURCE;
+	if (spec.flags & kResource_AllowRenderTarget) desc.BindFlags |= D3D11_BIND_RENDER_TARGET;
+	if (spec.flags & kResource_AllowDepthStencil) desc.BindFlags |= D3D11_BIND_DEPTH_STENCIL;
+	if (spec.flags & kResource_AllowUnorderedAccess) desc.BindFlags |= D3D11_BIND_UNORDERED_ACCESS;
+	if ((spec.flags & kResource_DenyShaderResource) == 0) desc.BindFlags |= D3D11_BIND_SHADER_RESOURCE;
 
 	desc.Usage              = D3D11_USAGE_DEFAULT;
 	desc.SampleDesc.Count   = kMax(spec.num_samples, 1u);
@@ -865,6 +861,24 @@ static kTexture *kD3D11_GetSwapChainRenderTarget(kSwapChain *swap_chain)
 //
 // Render2D
 //
+
+#include "kArray.h"
+
+static void kD3D11_ExecuteCommands2(const kRenderData2_Version2 &data)
+{
+	if (data.vertices.count == 0 || data.indices.count == 0) return;
+
+	kRenderData2D v1 = {};
+	v1.vertices      = data.vertices;
+	v1.indices       = data.indices;
+
+	kArray<kRenderPass2D> pass1;
+
+	for (const kRenderPass2D_Version2 &pass2 : data.passes)
+	{
+		kRenderPass2D dst = {};
+	}
+}
 
 static void kD3D11_ExecuteCommands(const kRenderData2D &data)
 {

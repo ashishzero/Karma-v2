@@ -16,12 +16,31 @@ typedef struct kRenderPass2D
 	kSpan<kRenderCommand2D> commands;
 } kRenderPass2D;
 
+typedef struct kRenderPass2D_Version2
+{
+	kTexture               *rt;
+	kTexture               *ds;
+	kViewport               viewport;
+	u32                     flags;
+	kRenderClear2D          clear;
+	kSpan<kRenderCommand2D> commands;
+} kRenderPass2D_Version2;
+
 typedef struct kRenderData2D
 {
 	kSpan<kRenderPass2D> passes;
 	kSpan<kVertex2D>     vertices;
 	kSpan<kIndex2D>      indices;
 } kRenderData2D;
+
+typedef struct kRenderData2_Version2
+{
+	kSpan<kRenderPass2D_Version2> passes;
+	kSpan<kMat4>                  transforms;
+	kSpan<kTexture *>             textures[2];
+	kSpan<kVertex2D>              vertices;
+	kSpan<kIndex2D>               indices;
+} kRenderData2_Version2;
 
 typedef kSwapChain *(*kSwapChainCreateProc)(void *, const kRenderTargetConfig &);
 typedef void (*kSwapChainDestroyProc)(kSwapChain *);
@@ -37,6 +56,7 @@ typedef kVec2i (*kRenderBackendTextureSizeProc)(kTexture *);
 typedef void (*kkRenderBackendTextureResizeProc)(kTexture *, u32, u32);
 
 typedef void (*kRenderBackendExecuteCommandsProc)(const kRenderData2D &);
+typedef void (*kRenderBackendExecuteCommandsProc2)(const kRenderData2_Version2 &);
 typedef void (*kRenderBackendNextFrame)(void);
 
 typedef void (*kRenderBackendDestroyProc)(void);

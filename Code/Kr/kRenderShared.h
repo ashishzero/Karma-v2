@@ -163,3 +163,21 @@ typedef struct kRenderClear2D
 	float depth;
 	u8    stencil;
 } kRenderClear2D;
+
+typedef struct kRenderCommandDecoded
+{
+	u16 textures[2];
+	u16 transform;
+	u8  rect;
+	u8  filter;
+	u8  blend;
+	u8  padding;
+} kRenderCommandDecoded;
+
+typedef struct kRenderCommand2D_Version2
+{
+	u64 key;
+	i32 vertex;
+	u32 index;
+	u32 count;
+} kRenderCommand2D_Version2;
