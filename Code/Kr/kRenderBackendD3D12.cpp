@@ -69,13 +69,15 @@ struct kD3D12_Render2D
 struct kD3D12_Resource
 {
 	// TODO: put these somewhere better
-	UINT                  rtv_stride;
-	ID3D12DescriptorHeap *rtv_descriptor;
-	ID3D12DescriptorHeap *srv_descriptor[K_FRAME_COUNT];
+	UINT                        rtv_stride;
+	ID3D12DescriptorHeap       *rtv_descriptor;
+	ID3D12DescriptorHeap       *srv_descriptor[K_FRAME_COUNT];
+	ID3D12DescriptorHeap       *sampler_descriptor;
+	D3D12_GPU_DESCRIPTOR_HANDLE samplers[2];
 
-	kD3D12_SwapChain      swap_chains;
-	kD3D12_TexturePool    textures;
-	kD3D12_Render2D       render2d;
+	kD3D12_SwapChain            swap_chains;
+	kD3D12_TexturePool          textures;
+	kD3D12_Render2D             render2d;
 };
 
 struct kD3D12_Backend
@@ -298,16 +300,9 @@ static kTexture *kD3D12_CreateTexture(const kTextureSpec &spec)
 		src.Type                        = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
 		src.PlacedFootprint             = layout;
 
-		D3D12_RESOURCE_BARRIER barrier  = {};
-		barrier.Type                    = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		barrier.Transition.pResource    = r->resource;
-		barrier.Transition.StateBefore  = r->d3dstate;
-		barrier.Transition.StateAfter   = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-
 		d3d12.upload.allocator->Reset();
 		d3d12.upload.commands->Reset(d3d12.upload.allocator, 0);
 		d3d12.upload.commands->CopyTextureRegion(&dst, 0, 0, 0, &src, 0);
-		d3d12.upload.commands->ResourceBarrier(1, &barrier);
 		d3d12.upload.commands->Close();
 
 		ID3D12CommandList *commands[] = {d3d12.upload.commands};
@@ -316,8 +311,6 @@ static kTexture *kD3D12_CreateTexture(const kTextureSpec &spec)
 		d3d12.upload.fence->SetEventOnCompletion(d3d12.upload.counter, d3d12.upload.event);
 		d3d12.upload.counter += 1;
 		WaitForSingleObjectEx(d3d12.upload.event, INFINITE, FALSE);
-
-		r->d3dstate = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 	}
 
 	r->state = kResourceState_Ready;
@@ -609,42 +602,42 @@ static ID3D12RootSignature *kD3D12_RootSignature2D(void)
 {
 	if (!d3d12.resource.render2d.root_sig)
 	{
-		D3D12_ROOT_PARAMETER params[2]     = {};
+		D3D12_ROOT_PARAMETER params[3]     = {};
 		params[0].ParameterType            = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
 		params[0].Constants.Num32BitValues = 16;
 		params[0].Constants.ShaderRegister = 0;
 		params[0].Constants.RegisterSpace  = 0;
 		params[0].ShaderVisibility         = D3D12_SHADER_VISIBILITY_VERTEX;
 
-		D3D12_DESCRIPTOR_RANGE ranges[1];
-		ranges[0].RangeType                           = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-		ranges[0].NumDescriptors                      = 2;
-		ranges[0].BaseShaderRegister                  = 0;
-		ranges[0].RegisterSpace                       = 0;
-		ranges[0].OffsetInDescriptorsFromTableStart   = 0;
+		D3D12_DESCRIPTOR_RANGE srvs[1];
+		srvs[0].RangeType                             = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+		srvs[0].NumDescriptors                        = 2;
+		srvs[0].BaseShaderRegister                    = 0;
+		srvs[0].RegisterSpace                         = 0;
+		srvs[0].OffsetInDescriptorsFromTableStart     = 0;
 
 		params[1].ParameterType                       = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-		params[1].DescriptorTable.NumDescriptorRanges = kArrayCount(ranges);
-		params[1].DescriptorTable.pDescriptorRanges   = ranges;
+		params[1].DescriptorTable.NumDescriptorRanges = kArrayCount(srvs);
+		params[1].DescriptorTable.pDescriptorRanges   = srvs;
 		params[1].ShaderVisibility                    = D3D12_SHADER_VISIBILITY_PIXEL;
 
-		D3D12_STATIC_SAMPLER_DESC sampler             = {};
-		sampler.Filter                                = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-		sampler.AddressU                              = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		sampler.AddressV                              = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		sampler.AddressW                              = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		sampler.ShaderRegister                        = 0;
-		sampler.RegisterSpace                         = 0;
-		sampler.ShaderVisibility                      = D3D12_SHADER_VISIBILITY_PIXEL;
+		D3D12_DESCRIPTOR_RANGE samplers[1];
+		samplers[0].RangeType                         = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
+		samplers[0].NumDescriptors                    = 1;
+		samplers[0].BaseShaderRegister                = 0;
+		samplers[0].RegisterSpace                     = 0;
+		samplers[0].OffsetInDescriptorsFromTableStart = 0;
+
+		params[2].ParameterType                       = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		params[2].DescriptorTable.NumDescriptorRanges = kArrayCount(samplers);
+		params[2].DescriptorTable.pDescriptorRanges   = samplers;
+		params[2].ShaderVisibility                    = D3D12_SHADER_VISIBILITY_PIXEL;
 
 		D3D12_VERSIONED_ROOT_SIGNATURE_DESC desc      = {};
 		desc.Version                                  = D3D_ROOT_SIGNATURE_VERSION_1;
 		desc.Desc_1_0.Flags                           = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 		desc.Desc_1_0.NumParameters                   = kArrayCount(params);
 		desc.Desc_1_0.pParameters                     = params;
-
-		desc.Desc_1_1.NumStaticSamplers               = 1;
-		desc.Desc_1_1.pStaticSamplers                 = &sampler;
 
 		ID3DBlob *rootsig, *err;
 		HRESULT   hr = D3D12SerializeVersionedRootSignature(&desc, &rootsig, &err);
@@ -873,7 +866,9 @@ static void kD3D12_ExecuteCommands(const kRenderData2D &data)
 	D3D12_GPU_DESCRIPTOR_HANDLE gpu            = srv_descriptor->GetGPUDescriptorHandleForHeapStart();
 	D3D12_CPU_DESCRIPTOR_HANDLE cpu            = srv_descriptor->GetCPUDescriptorHandleForHeapStart();
 
-	gc->SetDescriptorHeaps(1, &d3d12.resource.srv_descriptor[d3d12.frame.index]);
+	ID3D12DescriptorHeap *heaps[] = { d3d12.resource.srv_descriptor[d3d12.frame.index], d3d12.resource.sampler_descriptor };
+
+	gc->SetDescriptorHeaps(kArrayCount(heaps), heaps);
 
 	for (const kRenderPass2D &pass : data.passes)
 	{
@@ -933,6 +928,8 @@ static void kD3D12_ExecuteCommands(const kRenderData2D &data)
 			{
 				gc->SetPipelineState(ps);
 			}
+
+			gc->SetGraphicsRootDescriptorTable(2, d3d12.resource.samplers[cmd.filter]);
 
 			for (const kRenderParam2D &param : cmd.params)
 			{
@@ -1159,7 +1156,7 @@ static bool kD3D12_CreateGraphicsDevice(void)
 
 	{
 		D3D12_COMMAND_QUEUE_DESC queue = {};
-		queue.Type                     = D3D12_COMMAND_LIST_TYPE_DIRECT;
+		queue.Type                     = D3D12_COMMAND_LIST_TYPE_COPY;
 		queue.Flags                    = D3D12_COMMAND_QUEUE_FLAG_NONE;
 
 		hr                             = d3d12.device->CreateCommandQueue(&queue, IID_PPV_ARGS(&d3d12.upload.queue));
@@ -1170,15 +1167,14 @@ static bool kD3D12_CreateGraphicsDevice(void)
 			return false;
 		}
 
-		hr =
-			d3d12.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&d3d12.upload.allocator));
+		hr = d3d12.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COPY, IID_PPV_ARGS(&d3d12.upload.allocator));
 		if (FAILED(hr))
 		{
 			kLogHresultError(hr, "Direct3D12", "Failed to create command allocator");
 			return false;
 		}
 
-		hr = d3d12.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, d3d12.upload.allocator, 0,
+		hr = d3d12.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COPY, d3d12.upload.allocator, 0,
 		                                     IID_PPV_ARGS(&d3d12.upload.commands));
 		if (FAILED(hr))
 		{
@@ -1254,6 +1250,49 @@ static bool kD3D12_CreateGraphicsDevice(void)
 			}
 
 			d3d12.resource.rtv_descriptor = descriptor;
+		}
+	}
+
+	{
+		UINT stride = d3d12.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+
+		{
+			D3D12_DESCRIPTOR_HEAP_DESC heap  = {};
+			heap.Type                        = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
+			heap.NumDescriptors              = 2;
+			heap.Flags                       = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+
+			ID3D12DescriptorHeap *descriptor = nullptr;
+			hr                               = d3d12.device->CreateDescriptorHeap(&heap, IID_PPV_ARGS(&descriptor));
+
+			if (FAILED(hr))
+			{
+				kLogHresultError(hr, "DirectX11", "Failed to create descriptor heap");
+				return false;
+			}
+
+			d3d12.resource.sampler_descriptor = descriptor;
+
+			D3D12_GPU_DESCRIPTOR_HANDLE gpu   = descriptor->GetGPUDescriptorHandleForHeapStart();
+			d3d12.resource.samplers[0]        = gpu;
+			gpu.ptr += stride;
+			d3d12.resource.samplers[1] = gpu;
+
+			D3D12_SAMPLER_DESC linear  = {};
+			linear.Filter              = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+			linear.AddressU            = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+			linear.AddressV            = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+			linear.AddressW            = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+
+			D3D12_SAMPLER_DESC point   = linear;
+			point.Filter               = D3D12_FILTER_MIN_MAG_MIP_POINT;
+
+			D3D12_CPU_DESCRIPTOR_HANDLE linear_dest = descriptor->GetCPUDescriptorHandleForHeapStart();
+			D3D12_CPU_DESCRIPTOR_HANDLE point_dest = linear_dest;
+			point_dest.ptr += stride;
+
+			d3d12.device->CreateSampler(&linear, linear_dest);
+			d3d12.device->CreateSampler(&point, point_dest);
 		}
 	}
 
