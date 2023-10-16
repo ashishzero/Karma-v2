@@ -870,8 +870,8 @@ static void kD3D11_ExecuteCommands(const kRenderData2D &data)
 {
 	if (data.vertices.count == 0 || data.indices.count == 0) return;
 
-	uint vb_size = (uint)kArrSizeInBytes(data.vertices);
-	uint ib_size = (uint)kArrSizeInBytes(data.indices);
+	uint vb_size = (uint)data.vertices.Size();
+	uint ib_size = (uint)data.indices.Size();
 
 	if (vb_size > d3d11.resource.render2d.vertex_sz)
 	{

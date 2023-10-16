@@ -36,15 +36,20 @@ kVertexOutput kQuadVS(kVertexInput vertex)
 
 ////////////////////////////////////////////////
 
+static const float3 OutLineColor = float3(1.0, 1.0, 1.0);
+static const float  OutLineWidth = 0.1;
+
 float4 kQuadPS(kVertexOutput input) : SV_Target
 {
 	float4 sampled = SrcTexture.Sample(Sampler, input.tex);
 	float  sd_mask = MaskTexture.Sample(Sampler, input.tex).r;
 	float4 masked  = MaskTexture.Sample(Sampler, input.tex);
 	float  aaf     = fwidth(sd_mask);
-	float  alpha   = smoothstep(0.5 - aaf, 0.5 + aaf, sd_mask);
-	float4 color   = float4(1.0, 1.0, 1.0, alpha) * sampled * input.col;
-	return color;
+	float  factor  = smoothstep(0.5 - aaf, 0.5 + aaf, sd_mask);
+	float3 color   = lerp(OutLineColor, sampled.rgb * input.col.rgb, factor);
+	float  outdist = (1.0 - OutLineWidth) * 0.5;
+	float  alpha   = smoothstep(outdist - aaf, outdist + aaf, sd_mask);
+	return float4(color, sampled.a * input.col.a * alpha);
 }
 
 ////////////////////////////////////////////////

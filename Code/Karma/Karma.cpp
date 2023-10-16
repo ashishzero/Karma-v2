@@ -51,9 +51,9 @@ void         Update(float dt)
 	kBeginRenderPass(rt, 0, kRenderPass_ClearColor, clear);
 
 	kBeginCameraRect(0, (float)size.x, 0, (float)size.y);
-	kDrawText(pf, kVec2(0), kVec4(1, 1, 0, 1), yfactor);
-	kDrawText(aa, kVec2(50, 100), kVec4(1, 1, 1, 1), yfactor);
-	kDrawText(tm, kVec2(50, 150), kVec4(1, 1, 1, 1), yfactor);
+	kDrawText(pf, kVec2(0), kVec4(1, 0, 0, 1), yfactor);
+	kDrawText(aa, kVec2(50, 100), kVec4(1, 0, 0, 1), yfactor);
+	kDrawText(tm, kVec2(50, 150), kVec4(1, 0, 0, 1), yfactor);
 	kEndCamera();
 
 	kBeginCamera(ar, 100);

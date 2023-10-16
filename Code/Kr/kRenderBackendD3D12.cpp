@@ -38,19 +38,22 @@ struct kD3D12_Upload
 struct kD3D12_Texture : kTexture
 {
 	ID3D12Resource *resource;
+	// TODO: remove these from here
+	D3D12_CPU_DESCRIPTOR_HANDLE rtv;
+	D3D12_CPU_DESCRIPTOR_HANDLE dsv;
+
+	D3D12_RESOURCE_STATES       d3dstate;
 };
 
 using kD3D12_TexturePool = kMemoryPool<kD3D12_Texture>;
 
 struct kD3D12_SwapChain : kSwapChain
 {
-	uint                        index;
-	IDXGISwapChain3            *native;
-	ID3D12DescriptorHeap       *descriptor;
-	kD3D12_Texture              targets[K_BACK_BUFFER_COUNT];
-	D3D12_CPU_DESCRIPTOR_HANDLE rtv[K_BACK_BUFFER_COUNT];
-	kD3D12_SwapChain           *prev;
-	kD3D12_SwapChain           *next;
+	uint              index;
+	IDXGISwapChain3  *native;
+	kD3D12_Texture    targets[K_BACK_BUFFER_COUNT];
+	kD3D12_SwapChain *prev;
+	kD3D12_SwapChain *next;
 };
 
 struct kD3D12_Render2D
@@ -65,16 +68,20 @@ struct kD3D12_Render2D
 
 struct kD3D12_Resource
 {
-	kD3D12_SwapChain   swap_chains;
-	kD3D12_TexturePool textures;
-	kD3D12_Render2D    render2d;
+	// TODO: put these somewhere better
+	UINT                  rtv_stride;
+	ID3D12DescriptorHeap *rtv_descriptor;
+	ID3D12DescriptorHeap *srv_descriptor[K_FRAME_COUNT];
+
+	kD3D12_SwapChain      swap_chains;
+	kD3D12_TexturePool    textures;
+	kD3D12_Render2D       render2d;
 };
 
 struct kD3D12_Backend
 {
 	IDXGIFactory2  *factory;
 	ID3D12Device   *device;
-	UINT            rtv_stride;
 	kD3D12_Frame    frame;
 	kD3D12_Upload   upload;
 	kD3D12_Resource resource;
@@ -141,15 +148,22 @@ static IDXGIAdapter1 *kD3D12_FindAdapter(IDXGIFactory2 *factory)
 
 static void kD3D12_WaitForGpu(void)
 {
-	HRESULT hr = d3d12.frame.queue->Signal(d3d12.frame.fence, d3d12.frame.values[d3d12.frame.index]);
-	if (FAILED(hr))
+	UINT64 max_value = 1;
+	for (int i = 0; i < K_FRAME_COUNT; ++i)
 	{
-		kLogHresultError(hr, "Direct3D12", "Failed to signal fence");
-		return;
+		UINT64  value = d3d12.frame.values[d3d12.frame.index];
+		HRESULT hr    = d3d12.frame.queue->Signal(d3d12.frame.fence, value);
+		if (FAILED(hr))
+		{
+			kLogHresultError(hr, "Direct3D12", "Failed to signal fence");
+			continue;
+		}
+		d3d12.frame.fence->SetEventOnCompletion(value, d3d12.frame.event);
+		WaitForSingleObjectEx(d3d12.frame.event, INFINITE, FALSE);
+		max_value = kMax(value, max_value);
 	}
-	d3d12.frame.fence->SetEventOnCompletion(d3d12.frame.values[d3d12.frame.index], d3d12.frame.event);
-	WaitForSingleObjectEx(d3d12.frame.event, INFINITE, FALSE);
-	d3d12.frame.values[d3d12.frame.index] += 1;
+	d3d12.frame.index     = 0;
+	d3d12.frame.values[0] = max_value + 1;
 }
 
 static void kD3D12_MoveToNextFrame(void)
@@ -208,8 +222,10 @@ static kTexture *kD3D12_CreateTexture(const kTextureSpec &spec)
 	D3D12_HEAP_PROPERTIES heap = {};
 	heap.Type                  = D3D12_HEAP_TYPE_DEFAULT;
 
-	HRESULT hr                 = d3d12.device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &desc,
-	                                                                   D3D12_RESOURCE_STATE_COPY_DEST, 0, IID_PPV_ARGS(&r->resource));
+	r->d3dstate                = spec.pixels ? D3D12_RESOURCE_STATE_COPY_DEST : D3D12_RESOURCE_STATE_COMMON;
+
+	HRESULT hr = d3d12.device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &desc, r->d3dstate, 0,
+	                                                   IID_PPV_ARGS(&r->resource));
 
 	if (FAILED(hr))
 	{
@@ -285,8 +301,8 @@ static kTexture *kD3D12_CreateTexture(const kTextureSpec &spec)
 		D3D12_RESOURCE_BARRIER barrier  = {};
 		barrier.Type                    = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 		barrier.Transition.pResource    = r->resource;
-		barrier.Transition.StateBefore  = D3D12_RESOURCE_STATE_COPY_DEST;
-		barrier.Transition.StateAfter   = D3D12_RESOURCE_STATE_COMMON;
+		barrier.Transition.StateBefore  = r->d3dstate;
+		barrier.Transition.StateAfter   = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 
 		d3d12.upload.allocator->Reset();
 		d3d12.upload.commands->Reset(d3d12.upload.allocator, 0);
@@ -300,7 +316,11 @@ static kTexture *kD3D12_CreateTexture(const kTextureSpec &spec)
 		d3d12.upload.fence->SetEventOnCompletion(d3d12.upload.counter, d3d12.upload.event);
 		d3d12.upload.counter += 1;
 		WaitForSingleObjectEx(d3d12.upload.event, INFINITE, FALSE);
+
+		r->d3dstate = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 	}
+
+	r->state = kResourceState_Ready;
 
 	return r;
 }
@@ -395,7 +415,7 @@ static void kD3D12_CreateSwapChainBuffers(kD3D12_SwapChain *r)
 	{
 		kD3D12_Texture *rt = &r->targets[i];
 		rt->state          = kResourceState_Unready;
-		HRESULT hr         = r->native->GetBuffer(0, IID_PPV_ARGS(&rt->resource));
+		HRESULT hr         = r->native->GetBuffer(i, IID_PPV_ARGS(&rt->resource));
 
 		if (FAILED(hr))
 		{
@@ -404,8 +424,21 @@ static void kD3D12_CreateSwapChainBuffers(kD3D12_SwapChain *r)
 			continue;
 		}
 
-		d3d12.device->CreateRenderTargetView(rt->resource, 0, r->rtv[i]);
-		rt->state = kResourceState_Ready;
+		{
+			ID3D12DescriptorHeap       *descriptor = d3d12.resource.rtv_descriptor;
+
+			D3D12_CPU_DESCRIPTOR_HANDLE rtv        = descriptor->GetCPUDescriptorHandleForHeapStart();
+
+			for (uint i = 0; i < K_BACK_BUFFER_COUNT; ++i)
+			{
+				r->targets[i].rtv = rtv;
+				rtv.ptr += d3d12.resource.rtv_stride;
+			}
+		}
+
+		d3d12.device->CreateRenderTargetView(rt->resource, 0, r->targets[i].rtv);
+		rt->state    = kResourceState_Ready;
+		rt->d3dstate = D3D12_RESOURCE_STATE_COMMON;
 	}
 }
 
@@ -431,6 +464,8 @@ static void kD3D12_ResizeSwapChainBuffers(kSwapChain *swap_chain, uint w, uint h
 		kD3D12_DestroySwapChainBuffers(r);
 		r->native->ResizeBuffers(K_BACK_BUFFER_COUNT, 0, 0, DXGI_FORMAT_UNKNOWN, 0);
 		kD3D12_CreateSwapChainBuffers(r);
+
+		r->index = r->native->GetCurrentBackBufferIndex();
 	}
 }
 
@@ -445,7 +480,7 @@ static void kD3D12_DestroySwapChain(kSwapChain *swap_chain)
 	{
 		kDListRemove(r);
 		kD3D12_DestroySwapChainBuffers(r);
-		kRelease(&r->descriptor);
+		// kRelease(&r->descriptor);
 		kRelease(&r->native);
 		kFree(r, sizeof(*r));
 	}
@@ -492,19 +527,19 @@ static kSwapChain *kD3D12_CreateSwapChain(void *_window, const kRenderTargetConf
 
 	kRelease(&swapchain1);
 
-	D3D12_DESCRIPTOR_HEAP_DESC heap  = {};
-	heap.Type                        = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-	heap.NumDescriptors              = K_BACK_BUFFER_COUNT;
+	// D3D12_DESCRIPTOR_HEAP_DESC heap  = {};
+	// heap.Type                        = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+	// heap.NumDescriptors              = K_BACK_BUFFER_COUNT;
 
-	ID3D12DescriptorHeap *descriptor = nullptr;
-	hr                               = d3d12.device->CreateDescriptorHeap(&heap, IID_PPV_ARGS(&descriptor));
+	// ID3D12DescriptorHeap *descriptor = nullptr;
+	// hr                               = d3d12.device->CreateDescriptorHeap(&heap, IID_PPV_ARGS(&descriptor));
 
-	if (FAILED(hr))
-	{
-		kLogHresultError(hr, "DirectX11", "Failed to create descriptor heap for swap chain");
-		swapchain3->Release();
-		return (kSwapChain *)&kFallbackSwapChain;
-	}
+	// if (FAILED(hr))
+	//{
+	//	kLogHresultError(hr, "DirectX11", "Failed to create descriptor heap for swap chain");
+	//	swapchain3->Release();
+	//	return (kSwapChain *)&kFallbackSwapChain;
+	//}
 
 	kD3D12_SwapChain *r = (kD3D12_SwapChain *)kAlloc(sizeof(kD3D12_SwapChain));
 
@@ -512,25 +547,15 @@ static kSwapChain *kD3D12_CreateSwapChain(void *_window, const kRenderTargetConf
 	{
 		kLogError("DirectX12: Failed to allocate memory for create swap chain\n");
 		swapchain3->Release();
-		descriptor->Release();
+		// descriptor->Release();
 		return (kSwapChain *)&kFallbackSwapChain;
 	}
 
 	memset(r, 0, sizeof(*r));
 
-	r->native     = swapchain3;
-	r->descriptor = descriptor;
-	r->state      = kResourceState_Ready;
-
-	{
-		D3D12_CPU_DESCRIPTOR_HANDLE rtv = r->descriptor->GetCPUDescriptorHandleForHeapStart();
-
-		for (uint i = 0; i < K_BACK_BUFFER_COUNT; ++i)
-		{
-			r->rtv[i] = rtv;
-			rtv.ptr += d3d12.rtv_stride;
-		}
-	}
+	r->native = swapchain3;
+	// r->descriptor = descriptor;
+	r->state = kResourceState_Ready;
 
 	r->index = r->native->GetCurrentBackBufferIndex();
 
@@ -584,28 +609,42 @@ static ID3D12RootSignature *kD3D12_RootSignature2D(void)
 {
 	if (!d3d12.resource.render2d.root_sig)
 	{
-		D3D12_ROOT_PARAMETER params[3]           = {};
-		params[0].ParameterType                  = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-		params[0].Constants.Num32BitValues       = 16;
-		params[0].Constants.ShaderRegister       = 0;
-		params[0].Constants.RegisterSpace        = 0;
-		params[0].ShaderVisibility               = D3D12_SHADER_VISIBILITY_VERTEX;
+		D3D12_ROOT_PARAMETER params[2]     = {};
+		params[0].ParameterType            = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+		params[0].Constants.Num32BitValues = 16;
+		params[0].Constants.ShaderRegister = 0;
+		params[0].Constants.RegisterSpace  = 0;
+		params[0].ShaderVisibility         = D3D12_SHADER_VISIBILITY_VERTEX;
 
-		params[1].ParameterType                  = D3D12_ROOT_PARAMETER_TYPE_SRV;
-		params[1].Descriptor.ShaderRegister      = 0;
-		params[1].Descriptor.RegisterSpace       = 0;
-		params[1].ShaderVisibility               = D3D12_SHADER_VISIBILITY_PIXEL;
+		D3D12_DESCRIPTOR_RANGE ranges[1];
+		ranges[0].RangeType                           = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+		ranges[0].NumDescriptors                      = 2;
+		ranges[0].BaseShaderRegister                  = 0;
+		ranges[0].RegisterSpace                       = 0;
+		ranges[0].OffsetInDescriptorsFromTableStart   = 0;
 
-		params[2].ParameterType                  = D3D12_ROOT_PARAMETER_TYPE_SRV;
-		params[2].Descriptor.ShaderRegister      = 0;
-		params[2].Descriptor.RegisterSpace       = 1;
-		params[2].ShaderVisibility               = D3D12_SHADER_VISIBILITY_PIXEL;
+		params[1].ParameterType                       = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		params[1].DescriptorTable.NumDescriptorRanges = kArrayCount(ranges);
+		params[1].DescriptorTable.pDescriptorRanges   = ranges;
+		params[1].ShaderVisibility                    = D3D12_SHADER_VISIBILITY_PIXEL;
 
-		D3D12_VERSIONED_ROOT_SIGNATURE_DESC desc = {};
-		desc.Version                             = D3D_ROOT_SIGNATURE_VERSION_1;
-		desc.Desc_1_0.Flags                      = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-		desc.Desc_1_0.NumParameters              = kArrayCount(params);
-		desc.Desc_1_0.pParameters                = params;
+		D3D12_STATIC_SAMPLER_DESC sampler             = {};
+		sampler.Filter                                = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+		sampler.AddressU                              = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		sampler.AddressV                              = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		sampler.AddressW                              = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		sampler.ShaderRegister                        = 0;
+		sampler.RegisterSpace                         = 0;
+		sampler.ShaderVisibility                      = D3D12_SHADER_VISIBILITY_PIXEL;
+
+		D3D12_VERSIONED_ROOT_SIGNATURE_DESC desc      = {};
+		desc.Version                                  = D3D_ROOT_SIGNATURE_VERSION_1;
+		desc.Desc_1_0.Flags                           = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+		desc.Desc_1_0.NumParameters                   = kArrayCount(params);
+		desc.Desc_1_0.pParameters                     = params;
+
+		desc.Desc_1_1.NumStaticSamplers               = 1;
+		desc.Desc_1_1.pStaticSamplers                 = &sampler;
 
 		ID3DBlob *rootsig, *err;
 		HRESULT   hr = D3D12SerializeVersionedRootSignature(&desc, &rootsig, &err);
@@ -654,7 +693,7 @@ static ID3D12PipelineState *kD3D12_PipelineState2D(kBlendMode blend)
 		desc.RasterizerState.FrontCounterClockwise            = TRUE;
 		desc.RasterizerState.MultisampleEnable                = TRUE;
 		desc.RasterizerState.AntialiasedLineEnable            = FALSE;
-		desc.DepthStencilState.DepthEnable                    = TRUE;
+		desc.DepthStencilState.DepthEnable                    = FALSE;
 		desc.DepthStencilState.DepthWriteMask                 = D3D12_DEPTH_WRITE_MASK_ALL;
 		desc.DepthStencilState.DepthFunc                      = D3D12_COMPARISON_FUNC_LESS_EQUAL;
 		desc.InputLayout.NumElements                          = kArrayCount(input_elements);
@@ -662,7 +701,7 @@ static ID3D12PipelineState *kD3D12_PipelineState2D(kBlendMode blend)
 		desc.PrimitiveTopologyType                            = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 		desc.NumRenderTargets                                 = 1;
 		desc.RTVFormats[0]                                    = DXGI_FORMAT_R8G8B8A8_UNORM;
-		desc.DSVFormat                                        = DXGI_FORMAT_D32_FLOAT;
+		desc.DSVFormat                                        = DXGI_FORMAT_UNKNOWN;
 		desc.SampleDesc.Count                                 = 1;
 		desc.SampleDesc.Quality                               = 0;
 
@@ -690,7 +729,8 @@ static ID3D12Resource *kD3D12_VertexBuffer2D(uint sz)
 {
 	uint frame = d3d12.frame.index;
 
-	if (sz < d3d12.resource.render2d.vertex_sz) return d3d12.resource.render2d.vertex[frame];
+	if (sz <= d3d12.resource.render2d.vertex_sz && d3d12.resource.render2d.vertex[frame])
+		return d3d12.resource.render2d.vertex[frame];
 
 	kD3D12_WaitForGpu();
 
@@ -714,8 +754,8 @@ static ID3D12Resource *kD3D12_VertexBuffer2D(uint sz)
 	{
 		kRelease(&d3d12.resource.render2d.vertex[i]);
 		HRESULT hr =
-			d3d12.device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_COMMON, 0,
-		                                          IID_PPV_ARGS(&d3d12.resource.render2d.vertex[i]));
+			d3d12.device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_GENERIC_READ,
+		                                          0, IID_PPV_ARGS(&d3d12.resource.render2d.vertex[i]));
 		if (FAILED(hr))
 		{
 			kLogHresultError(hr, "Direct3D12", "Failed to create vertex shader (%d)", i);
@@ -730,7 +770,8 @@ static ID3D12Resource *kD3D12_IndexBuffer2D(uint sz)
 {
 	uint frame = d3d12.frame.index;
 
-	if (sz < d3d12.resource.render2d.index_sz) return d3d12.resource.render2d.index[frame];
+	if (sz <= d3d12.resource.render2d.index_sz && d3d12.resource.render2d.index[frame])
+		return d3d12.resource.render2d.index[frame];
 
 	kD3D12_WaitForGpu();
 
@@ -755,8 +796,8 @@ static ID3D12Resource *kD3D12_IndexBuffer2D(uint sz)
 	{
 		kRelease(&d3d12.resource.render2d.index[i]);
 		HRESULT hr =
-			d3d12.device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_COMMON, 0,
-		                                          IID_PPV_ARGS(&d3d12.resource.render2d.index[i]));
+			d3d12.device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_GENERIC_READ,
+		                                          0, IID_PPV_ARGS(&d3d12.resource.render2d.index[i]));
 		if (FAILED(hr))
 		{
 			kLogHresultError(hr, "Direct3D12", "Failed to create index shader (%d)", i);
@@ -775,14 +816,16 @@ static void kD3D12_ExecuteCommands(const kRenderData2D &data)
 {
 	if (data.vertices.count == 0 || data.indices.count == 0) return;
 
-	uint            vb_size = (uint)kArrSizeInBytes(data.vertices);
-	uint            ib_size = (uint)kArrSizeInBytes(data.indices);
+	uint            vb_size = (uint)data.vertices.Size();
+	uint            ib_size = (uint)data.indices.Size();
 
 	ID3D12Resource *vb      = kD3D12_VertexBuffer2D(vb_size);
 	ID3D12Resource *ib      = kD3D12_IndexBuffer2D(ib_size);
 	HRESULT         hr      = S_OK;
 
-	void           *mapped;
+	if (!vb || !ib) return;
+
+	void *mapped;
 
 	hr = vb->Map(0, 0, &mapped);
 	if (FAILED(hr))
@@ -799,7 +842,7 @@ static void kD3D12_ExecuteCommands(const kRenderData2D &data)
 		kLogHresultError(hr, "Direct3D12", "Failed to map index buffer");
 		return;
 	}
-	memcpy(mapped, data.vertices.data, ib_size);
+	memcpy(mapped, data.indices.data, ib_size);
 	ib->Unmap(0, 0);
 
 	d3d12.frame.allocators[d3d12.frame.index]->Reset();
@@ -824,8 +867,13 @@ static void kD3D12_ExecuteCommands(const kRenderData2D &data)
 	gc->SetGraphicsRootSignature(root_sig);
 	gc->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	D3D12_DESCRIPTOR_HEAP_DESC desc = {};
-	desc.Type                       = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
+	UINT srv_stride = d3d12.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+	ID3D12DescriptorHeap       *srv_descriptor = d3d12.resource.srv_descriptor[d3d12.frame.index];
+	D3D12_GPU_DESCRIPTOR_HANDLE gpu            = srv_descriptor->GetGPUDescriptorHandleForHeapStart();
+	D3D12_CPU_DESCRIPTOR_HANDLE cpu            = srv_descriptor->GetCPUDescriptorHandleForHeapStart();
+
+	gc->SetDescriptorHeaps(1, &d3d12.resource.srv_descriptor[d3d12.frame.index]);
 
 	for (const kRenderPass2D &pass : data.passes)
 	{
@@ -835,8 +883,19 @@ static void kD3D12_ExecuteCommands(const kRenderData2D &data)
 		if (rt->state != kResourceState_Ready) continue;
 		if (ds && ds->state != kResourceState_Ready) continue;
 
-		D3D12_CPU_DESCRIPTOR_HANDLE rtv = ? ;
-		D3D12_CPU_DESCRIPTOR_HANDLE dsv = ? ;
+		if (rt->d3dstate != D3D12_RESOURCE_STATE_RENDER_TARGET)
+		{
+			D3D12_RESOURCE_BARRIER barrier = {};
+			barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+			barrier.Transition.pResource   = rt->resource;
+			barrier.Transition.StateBefore = rt->d3dstate;
+			barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_RENDER_TARGET;
+			rt->d3dstate                   = D3D12_RESOURCE_STATE_RENDER_TARGET;
+			gc->ResourceBarrier(1, &barrier);
+		}
+
+		D3D12_CPU_DESCRIPTOR_HANDLE rtv = rt->rtv;
+		D3D12_CPU_DESCRIPTOR_HANDLE dsv = {};
 
 		if (pass.flags & kRenderPass_ClearColor)
 		{
@@ -852,6 +911,7 @@ static void kD3D12_ExecuteCommands(const kRenderData2D &data)
 			{
 				gc->ClearDepthStencilView(dsv, (D3D12_CLEAR_FLAGS)flags, pass.clear.depth, pass.clear.stencil, 0, 0);
 			}
+			dsv = ds->dsv;
 		}
 
 		D3D12_VIEWPORT viewport;
@@ -864,12 +924,15 @@ static void kD3D12_ExecuteCommands(const kRenderData2D &data)
 
 		gc->OMSetRenderTargets(1, &rtv, TRUE, ds ? &dsv : nullptr);
 		gc->RSSetViewports(1, &viewport);
-		gc->SetDescriptorHeaps(?, ?);
 
 		for (const kRenderCommand2D &cmd : pass.commands)
 		{
 			ID3D12PipelineState *ps = kD3D12_PipelineState2D(cmd.shader.blend);
-			gc->SetPipelineState(ps);
+
+			if (ps)
+			{
+				gc->SetPipelineState(ps);
+			}
 
 			for (const kRenderParam2D &param : cmd.params)
 			{
@@ -884,13 +947,70 @@ static void kD3D12_ExecuteCommands(const kRenderData2D &data)
 
 				if (r1->state != kResourceState_Ready || r2->state != kResourceState_Ready) continue;
 
+				// D3D12_GPU_VIRTUAL_ADDRESS srv1 = r1->resource->GetGPUVirtualAddress();
+				// D3D12_GPU_VIRTUAL_ADDRESS srv2 = r2->resource->GetGPUVirtualAddress();
+
+				D3D12_RESOURCE_BARRIER barriers[2]   = {};
+				uint                   barrier_count = 0;
+
+				if (r1->d3dstate != D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE)
+				{
+					D3D12_RESOURCE_BARRIER *barrier = &barriers[barrier_count++];
+					barrier->Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+					barrier->Transition.pResource   = r1->resource;
+					barrier->Transition.StateBefore = r1->d3dstate;
+					barrier->Transition.StateAfter  = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+					barrier->Transition.Subresource = 0;
+					r1->d3dstate                    = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+				}
+
+				if (r2->d3dstate != D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE)
+				{
+					D3D12_RESOURCE_BARRIER *barrier = &barriers[barrier_count++];
+					barrier->Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+					barrier->Transition.pResource   = r2->resource;
+					barrier->Transition.StateBefore = r2->d3dstate;
+					barrier->Transition.StateAfter  = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+					barrier->Transition.Subresource = 0;
+					r2->d3dstate                    = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+				}
+
+				if (barrier_count)
+				{
+					gc->ResourceBarrier(barrier_count, barriers);
+				}
+
+				D3D12_CPU_DESCRIPTOR_HANDLE srv1 = cpu;
+				cpu.ptr += srv_stride;
+				D3D12_CPU_DESCRIPTOR_HANDLE srv2 = cpu;
+				cpu.ptr += srv_stride;
+
+				d3d12.device->CreateShaderResourceView(r1->resource, 0, srv1);
+				d3d12.device->CreateShaderResourceView(r2->resource, 0, srv2);
+
 				gc->SetGraphicsRoot32BitConstants(0, 16, param.transform.m, 0);
-				gc->SetGraphicsRootShaderResourceView(0, ?);
-				gc->SetGraphicsRootShaderResourceView(1, ?);
+				gc->SetGraphicsRootDescriptorTable(1, gpu);
+				// gc->SetGraphicsRootShaderResourceView(1, srv1);
+				// gc->SetGraphicsRootShaderResourceView(2, srv2);
+				//  gc->SetGraphicsRootDescriptorTable(3, ?);
 				gc->RSSetScissorRects(1, &rect);
-				gc->PSSetSamplers(0, 1, &sampler);
 				gc->DrawIndexedInstanced(param.count, 1, param.index, param.vertex, 0);
+
+				gpu.ptr += srv_stride;
+				gpu.ptr += srv_stride;
 			}
+		}
+
+		{
+			kAssert(rt->d3dstate == D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+			D3D12_RESOURCE_BARRIER barrier = {};
+			barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+			barrier.Transition.pResource   = rt->resource;
+			barrier.Transition.StateBefore = rt->d3dstate;
+			barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_PRESENT;
+			rt->d3dstate                   = D3D12_RESOURCE_STATE_PRESENT;
+			gc->ResourceBarrier(1, &barrier);
 		}
 	}
 
@@ -903,6 +1023,23 @@ static void kD3D12_ExecuteCommands(const kRenderData2D &data)
 //
 // Device
 //
+
+static void kD3D12_MessageCallback(D3D12_MESSAGE_CATEGORY category, D3D12_MESSAGE_SEVERITY severity,
+                                   D3D12_MESSAGE_ID id, LPCSTR desc, void *ctx)
+{
+	if (severity == D3D12_MESSAGE_SEVERITY_CORRUPTION || severity == D3D12_MESSAGE_SEVERITY_ERROR)
+	{
+		kLogError("Direct3D12: %s\n", desc);
+	}
+	else if (severity == D3D12_MESSAGE_SEVERITY_WARNING)
+	{
+		kLogWarning("Direct3D12: %s\n", desc);
+	}
+	else
+	{
+		kLogTrace("Direct3D12: %s\n", desc);
+	}
+}
 
 static void kD3D12_DestroyGraphicsDevice(void)
 {
@@ -943,17 +1080,17 @@ static bool kD3D12_CreateGraphicsDevice(void)
 			kLogTrace("Direct3D12: Debug layer enabled.\n");
 			debug->EnableDebugLayer();
 			flags |= DXGI_CREATE_FACTORY_DEBUG;
+
+			hr = debug->QueryInterface(IID_PPV_ARGS(&debug1));
+			if (SUCCEEDED(hr))
+			{
+				kLogTrace("Direct3D12: GPU validation enabled.\n");
+				debug1->SetEnableGPUBasedValidation(true);
+			}
 		}
 		else
 		{
 			kLogTrace("Direct3D12: Failed to enable debug layer.\n");
-		}
-
-		hr = debug->QueryInterface(IID_PPV_ARGS(&debug1));
-		if (SUCCEEDED(hr))
-		{
-			kLogTrace("Direct3D12: GPU validation enabled.\n");
-			debug1->SetEnableGPUBasedValidation(true);
 		}
 	}
 
@@ -990,6 +1127,22 @@ static bool kD3D12_CreateGraphicsDevice(void)
 		return false;
 	}
 
+	if (flags & DXGI_CREATE_FACTORY_DEBUG)
+	{
+		ID3D12InfoQueue1 *info_queue = nullptr;
+		hr                           = d3d12.device->QueryInterface(IID_PPV_ARGS(&info_queue));
+		if (SUCCEEDED(hr))
+		{
+			DWORD cookie = 0;
+			hr = info_queue->RegisterMessageCallback(kD3D12_MessageCallback, D3D12_MESSAGE_CALLBACK_FLAG_NONE, 0,
+			                                         &cookie);
+			if (SUCCEEDED(hr))
+			{
+				kLogTrace("Direct3D12: Registered message callback.\n");
+			}
+		}
+	}
+
 	{
 		D3D12_COMMAND_QUEUE_DESC queue = {};
 		queue.Type                     = D3D12_COMMAND_LIST_TYPE_DIRECT;
@@ -1006,7 +1159,7 @@ static bool kD3D12_CreateGraphicsDevice(void)
 
 	{
 		D3D12_COMMAND_QUEUE_DESC queue = {};
-		queue.Type                     = D3D12_COMMAND_LIST_TYPE_COPY;
+		queue.Type                     = D3D12_COMMAND_LIST_TYPE_DIRECT;
 		queue.Flags                    = D3D12_COMMAND_QUEUE_FLAG_NONE;
 
 		hr                             = d3d12.device->CreateCommandQueue(&queue, IID_PPV_ARGS(&d3d12.upload.queue));
@@ -1017,14 +1170,15 @@ static bool kD3D12_CreateGraphicsDevice(void)
 			return false;
 		}
 
-		hr = d3d12.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COPY, IID_PPV_ARGS(&d3d12.upload.allocator));
+		hr =
+			d3d12.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&d3d12.upload.allocator));
 		if (FAILED(hr))
 		{
 			kLogHresultError(hr, "Direct3D12", "Failed to create command allocator");
 			return false;
 		}
 
-		hr = d3d12.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COPY, d3d12.upload.allocator, 0,
+		hr = d3d12.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, d3d12.upload.allocator, 0,
 		                                     IID_PPV_ARGS(&d3d12.upload.commands));
 		if (FAILED(hr))
 		{
@@ -1082,7 +1236,47 @@ static bool kD3D12_CreateGraphicsDevice(void)
 
 	kDListInit(&d3d12.resource.swap_chains);
 
-	d3d12.rtv_stride = d3d12.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	{
+		d3d12.resource.rtv_stride = d3d12.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+
+		{
+			D3D12_DESCRIPTOR_HEAP_DESC heap  = {};
+			heap.Type                        = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+			heap.NumDescriptors              = K_BACK_BUFFER_COUNT;
+
+			ID3D12DescriptorHeap *descriptor = nullptr;
+			hr                               = d3d12.device->CreateDescriptorHeap(&heap, IID_PPV_ARGS(&descriptor));
+
+			if (FAILED(hr))
+			{
+				kLogHresultError(hr, "DirectX11", "Failed to create descriptor heap");
+				return false;
+			}
+
+			d3d12.resource.rtv_descriptor = descriptor;
+		}
+	}
+
+	{
+		for (int i = 0; i < K_FRAME_COUNT; ++i)
+		{
+			D3D12_DESCRIPTOR_HEAP_DESC heap  = {};
+			heap.Type                        = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+			heap.NumDescriptors              = 512;
+			heap.Flags                       = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+
+			ID3D12DescriptorHeap *descriptor = nullptr;
+			hr                               = d3d12.device->CreateDescriptorHeap(&heap, IID_PPV_ARGS(&descriptor));
+
+			if (FAILED(hr))
+			{
+				kLogHresultError(hr, "DirectX11", "Failed to create descriptor heap");
+				return false;
+			}
+
+			d3d12.resource.srv_descriptor[i] = descriptor;
+		}
+	}
 
 	return true;
 }
@@ -1111,7 +1305,7 @@ bool kD3D12_CreateRenderBackend(kRenderBackend *backend)
 	backend->GetTextureSize          = kD3D12_GetTextureSize;
 	backend->ResizeTexture           = kD3D12_ResizeTexture;
 
-	backend->ExecuteCommands         = kExecuteCommandsFallback;
+	backend->ExecuteCommands         = kD3D12_ExecuteCommands;
 	backend->NextFrame               = kD3D12_MoveToNextFrame; //? this before kD3D12_Present??
 
 	backend->Destroy                 = kD3D12_DestroyGraphicsDevice;

@@ -614,13 +614,17 @@ struct kSpan
 		kAssert(count);
 		return data[count - 1];
 	}
+
+	umem Size(void) const
+	{
+		return count * sizeof(Item);
+	}
 };
 
 #define kStrFmt "%.*s"
 #define kStrArg(x) (int)((x).count), ((x).data)
 #define kArrFmt "{ %zd, %p }"
 #define kArrArg(x) ((x).count), ((x).data)
-#define kArrSizeInBytes(arr) ((arr).count * sizeof(*((arr).data)))
 
 //
 //
