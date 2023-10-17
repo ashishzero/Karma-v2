@@ -573,6 +573,18 @@ typedef struct kRect
 //
 //
 
+template <typename T>
+struct kRange
+{
+	T beg;
+	T end;
+
+	inline kRange() : beg(0), end(0) {}
+	inline kRange(T r) : beg(r), end(r) {}
+	inline kRange(T b, T e) : beg(b), end(e) {}
+	inline T Length(void) { return end - beg; }
+};
+
 template <typename Item>
 struct kSpan
 {
@@ -589,12 +601,12 @@ struct kSpan
 		kAssert(index < count);
 		return data[index];
 	}
-	inline Item       *begin() { return data; }
-	inline Item       *end() { return data + count; }
+	inline Item *      begin() { return data; }
+	inline Item *      end() { return data + count; }
 	inline const Item *begin() const { return data; }
 	inline const Item *end() const { return data + count; }
 
-	Item              &First(void)
+	Item &             First(void)
 	{
 		kAssert(count);
 		return data[0];
@@ -615,10 +627,7 @@ struct kSpan
 		return data[count - 1];
 	}
 
-	umem Size(void) const
-	{
-		return count * sizeof(Item);
-	}
+	umem Size(void) const { return count * sizeof(Item); }
 };
 
 #define kStrFmt "%.*s"
@@ -663,7 +672,7 @@ bool operator!=(kHandle<T> a, kHandle<T> b)
 struct kString
 {
 	imem count;
-	u8  *data;
+	u8 * data;
 
 	kString() : count(0), data(0) {}
 	kString(kSpan<u8> av) : count(av.count), data(av.data) {}
@@ -683,11 +692,11 @@ struct kString
 		kAssert(index < count);
 		return data[index];
 	}
-	inline u8       *begin() { return data; }
-	inline u8       *end() { return data + count; }
+	inline u8 *      begin() { return data; }
+	inline u8 *      end() { return data + count; }
 	inline const u8 *begin() const { return data; }
 	inline const u8 *end() const { return data + count; }
-	operator kSpan<u8>() { return kSpan<u8>(data, count); }
+					 operator kSpan<u8>() { return kSpan<u8>(data, count); }
 };
 
 //
@@ -716,7 +725,7 @@ typedef void *(*kAllocatorProc)(kAllocatorMode, void *, umem, umem, void *);
 typedef struct kAllocator
 {
 	kAllocatorProc proc;
-	void          *data;
+	void *         data;
 } kAllocator;
 
 enum kArenaFlags
@@ -736,7 +745,7 @@ typedef struct kAtomic
 
 typedef struct kArena
 {
-	u8     *mem;
+	u8 *    mem;
 	umem    pos;
 	umem    cap;
 	u32     alignment;
@@ -763,11 +772,12 @@ typedef struct kArenaSpec
 
 typedef enum kLogLevel
 {
-	kLogLevel_Verbose = 0,
+	kLogLevel_Trace = 0,
+	kLogLevel_Info,
 	kLogLevel_Warning,
 	kLogLevel_Error
 } kLogLevel;
-typedef void (*kLogProc)(void *, kLogLevel, const u8 *, imem);
+typedef void (*kLogProc)(void *, kLogLevel, const char *, const u8 *, imem);
 
 typedef void (*kFatalErrorProc)(const char *message);
 typedef void (*kHandleAssertionProc)(const char *file, int line, const char *proc, const char *string);
@@ -780,7 +790,7 @@ typedef struct kLogger
 {
 	kLogProc  proc;
 	kLogLevel level;
-	void     *data;
+	void *    data;
 } kLogger;
 
 //
@@ -796,10 +806,10 @@ static const kArena     kFallbackArena     = {};
 //
 //
 
-u8     *kAlignPointer(u8 *location, umem alignment);
+u8 *    kAlignPointer(u8 *location, umem alignment);
 
-void   *kAlloc(kAllocator *allocator, umem size);
-void   *kRealloc(kAllocator *allocator, void *ptr, umem prev, umem size);
+void *  kAlloc(kAllocator *allocator, umem size);
+void *  kRealloc(kAllocator *allocator, void *ptr, umem prev, umem size);
 void    kFree(kAllocator *allocator, void *ptr, umem size);
 
 void    kArenaAllocator(kArena *arena, kAllocator *allocator);
@@ -813,8 +823,8 @@ void    kUnlockArena(kArena *arena);
 bool    kSetPosition(kArena *arena, umem pos, uint flags);
 bool    kAlignPosition(kArena *arena, umem alignment, uint flags);
 
-void   *kPushSize(kArena *arena, umem size, uint flags);
-void   *kPushSizeAligned(kArena *arena, umem size, u32 alignment, uint flags);
+void *  kPushSize(kArena *arena, umem size, uint flags);
+void *  kPushSizeAligned(kArena *arena, umem size, u32 alignment, uint flags);
 
 #define kPushType(arena, type, flags) (type *)kPushSizeAligned(arena, sizeof(type), alignof(type), flags)
 #define kPushArray(arena, type, count, flags)                                                                          \
@@ -846,7 +856,7 @@ int     kCodepointToUTF8(u32 codepoint, u8 buffer[4]);
 int     kUTF8ToCodepoint(const u8 *start, u8 *end, u32 *codepoint);
 
 kString kCopyString(kString string, kAllocator *allocator);
-char   *kStringToCstr(kString string, kAllocator *allocator);
+char *  kStringToCstr(kString string, kAllocator *allocator);
 
 bool    kIsWhitespace(u32 ch);
 kString kTrimString(kString str);

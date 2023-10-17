@@ -1,6 +1,6 @@
 #pragma once
 #include "kCommon.h"
-#include "kRenderShared.h"
+#include "kRenderBackend.h"
 
 typedef enum kKey
 {
@@ -214,6 +214,7 @@ typedef enum kWindowFlag
 } kWindowFlag;
 
 struct kPlatformWindow;
+struct kSwapChain;
 using kWindow = kHandle<kPlatformWindow>;
 
 typedef struct kWindowState
@@ -247,9 +248,9 @@ void kFallbackUserUpdateProc(float dt);
 //
 
 kSpan<kEvent> kGetEvents(void);
-kArena       *kGetFrameArena(void);
+kArena *      kGetFrameArena(void);
 
-void         *kGetUserEventData(void);
+void *        kGetUserEventData(void);
 void          kSetUserEventData(void *);
 void          kGetUserEvents(kMediaUserEvents *user);
 void          kSetUserEvents(const kMediaUserEvents &user);
@@ -278,7 +279,7 @@ bool          kIsWindowMaximized(void);
 kVec2i        kGetWindowSize(void);
 float         kGetWindowAspectRatio(void);
 float         kGetWindowDpiScale(void);
-kTexture     *kGetWindowRenderTarget(void);
+kTexture *    kGetWindowRenderTarget(void);
 
 bool          kIsCursorCaptured(void);
 bool          kIsCursorHovered(void);

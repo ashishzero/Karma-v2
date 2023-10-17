@@ -32,10 +32,10 @@ void kHandleAssertion(const char *file, int line, const char *proc, const char *
 //
 //
 
-kContext   *kGetContext(void) { return &context; }
+kContext *  kGetContext(void) { return &context; }
 kAllocator *kGetContextAllocator(void) { return &context.allocator; }
-void       *kAlloc(umem size) { return kAlloc(&context.allocator, size); }
-void       *kRealloc(void *ptr, umem prev, umem size) { return kRealloc(&context.allocator, ptr, prev, size); }
+void *      kAlloc(umem size) { return kAlloc(&context.allocator, size); }
+void *      kRealloc(void *ptr, umem prev, umem size) { return kRealloc(&context.allocator, ptr, prev, size); }
 void        kFree(void *ptr, umem size) { kFree(&context.allocator, ptr, size); }
 
 u32         kRandom(void) { return kRandom(&context.random); }
@@ -47,25 +47,65 @@ float       kRandomFloatRange(float min, float max) { return kRandomFloatRange(&
 float       kRandomFloat(void) { return kRandomFloat(&context.random); }
 void        kRandomSourceSeed(u64 state, u64 seq) { kRandomSourceSeed(&context.random, state, seq); }
 
-void        kLogPrintV(kLogLevel level, const char *fmt, va_list list)
+void        kSetLogLevel(kLogLevel level) { context.logger.level = level; }
+
+void        kLogPrintV(kLogLevel level, const char *src, const char *fmt, va_list list)
 {
 	if (level >= context.logger.level)
 	{
 		char buff[4096];
 		int  len = vsnprintf(buff, kArrayCount(buff), fmt, list);
-		context.logger.proc(context.logger.data, context.logger.level, (u8 *)buff, len);
+		context.logger.proc(context.logger.data, level, src, (u8 *)buff, len);
 	}
 }
 
-void kLogTraceV(const char *fmt, va_list list) { kLogPrintV(kLogLevel_Verbose, fmt, list); }
-void kLogWarningV(const char *fmt, va_list list) { kLogPrintV(kLogLevel_Warning, fmt, list); }
-void kLogErrorV(const char *fmt, va_list list) { kLogPrintV(kLogLevel_Error, fmt, list); }
+void kLogTraceExV(const char *src, const char *fmt, va_list list) { kLogPrintV(kLogLevel_Trace, src, fmt, list); }
+void kLogInfoExV(const char *src, const char *fmt, va_list list) { kLogPrintV(kLogLevel_Info, src, fmt, list); }
+void kLogWarningExV(const char *src, const char *fmt, va_list list) { kLogPrintV(kLogLevel_Warning, src, fmt, list); }
+void kLogErrorExV(const char *src, const char *fmt, va_list list) { kLogPrintV(kLogLevel_Error, src, fmt, list); }
 
-void kLogPrint(kLogLevel level, const char *fmt, ...)
+void kLogTraceV(const char *fmt, va_list list) { kLogTraceExV("", fmt, list); }
+void kLogInfoV(const char *fmt, va_list list) { kLogInfoExV("", fmt, list); }
+void kLogWarningV(const char *fmt, va_list list) { kLogWarningExV("", fmt, list); }
+void kLogErrorV(const char *fmt, va_list list) { kLogErrorExV("", fmt, list); }
+
+void kLogPrint(kLogLevel level, const char *src, const char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	kLogPrintV(level, fmt, args);
+	kLogPrintV(level, fmt, src, args);
+	va_end(args);
+}
+
+void kLogTraceEx(const char *src, const char *fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	kLogTraceExV(src, fmt, args);
+	va_end(args);
+}
+
+void kLogInfoEx(const char *src, const char *fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	kLogInfoExV(src, fmt, args);
+	va_end(args);
+}
+
+void kLogWarningEx(const char *src, const char *fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	kLogWarningExV(src, fmt, args);
+	va_end(args);
+}
+
+void kLogErrorEx(const char *src, const char *fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	kLogErrorExV(src, fmt, args);
 	va_end(args);
 }
 
@@ -73,7 +113,15 @@ void kLogTrace(const char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	kLogTraceV(fmt, args);
+	kLogTraceExV("", fmt, args);
+	va_end(args);
+}
+
+void kLogInfo(const char *fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	kLogInfoExV("", fmt, args);
 	va_end(args);
 }
 
@@ -81,7 +129,7 @@ void kLogWarning(const char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	kLogWarningV(fmt, args);
+	kLogWarningExV("", fmt, args);
 	va_end(args);
 }
 
@@ -89,7 +137,7 @@ void kLogError(const char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	kLogErrorV(fmt, args);
+	kLogErrorExV("", fmt, args);
 	va_end(args);
 }
 
@@ -124,20 +172,27 @@ void kDefaultFatalError(const char *message)
 	FatalAppExitW(0, L"out of memory");
 }
 
-static const WORD ColorsMap[] = {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, FOREGROUND_RED | FOREGROUND_GREEN,
-                                 FOREGROUND_RED};
-static_assert(kArrayCount(ColorsMap) == kLogLevel_Error + 1, "");
+static const WORD  kColorsMap[] = {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE,
+                                  FOREGROUND_GREEN | FOREGROUND_BLUE,
+                                  FOREGROUND_RED | FOREGROUND_GREEN, FOREGROUND_RED};
+static const char *kHeaderMap[] = {"Trace", "Info", "Warning", "Error"};
+static_assert(kArrayCount(kHeaderMap) == kLogLevel_Error + 1, "");
+static_assert(kArrayCount(kColorsMap) == kLogLevel_Error + 1, "");
 
-void kDefaultHandleLog(void *data, kLogLevel level, const u8 *msg, imem msg_len)
+void kDefaultHandleLog(void *data, kLogLevel level, const char *src, const u8 *msg, imem msg_len)
 {
 	static kAtomic Guard = {0};
-
-	wchar_t        buff[4096];
-
-	int            len = MultiByteToWideChar(CP_UTF8, 0, (char *)msg, (int)msg_len, buff, kArrayCount(buff) - 1);
-	buff[len]          = 0;
+	static char    MessageBufferUTF8[8192];
+	static wchar_t MessageBufferWide[8192];
 
 	kAtomicLock(&Guard);
+
+	msg_len = snprintf(MessageBufferUTF8, kArrayCount(MessageBufferUTF8), "%-8s: %-12s %s", kHeaderMap[level],
+	                   src ? src : "", msg);
+
+	int len = MultiByteToWideChar(CP_UTF8, 0, MessageBufferUTF8, (int)msg_len, MessageBufferWide,
+	                              kArrayCount(MessageBufferWide) - 1);
+	MessageBufferWide[len] = 0;
 
 #ifndef K_CONSOLE_APPLICATION
 	HANDLE handle = (level == kLogLevel_Error) ? GetStdHandle(STD_ERROR_HANDLE) : GetStdHandle(STD_OUTPUT_HANDLE);
@@ -145,17 +200,17 @@ void kDefaultHandleLog(void *data, kLogLevel level, const u8 *msg, imem msg_len)
 	{
 		CONSOLE_SCREEN_BUFFER_INFO buffer_info;
 		GetConsoleScreenBufferInfo(handle, &buffer_info);
-		SetConsoleTextAttribute(handle, ColorsMap[level]);
+		SetConsoleTextAttribute(handle, kColorsMap[level]);
 		DWORD written = 0;
-		WriteConsoleW(handle, buff, len, &written, 0);
+		WriteConsoleW(handle, MessageBufferWide, len, &written, 0);
 		SetConsoleTextAttribute(handle, buffer_info.wAttributes);
 	}
 #else
 	FILE *out = (level == kLogLevel_Error) ? stderr : stdout;
-	fwprintf(out, L"%s", buff);
+	fwprintf(out, L"%s", MessageBufferWide);
 #endif
 
-	if (IsDebuggerPresent()) OutputDebugStringW(buff);
+	if (IsDebuggerPresent()) OutputDebugStringW(MessageBufferWide);
 
 	kAtomicUnlock(&Guard);
 }

@@ -19,13 +19,13 @@ constexpr uint K_TEXTURE_MAX_PER_BLOCK = 32;
 typedef struct kD3D11_Texture : kTexture
 {
 	kVec2i                     size;
-	ID3D11ShaderResourceView  *srv;
-	ID3D11RenderTargetView    *rtv;
-	ID3D11DepthStencilView    *dsv;
+	ID3D11ShaderResourceView * srv;
+	ID3D11RenderTargetView *   rtv;
+	ID3D11DepthStencilView *   dsv;
 	ID3D11UnorderedAccessView *uav;
-	ID3D11Texture2D           *texture2d;
-	kD3D11_Texture            *prev;
-	kD3D11_Texture            *next;
+	ID3D11Texture2D *          texture2d;
+	kD3D11_Texture *           prev;
+	kD3D11_Texture *           next;
 } kD3D11_Texture;
 
 typedef enum kD3D11_RenderTarget
@@ -39,12 +39,12 @@ typedef enum kD3D11_RenderTarget
 
 typedef struct kD3D11_SwapChain : kSwapChain
 {
-	IDXGISwapChain1    *native;
+	IDXGISwapChain1 *   native;
 	kD3D11_Texture      targets[kD3D11_RenderTarget_Count];
 	kD3D11_RenderTarget rt;
 	kRenderTargetConfig rt_config;
-	kD3D11_SwapChain   *prev;
-	kD3D11_SwapChain   *next;
+	kD3D11_SwapChain *  prev;
+	kD3D11_SwapChain *  next;
 } kD3D11_SwapChain;
 
 typedef struct kD3D11_TextureBlock
@@ -56,7 +56,7 @@ typedef struct kD3D11_TextureBlock
 typedef struct kD3D11_TexturePool
 {
 	kD3D11_Texture       first;
-	kD3D11_Texture      *free;
+	kD3D11_Texture *     free;
 	kD3D11_TextureBlock *blocks;
 } kD3D11_TexturePool;
 
@@ -64,27 +64,27 @@ typedef struct kD3D11_Render2D
 {
 	uint                   vertex_sz;
 	uint                   index_sz;
-	ID3D11Buffer          *vertex;
-	ID3D11Buffer          *index;
-	ID3D11Buffer          *constant;
-	ID3D11VertexShader    *vs;
-	ID3D11PixelShader     *ps;
-	ID3D11InputLayout     *input;
+	ID3D11Buffer *         vertex;
+	ID3D11Buffer *         index;
+	ID3D11Buffer *         constant;
+	ID3D11VertexShader *   vs;
+	ID3D11PixelShader *    ps;
+	ID3D11InputLayout *    input;
 	ID3D11RasterizerState *rasterizer;
 } kD3D11_Render2D;
 
 typedef struct kD3D11_PostProcess
 {
-	ID3D11VertexShader  *vs;
-	ID3D11PixelShader   *tonemapping[kToneMappingMethod_Count];
+	ID3D11VertexShader * vs;
+	ID3D11PixelShader *  tonemapping[kToneMappingMethod_Count];
 	ID3D11ComputeShader *tonemapping_cs;
 } kD3D11_PostProcess;
 
 typedef struct kD3D11_DeferredResource
 {
 	ID3D11DepthStencilState *depth;
-	ID3D11SamplerState      *samplers[kTextureFilter_Count];
-	ID3D11BlendState        *blends[kBlendMode_Count];
+	ID3D11SamplerState *     samplers[kTextureFilter_Count];
+	ID3D11BlendState *       blends[kBlendMode_Count];
 	kD3D11_PostProcess       postprocess;
 } kD3D11_DeferredResource;
 
@@ -98,9 +98,9 @@ typedef struct kD3D11_Resource
 
 typedef struct kD3D11_Backend
 {
-	ID3D11Device1        *device;
+	ID3D11Device1 *       device;
 	ID3D11DeviceContext1 *device_context;
-	IDXGIFactory2        *factory;
+	IDXGIFactory2 *       factory;
 	kD3D11_Resource       resource;
 } kD3D11_Backend;
 
@@ -150,7 +150,7 @@ static_assert(kArrayCount(kD3D11_FormatMap) == kFormat_Count, "");
 static constexpr D3D11_FILTER kD3D11_FilterMap[] = {D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_FILTER_MIN_MAG_MIP_POINT};
 static_assert(kArrayCount(kD3D11_FilterMap) == kTextureFilter_Count, "");
 
-static const char   *kD3D11_ToneMappingPSNames[] = {"standard dynamic range", "HDR AES"};
+static const char *  kD3D11_ToneMappingPSNames[] = {"standard dynamic range", "HDR AES"};
 static const kString kD3D11_ToneMappingPS[]      = {kString(kToneMapSdrPS), kString(kToneMapAcesApproxPS)};
 static_assert(kArrayCount(kD3D11_ToneMappingPS) == kToneMappingMethod_Count, "");
 static_assert(kArrayCount(kD3D11_ToneMappingPSNames) == kToneMappingMethod_Count, "");
@@ -214,19 +214,19 @@ static ID3D11BlendState *kD3D11_GetBlendState(kBlendMode mode)
 		return d3d11.resource.deferred.blends[mode];
 	}
 
-	if (mode == kBlendMode_None)
+	if (mode == kBlendMode_Opaque)
 	{
 		D3D11_BLEND_DESC blend                      = {};
 		blend.RenderTarget[0].RenderTargetWriteMask = 0xf;
 
-		HRESULT hr = d3d11.device->CreateBlendState(&blend, &d3d11.resource.deferred.blends[kBlendMode_None]);
+		HRESULT hr = d3d11.device->CreateBlendState(&blend, &d3d11.resource.deferred.blends[kBlendMode_Opaque]);
 		if (FAILED(hr))
 		{
 			kLogHresultError(hr, "DirectX11", "Failed to create blend state");
 		}
 	}
 
-	if (mode == kBlendMode_Alpha)
+	if (mode == kBlendMode_Normal)
 	{
 		D3D11_BLEND_DESC blend                      = {};
 		blend.RenderTarget[0].BlendEnable           = TRUE;
@@ -238,7 +238,7 @@ static ID3D11BlendState *kD3D11_GetBlendState(kBlendMode mode)
 		blend.RenderTarget[0].BlendOpAlpha          = D3D11_BLEND_OP_ADD;
 		blend.RenderTarget[0].RenderTargetWriteMask = 0xf;
 
-		HRESULT hr = d3d11.device->CreateBlendState(&blend, &d3d11.resource.deferred.blends[kBlendMode_Alpha]);
+		HRESULT hr = d3d11.device->CreateBlendState(&blend, &d3d11.resource.deferred.blends[kBlendMode_Normal]);
 		if (FAILED(hr))
 		{
 			kLogHresultError(hr, "DirectX11", "Failed to create alpha blend state");
@@ -257,7 +257,7 @@ static ID3D11VertexShader *kD3D11_GetPostProcessVertexShader(void)
 
 	kString vs = kString(kPostProcessVS);
 
-	kLogTrace("Direct3D11: Compiling post process vertex shader.\n");
+	kLogInfoEx("D3D11", "Compiling post process vertex shader.\n");
 
 	HRESULT hr = d3d11.device->CreateVertexShader(vs.data, vs.count, 0, &d3d11.resource.deferred.postprocess.vs);
 	if (FAILED(hr))
@@ -277,7 +277,7 @@ static ID3D11ComputeShader *kD3D11_GetPostProcessToneMappingComputeShader(void)
 
 	kString ps = kString(kToneMapAcesCS);
 
-	kLogTrace("Direct3D11: Compiling tone mapping compute shader.\n");
+	kLogInfoEx("D3D11", "Compiling tone mapping compute shader.\n");
 
 	HRESULT hr =
 		d3d11.device->CreateComputeShader(ps.data, ps.count, 0, &d3d11.resource.deferred.postprocess.tonemapping_cs);
@@ -298,7 +298,7 @@ static ID3D11PixelShader *kD3D11_GetPostProcessToneMappingShader(kToneMappingMet
 
 	kString ps = kD3D11_ToneMappingPS[method];
 
-	kLogTrace("Direct3D11: Compiling %s pixel shader.\n", kD3D11_ToneMappingPSNames[method]);
+	kLogInfoEx("D3D11", "Compiling %s pixel shader.\n", kD3D11_ToneMappingPSNames[method]);
 
 	HRESULT hr =
 		d3d11.device->CreatePixelShader(ps.data, ps.count, 0, &d3d11.resource.deferred.postprocess.tonemapping[method]);
@@ -410,7 +410,7 @@ static kTexture *kD3D11_CreateTexture(const kTextureSpec &spec)
 
 	if (!r)
 	{
-		kLogError("Direct3D11: Failed to allocate memory for texture\n");
+		kLogErrorEx("D3D11", "Failed to allocate memory for texture\n");
 		return (kD3D11_Texture *)&kFallbackTexture;
 	}
 
@@ -533,7 +533,7 @@ static void kD3D11_UnprepareSwapChainFeatureTextures(kD3D11_SwapChain *r)
 
 static void kD3D11_DestroySwapChainBuffers(kD3D11_SwapChain *r)
 {
-	kLogTrace("Direct3D11: Destroying swap chain render targets.\n");
+	kDebugTraceEx("D3D11", "Destroying swap chain render targets.\n");
 
 	kD3D11_UnprepareTexture(&r->targets[0]);
 	kRelease(&r->targets[0].texture2d);
@@ -555,7 +555,7 @@ static void kD3D11_PrepareSwapChainFeatureTextures(kD3D11_SwapChain *r)
 
 	if (r->rt_config.antialiasing != kAntiAliasingMethod_None)
 	{
-		kLogTrace("Direct3D11: Creating MSAA render target.\n");
+		kDebugTraceEx("D3D11", "Creating MSAA render target.\n");
 
 		D3D11_TEXTURE2D_DESC desc = {};
 		desc.Width                = size.x;
@@ -643,7 +643,7 @@ static void kD3D11_PrepareSwapChainFeatureTextures(kD3D11_SwapChain *r)
 
 static void kD3D11_CreateSwapChainBuffers(kD3D11_SwapChain *r)
 {
-	kLogTrace("Direct3D11: Creating swap chain render targets.\n");
+	kDebugTraceEx("D3D11", "Creating swap chain render targets.\n");
 
 	r->rt              = kD3D11_RenderTarget_Final;
 
@@ -678,7 +678,7 @@ static void kD3D11_ResizeSwapChainBuffers(kSwapChain *swap_chain, uint w, uint h
 			return;
 		}
 
-		kLogTrace("Direct3D11: Resizing swap chain render targets to %ux%u.\n", w, h);
+		kDebugTraceEx("D3D11", "Resizing swap chain render targets to %ux%u.\n", w, h);
 
 		kD3D11_DestroySwapChainBuffers(r);
 		r->native->ResizeBuffers(K_BACK_BUFFER_COUNT, 0, 0, DXGI_FORMAT_UNKNOWN, 0);
@@ -688,7 +688,7 @@ static void kD3D11_ResizeSwapChainBuffers(kSwapChain *swap_chain, uint w, uint h
 
 static void kD3D11_DestroySwapChain(kSwapChain *swap_chain)
 {
-	kLogTrace("Destroying swap chain.\n");
+	kLogInfoEx("D3D11", "Destroying swap chain.\n");
 
 	kD3D11_Flush();
 
@@ -704,7 +704,7 @@ static void kD3D11_DestroySwapChain(kSwapChain *swap_chain)
 
 static kSwapChain *kD3D11_CreateSwapChain(void *_window, const kRenderTargetConfig &config)
 {
-	kLogTrace("Direct3D11: Creating swap chain.\n");
+	kLogInfoEx("D3D11", "Creating swap chain.\n");
 
 	HWND                  wnd             = (HWND)_window;
 
@@ -738,7 +738,7 @@ static kSwapChain *kD3D11_CreateSwapChain(void *_window, const kRenderTargetConf
 
 	if (!r)
 	{
-		kLogError("DirectX12: Failed to allocate memory for create swap chain\n");
+		kLogErrorEx("DirectX11", "Failed to allocate memory for create swap chain\n");
 		swapchain1->Release();
 		return (kSwapChain *)&kFallbackSwapChain;
 	}
@@ -762,19 +762,20 @@ static kRenderTargetConfig kD3D11_GetRenderTargetConfig(kSwapChain *swap_chain)
 	return r->rt_config;
 }
 
-static void kD3D11_ApplyRenderTargetConfig(kSwapChain *swap_chain, const kRenderTargetConfig &config)
+static bool kD3D11_ApplyRenderTargetConfig(kSwapChain *swap_chain, const kRenderTargetConfig &config)
 {
 	kD3D11_SwapChain *r = (kD3D11_SwapChain *)swap_chain;
-	if (r->state != kResourceState_Ready) return;
+	if (r->state != kResourceState_Ready) return false;
 
-	if (memcmp(&r->rt_config, &config, sizeof(config)) == 0) return;
+	if (memcmp(&r->rt_config, &config, sizeof(config)) == 0) return true;
 
-	kLogTrace("Direct3D11: Applying render configuration to swap chain. AntiAliasing=%s. ToneMapping:%s.\n",
-	          kAntiAliasingMethodStrings[config.antialiasing], kToneMappingMethodStrings[config.tonemapping]);
+	kLogInfoEx("D3D11", "Applying render configuration to swap chain. AntiAliasing=%s. ToneMapping:%s.\n",
+	           kAntiAliasingMethodStrings[config.antialiasing], kToneMappingMethodStrings[config.tonemapping]);
 
 	kD3D11_UnprepareSwapChainFeatureTextures(r);
 	r->rt_config = config;
 	kD3D11_PrepareSwapChainFeatureTextures(r);
+	return true;
 }
 
 static void kD3D11_Present(kSwapChain *swap_chain)
@@ -794,12 +795,12 @@ static void kD3D11_Present(kSwapChain *swap_chain)
 
 	if (rt == kD3D11_RenderTarget_Resolved && r->rt_config.tonemapping != kToneMappingMethod_SDR)
 	{
-		kD3D11_Texture            *resolved    = &r->targets[kD3D11_RenderTarget_Resolved];
-		kD3D11_Texture            *tonemapping = &r->targets[kD3D11_RenderTarget_ToneMapping];
+		kD3D11_Texture *           resolved    = &r->targets[kD3D11_RenderTarget_Resolved];
+		kD3D11_Texture *           tonemapping = &r->targets[kD3D11_RenderTarget_ToneMapping];
 
-		ID3D11ComputeShader       *cs          = kD3D11_GetPostProcessToneMappingComputeShader();
+		ID3D11ComputeShader *      cs          = kD3D11_GetPostProcessToneMappingComputeShader();
 
-		ID3D11ShaderResourceView  *srvs[]      = {resolved->srv};
+		ID3D11ShaderResourceView * srvs[]      = {resolved->srv};
 		ID3D11UnorderedAccessView *uavs[]      = {tonemapping->uav};
 
 		d3d11.device_context->CSSetShader(cs, 0, 0);
@@ -830,10 +831,10 @@ static void kD3D11_Present(kSwapChain *swap_chain)
 		float clear[]     = {0.0f, 0.0f, 0.0f, 0.0f};
 		d3d11.device_context->ClearRenderTargetView(target->rtv, clear);
 
-		ID3D11VertexShader       *vs          = kD3D11_GetPostProcessVertexShader();
-		ID3D11PixelShader        *ps          = kD3D11_GetPostProcessToneMappingShader(kToneMappingMethod_SDR);
-		ID3D11SamplerState       *sampler     = kD3D11_GetSampleState(kTextureFilter_Linear);
-		ID3D11BlendState         *blend       = kD3D11_GetBlendState(kBlendMode_None);
+		ID3D11VertexShader *      vs          = kD3D11_GetPostProcessVertexShader();
+		ID3D11PixelShader *       ps          = kD3D11_GetPostProcessToneMappingShader(kToneMappingMethod_SDR);
+		ID3D11SamplerState *      sampler     = kD3D11_GetSampleState(kTextureFilter_Linear);
+		ID3D11BlendState *        blend       = kD3D11_GetBlendState(kBlendMode_Opaque);
 		ID3D11ShaderResourceView *resources[] = {src->srv};
 
 		d3d11.device_context->OMSetRenderTargets(1, &target->rtv, 0);
@@ -862,12 +863,12 @@ static kTexture *kD3D11_GetSwapChainRenderTarget(kSwapChain *swap_chain)
 // Render2D
 //
 
-static void kD3D11_ExecuteCommands2(const kRenderData2_Version2 &data)
+static void kD3D11_ExecuteFrame(const kRenderFrame2D &frame)
 {
-	if (data.vertices.count == 0 || data.indices.count == 0) return;
+	if (frame.vertices.count == 0 || frame.indices.count == 0) return;
 
-	uint vb_size = (uint)data.vertices.Size();
-	uint ib_size = (uint)data.indices.Size();
+	uint vb_size = (uint)frame.vertices.Size();
+	uint ib_size = (uint)frame.indices.Size();
 
 	if (vb_size > d3d11.resource.render2d.vertex_sz)
 	{
@@ -913,10 +914,10 @@ static void kD3D11_ExecuteCommands2(const kRenderData2_Version2 &data)
 
 	D3D11_MAPPED_SUBRESOURCE mapped;
 
-	ID3D11DeviceContext1    *dc = d3d11.device_context;
-	ID3D11Buffer            *vb = d3d11.resource.render2d.vertex;
-	ID3D11Buffer            *ib = d3d11.resource.render2d.index;
-	ID3D11Buffer            *cb = d3d11.resource.render2d.constant;
+	ID3D11DeviceContext1 *   dc = d3d11.device_context;
+	ID3D11Buffer *           vb = d3d11.resource.render2d.vertex;
+	ID3D11Buffer *           ib = d3d11.resource.render2d.index;
+	ID3D11Buffer *           cb = d3d11.resource.render2d.constant;
 	HRESULT                  hr = S_OK;
 
 	hr                          = dc->Map(vb, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
@@ -925,7 +926,7 @@ static void kD3D11_ExecuteCommands2(const kRenderData2_Version2 &data)
 		kLogHresultError(hr, "DirectX11", "Failed to map vertex2d buffer");
 		return;
 	}
-	memcpy(mapped.pData, data.vertices.data, vb_size);
+	memcpy(mapped.pData, frame.vertices.data, vb_size);
 	dc->Unmap(vb, 0);
 
 	hr = dc->Map(ib, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
@@ -934,7 +935,7 @@ static void kD3D11_ExecuteCommands2(const kRenderData2_Version2 &data)
 		kLogHresultError(hr, "DirectX11", "Failed to map index2d buffer");
 		return;
 	}
-	memcpy(mapped.pData, data.indices.data, ib_size);
+	memcpy(mapped.pData, frame.indices.data, ib_size);
 	dc->Unmap(ib, 0);
 
 	UINT                     stride = sizeof(kVertex2D);
@@ -952,7 +953,7 @@ static void kD3D11_ExecuteCommands2(const kRenderData2_Version2 &data)
 	dc->OMSetDepthStencilState(dss, 0);
 	dc->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	for (const kRenderPass2D_Version2 &pass : data.passes)
+	for (const kRenderPass2D &pass : frame.passes)
 	{
 		kD3D11_Texture *rt = (kD3D11_Texture *)pass.rt;
 		kD3D11_Texture *ds = (kD3D11_Texture *)pass.ds;
@@ -988,25 +989,44 @@ static void kD3D11_ExecuteCommands2(const kRenderData2_Version2 &data)
 		dc->OMSetRenderTargets(1, &rt->rtv, ds ? ds->dsv : nullptr);
 		dc->RSSetViewports(1, &viewport);
 
-		u8 blend = pass.commands[0].key.decoded.blend;
+		u32            material  = UINT32_MAX;
+		u32            transform = UINT32_MAX;
+		kBlendMode     blend     = kBlendMode_Count;
+		kTextureFilter filter    = kTextureFilter_Count;
+		u16            rect      = UINT16_MAX;
 
+		for (u32 index = pass.commands.beg; index < pass.commands.end; ++index)
 		{
-			ID3D11BlendState *blend = kD3D11_GetBlendState((kBlendMode)blend);
-			dc->OMSetBlendState(blend, 0, 0xffffffff);
-		}
+			const kRenderCommand2D &cmd = frame.commands[index];
 
-		for (const kRenderCommand2D_Version2 &cmd : pass.commands)
-		{
-			if (cmd.key.decoded.blend ^ blend)
+			if (cmd.blend ^ blend)
 			{
-				blend = cmd.key.decoded.blend;
-				ID3D11BlendState *blend = kD3D11_GetBlendState((kBlendMode)key.decoded.blend);
-				dc->OMSetBlendState(blend, 0, 0xffffffff);
+				blend                = cmd.blend;
+				ID3D11BlendState *bs = kD3D11_GetBlendState(blend);
+				dc->OMSetBlendState(bs, 0, 0xffffffff);
 			}
 
-			ID3D11ShaderResourceView *ps_resources[2];
+			if (cmd.filter ^ filter)
+			{
+				filter                      = cmd.filter;
+				ID3D11SamplerState *sampler = kD3D11_GetSampleState(filter);
+				dc->PSSetSamplers(0, 1, &sampler);
+			}
 
-			for (const kRenderParam2D &param : cmd.params)
+			if (cmd.rect ^ rect)
+			{
+				rect             = cmd.rect;
+				kRect      prect = frame.rects[rect];
+
+				D3D11_RECT rect;
+				rect.left   = (LONG)(prect.min.x);
+				rect.top    = (LONG)(prect.min.y);
+				rect.right  = (LONG)(prect.max.x);
+				rect.bottom = (LONG)(prect.max.y);
+				dc->RSSetScissorRects(1, &rect);
+			}
+
+			if (cmd.transform ^ transform)
 			{
 				hr = dc->Map(cb, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
 				if (FAILED(hr))
@@ -1014,207 +1034,30 @@ static void kD3D11_ExecuteCommands2(const kRenderData2_Version2 &data)
 					kLogHresultError(hr, "DirectX11", "Failed to map constant buffer");
 					continue;
 				}
-				memcpy(mapped.pData, param.transform.m, sizeof(kMat4));
+				memcpy(mapped.pData, frame.transforms[cmd.transform].m, sizeof(kMat4));
 				dc->Unmap(cb, 0);
+				transform = cmd.transform;
 
-				ID3D11SamplerState *sampler = kD3D11_GetSampleState(cmd.filter);
+				dc->VSSetConstantBuffers(0, 1, &cb);
+			}
 
-				kD3D11_Texture     *r1      = (kD3D11_Texture *)param.textures[0];
-				kD3D11_Texture     *r2      = (kD3D11_Texture *)param.textures[1];
+			if (cmd.material ^ material)
+			{
+				const kMaterial2D &material = frame.materials[cmd.material];
+
+				kD3D11_Texture *   r1       = (kD3D11_Texture *)material.textures[kTextureType_Color];
+				kD3D11_Texture *   r2       = (kD3D11_Texture *)material.textures[kTextureType_MaskSDF];
 
 				if (r1->state != kResourceState_Ready || r2->state != kResourceState_Ready) continue;
 
+				ID3D11ShaderResourceView *ps_resources[2];
 				ps_resources[0] = r1->srv;
 				ps_resources[1] = r2->srv;
 
-				D3D11_RECT rect;
-				rect.left   = (LONG)(param.rect.min.x);
-				rect.top    = (LONG)(param.rect.min.y);
-				rect.right  = (LONG)(param.rect.max.x);
-				rect.bottom = (LONG)(param.rect.max.y);
-
-				dc->VSSetConstantBuffers(0, 1, &cb);
 				dc->PSSetShaderResources(0, kArrayCount(ps_resources), ps_resources);
-				dc->PSSetSamplers(0, 1, &sampler);
-				dc->RSSetScissorRects(1, &rect);
-				dc->DrawIndexed(param.count, param.index, param.vertex);
 			}
-		}
 
-		dc->PSSetSamplers(0, 0, nullptr);
-		dc->PSSetShaderResources(0, 0, nullptr);
-	}
-
-	dc->ClearState();
-}
-
-static void kD3D11_ExecuteCommands(const kRenderData2D &data)
-{
-	if (data.vertices.count == 0 || data.indices.count == 0) return;
-
-	uint vb_size = (uint)data.vertices.Size();
-	uint ib_size = (uint)data.indices.Size();
-
-	if (vb_size > d3d11.resource.render2d.vertex_sz)
-	{
-		kRelease(&d3d11.resource.render2d.vertex);
-		d3d11.resource.render2d.vertex_sz = 0;
-
-		D3D11_BUFFER_DESC vb_desc         = {};
-		vb_desc.ByteWidth                 = vb_size;
-		vb_desc.Usage                     = D3D11_USAGE_DYNAMIC;
-		vb_desc.BindFlags                 = D3D11_BIND_VERTEX_BUFFER;
-		vb_desc.CPUAccessFlags            = D3D11_CPU_ACCESS_WRITE;
-
-		HRESULT hr                        = d3d11.device->CreateBuffer(&vb_desc, 0, &d3d11.resource.render2d.vertex);
-		if (FAILED(hr))
-		{
-			kLogHresultError(hr, "DirectX11", "Failed to allocate vertex buffer");
-			return;
-		}
-
-		d3d11.resource.render2d.vertex_sz = vb_size;
-	}
-
-	if (ib_size > d3d11.resource.render2d.index_sz)
-	{
-		kRelease(&d3d11.resource.render2d.index);
-		d3d11.resource.render2d.index_sz = 0;
-
-		D3D11_BUFFER_DESC ib_desc        = {};
-		ib_desc.ByteWidth                = ib_size;
-		ib_desc.Usage                    = D3D11_USAGE_DYNAMIC;
-		ib_desc.BindFlags                = D3D11_BIND_INDEX_BUFFER;
-		ib_desc.CPUAccessFlags           = D3D11_CPU_ACCESS_WRITE;
-
-		HRESULT hr                       = d3d11.device->CreateBuffer(&ib_desc, 0, &d3d11.resource.render2d.index);
-		if (FAILED(hr))
-		{
-			kLogHresultError(hr, "DirectX11", "Failed to allocate index buffer");
-			return;
-		}
-
-		d3d11.resource.render2d.index_sz = ib_size;
-	}
-
-	D3D11_MAPPED_SUBRESOURCE mapped;
-
-	ID3D11DeviceContext1    *dc = d3d11.device_context;
-	ID3D11Buffer            *vb = d3d11.resource.render2d.vertex;
-	ID3D11Buffer            *ib = d3d11.resource.render2d.index;
-	ID3D11Buffer            *cb = d3d11.resource.render2d.constant;
-	HRESULT                  hr = S_OK;
-
-	hr                          = dc->Map(vb, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
-	if (FAILED(hr))
-	{
-		kLogHresultError(hr, "DirectX11", "Failed to map vertex2d buffer");
-		return;
-	}
-	memcpy(mapped.pData, data.vertices.data, vb_size);
-	dc->Unmap(vb, 0);
-
-	hr = dc->Map(ib, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
-	if (FAILED(hr))
-	{
-		kLogHresultError(hr, "DirectX11", "Failed to map index2d buffer");
-		return;
-	}
-	memcpy(mapped.pData, data.indices.data, ib_size);
-	dc->Unmap(ib, 0);
-
-	UINT                     stride = sizeof(kVertex2D);
-	UINT                     offset = 0;
-	DXGI_FORMAT              format = sizeof(kIndex2D) == 4 ? DXGI_FORMAT_R32_UINT : DXGI_FORMAT_R16_UINT;
-
-	ID3D11DepthStencilState *dss    = kD3D11_GetDepthStencilState();
-
-	dc->IASetVertexBuffers(0, 1, &d3d11.resource.render2d.vertex, &stride, &offset);
-	dc->IASetIndexBuffer(d3d11.resource.render2d.index, format, 0);
-	dc->VSSetShader(d3d11.resource.render2d.vs, nullptr, 0);
-	dc->PSSetShader(d3d11.resource.render2d.ps, nullptr, 0);
-	dc->IASetInputLayout(d3d11.resource.render2d.input);
-	dc->RSSetState(d3d11.resource.render2d.rasterizer);
-	dc->OMSetDepthStencilState(dss, 0);
-	dc->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-	for (const kRenderPass2D &pass : data.passes)
-	{
-		kD3D11_Texture *rt = (kD3D11_Texture *)pass.rt;
-		kD3D11_Texture *ds = (kD3D11_Texture *)pass.ds;
-
-		if (rt->state != kResourceState_Ready) continue;
-		if (ds && ds->state != kResourceState_Ready) continue;
-
-		if (pass.flags & kRenderPass_ClearColor)
-		{
-			dc->ClearRenderTargetView(rt->rtv, pass.clear.color.m);
-		}
-
-		if (ds)
-		{
-			UINT flags = 0;
-			if (pass.flags & kRenderPass_ClearDepth) flags |= D3D11_CLEAR_DEPTH;
-			if (pass.flags & kRenderPass_ClearStencil) flags |= D3D11_CLEAR_STENCIL;
-
-			if (flags)
-			{
-				dc->ClearDepthStencilView(ds->dsv, flags, pass.clear.depth, pass.clear.stencil);
-			}
-		}
-
-		D3D11_VIEWPORT viewport;
-		viewport.TopLeftX = pass.viewport.x;
-		viewport.TopLeftY = pass.viewport.y;
-		viewport.Width    = pass.viewport.w;
-		viewport.Height   = pass.viewport.h;
-		viewport.MinDepth = pass.viewport.n;
-		viewport.MaxDepth = pass.viewport.f;
-
-		dc->OMSetRenderTargets(1, &rt->rtv, ds ? ds->dsv : nullptr);
-		dc->RSSetViewports(1, &viewport);
-
-		for (const kRenderCommand2D &cmd : pass.commands)
-		{
-			ID3D11BlendState *blend = kD3D11_GetBlendState(cmd.shader.blend);
-
-			dc->OMSetBlendState(blend, 0, 0xffffffff);
-
-			ID3D11ShaderResourceView *ps_resources[2];
-
-			for (const kRenderParam2D &param : cmd.params)
-			{
-				hr = dc->Map(cb, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
-				if (FAILED(hr))
-				{
-					kLogHresultError(hr, "DirectX11", "Failed to map constant buffer");
-					continue;
-				}
-				memcpy(mapped.pData, param.transform.m, sizeof(kMat4));
-				dc->Unmap(cb, 0);
-
-				ID3D11SamplerState *sampler = kD3D11_GetSampleState(cmd.filter);
-
-				kD3D11_Texture     *r1      = (kD3D11_Texture *)param.textures[0];
-				kD3D11_Texture     *r2      = (kD3D11_Texture *)param.textures[1];
-
-				if (r1->state != kResourceState_Ready || r2->state != kResourceState_Ready) continue;
-
-				ps_resources[0] = r1->srv;
-				ps_resources[1] = r2->srv;
-
-				D3D11_RECT rect;
-				rect.left   = (LONG)(param.rect.min.x);
-				rect.top    = (LONG)(param.rect.min.y);
-				rect.right  = (LONG)(param.rect.max.x);
-				rect.bottom = (LONG)(param.rect.max.y);
-
-				dc->VSSetConstantBuffers(0, 1, &cb);
-				dc->PSSetShaderResources(0, kArrayCount(ps_resources), ps_resources);
-				dc->PSSetSamplers(0, 1, &sampler);
-				dc->RSSetScissorRects(1, &rect);
-				dc->DrawIndexed(param.count, param.index, param.vertex);
-			}
+			dc->DrawIndexed(cmd.count, cmd.index, cmd.vertex);
 		}
 
 		dc->PSSetSamplers(0, 0, nullptr);
@@ -1306,11 +1149,11 @@ static bool kD3D11_CreateRenderResources2D(void)
 
 static void kD3D11_DestroyRenderResources(void)
 {
-	kLogTrace("Direct3D11: Destroying render 2d resources.\n");
+	kLogInfoEx("D3D11", "Destroying render 2d resources.\n");
 	kD3D11_DestroyRenderResources2D();
 
 	{
-		kLogTrace("Direct3D11: Destroying textures.\n");
+		kLogInfoEx("D3D11", "Destroying textures.\n");
 
 		kD3D11_TexturePool *pool = &d3d11.resource.textures;
 		while (!kDListIsEmpty(&pool->first))
@@ -1330,7 +1173,7 @@ static void kD3D11_DestroyRenderResources(void)
 		}
 	}
 
-	kLogTrace("Direct3D11: Destroying deferred resources.\n");
+	kLogInfoEx("D3D11", "Destroying deferred resources.\n");
 
 	kRelease(&d3d11.resource.deferred.depth);
 
@@ -1395,7 +1238,7 @@ static void kD3D11_DestroyGraphicsDevice(void)
 {
 	kD3D11_DestroyRenderResources();
 
-	kLogTrace("Direct3D11: Destroying graphics devices.\n");
+	kLogInfoEx("D3D11", "Destroying graphics devices.\n");
 
 	kRelease(&d3d11.device);
 	kRelease(&d3d11.device_context);
@@ -1436,13 +1279,13 @@ static bool kD3D11_CreateGraphicsDevice(void)
 		if (kEnableDebugLayer && !adapter)
 		{
 			kEnableDebugLayer = false;
-			kLogWarning("Direct3D11: Debug Layer SDK not present. Falling back to adaptor without debug layer.\n");
+			kLogWarningEx("D3D11", "Debug Layer SDK not present. Falling back to adaptor without debug layer.\n");
 		}
 	}
 
 	if (adapter == nullptr)
 	{
-		kLogError("Direct3D11: Supported adaptor not found!\n");
+		kLogWarningEx("D3D11", "Supported adaptor not found!\n");
 		return false;
 	}
 
@@ -1454,7 +1297,7 @@ static bool kD3D11_CreateGraphicsDevice(void)
 	{
 		ID3D11Device *device = nullptr;
 		HRESULT       hr     = D3D11CreateDevice(adapter, D3D_DRIVER_TYPE_UNKNOWN, NULL, device_flags, FeatureLevels,
-		                                         kArrayCount(FeatureLevels), D3D11_SDK_VERSION, &device, nullptr, nullptr);
+                                       kArrayCount(FeatureLevels), D3D11_SDK_VERSION, &device, nullptr, nullptr);
 		kAssert(hr != E_INVALIDARG);
 
 		if (FAILED(hr))
@@ -1477,7 +1320,7 @@ static bool kD3D11_CreateGraphicsDevice(void)
 			ID3D11InfoQueue *info_queue = nullptr;
 			if (SUCCEEDED(d3d11.device->QueryInterface(IID_PPV_ARGS(&info_queue))))
 			{
-				kLogTrace("Direct3D11: ID3D11Debug enabled.");
+				kLogTraceEx("D3D11", "ID3D11Debug enabled.");
 				info_queue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_CORRUPTION, true);
 				info_queue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_ERROR, true);
 				info_queue->Release();
@@ -1497,21 +1340,21 @@ static bool kD3D11_CreateGraphicsDevice(void)
 
 bool kD3D11_CreateRenderBackend(kRenderBackend *backend)
 {
-	kLogTrace("Direct3D11: Creating graphics devices\n");
+	kLogInfoEx("D3D11", "Creating graphics devices\n");
 	if (!kD3D11_CreateGraphicsDevice())
 	{
 		kD3D11_DestroyGraphicsDevice();
 		return false;
 	}
 
-	kLogTrace("Direct3D11: Creating render 2d resources.\n");
+	kLogInfoEx("D3D11", "Creating render 2d resources.\n");
 	if (!kD3D11_CreateRenderResources2D())
 	{
 		kD3D11_DestroyGraphicsDevice();
 		return false;
 	}
 
-	kLogTrace("Direct3D11: Registering render backend.\n");
+	kLogInfoEx("D3D11", "Registering render backend.\n");
 
 	kDListInit(&d3d11.resource.textures.first);
 	kDListInit(&d3d11.resource.swap_chains);
@@ -1529,7 +1372,7 @@ bool kD3D11_CreateRenderBackend(kRenderBackend *backend)
 	backend->GetTextureSize          = kD3D11_GetTextureSize;
 	backend->ResizeTexture           = kD3D11_ResizeTexture;
 
-	backend->ExecuteCommands         = kD3D11_ExecuteCommands;
+	backend->ExecuteFrame            = kD3D11_ExecuteFrame;
 	backend->NextFrame               = kNextFrameFallback;
 
 	backend->Destroy                 = kD3D11_DestroyGraphicsDevice;

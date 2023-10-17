@@ -11,28 +11,28 @@
 #pragma comment(lib, "D3D12.lib")
 #pragma comment(lib, "DXGI.lib")
 
-static constexpr uint K_FRAME_COUNT       = 2;
+static constexpr uint K_FRAME_COUNT       = 3;
 static constexpr uint K_BACK_BUFFER_COUNT = 3;
 
 struct kD3D12_Frame
 {
 	UINT                        index;
 	HANDLE                      event;
-	ID3D12Fence                *fence;
+	ID3D12Fence *               fence;
 	UINT64                      values[K_FRAME_COUNT];
-	ID3D12CommandAllocator     *allocators[K_FRAME_COUNT];
+	ID3D12CommandAllocator *    allocators[K_FRAME_COUNT];
 	ID3D12GraphicsCommandList4 *commands;
-	ID3D12CommandQueue         *queue;
+	ID3D12CommandQueue *        queue;
 };
 
 struct kD3D12_Upload
 {
-	ID3D12Fence               *fence;
+	ID3D12Fence *              fence;
 	HANDLE                     event;
 	UINT64                     counter;
-	ID3D12CommandAllocator    *allocator;
+	ID3D12CommandAllocator *   allocator;
 	ID3D12GraphicsCommandList *commands;
-	ID3D12CommandQueue        *queue;
+	ID3D12CommandQueue *       queue;
 };
 
 struct kD3D12_Texture : kTexture
@@ -50,7 +50,7 @@ using kD3D12_TexturePool = kMemoryPool<kD3D12_Texture>;
 struct kD3D12_SwapChain : kSwapChain
 {
 	uint              index;
-	IDXGISwapChain3  *native;
+	IDXGISwapChain3 * native;
 	kD3D12_Texture    targets[K_BACK_BUFFER_COUNT];
 	kD3D12_SwapChain *prev;
 	kD3D12_SwapChain *next;
@@ -60,8 +60,8 @@ struct kD3D12_Render2D
 {
 	uint                 vertex_sz;
 	uint                 index_sz;
-	ID3D12Resource      *vertex[K_FRAME_COUNT];
-	ID3D12Resource      *index[K_FRAME_COUNT];
+	ID3D12Resource *     vertex[K_FRAME_COUNT];
+	ID3D12Resource *     index[K_FRAME_COUNT];
 	ID3D12RootSignature *root_sig;
 	ID3D12PipelineState *pipelines[kBlendMode_Count];
 };
@@ -70,9 +70,9 @@ struct kD3D12_Resource
 {
 	// TODO: put these somewhere better
 	UINT                        rtv_stride;
-	ID3D12DescriptorHeap       *rtv_descriptor;
-	ID3D12DescriptorHeap       *srv_descriptor[K_FRAME_COUNT];
-	ID3D12DescriptorHeap       *sampler_descriptor;
+	ID3D12DescriptorHeap *      rtv_descriptor;
+	ID3D12DescriptorHeap *      srv_descriptor[K_FRAME_COUNT];
+	ID3D12DescriptorHeap *      sampler_descriptor;
 	D3D12_GPU_DESCRIPTOR_HANDLE samplers[2];
 
 	kD3D12_SwapChain            swap_chains;
@@ -82,8 +82,8 @@ struct kD3D12_Resource
 
 struct kD3D12_Backend
 {
-	IDXGIFactory2  *factory;
-	ID3D12Device   *device;
+	IDXGIFactory2 * factory;
+	ID3D12Device *  device;
 	kD3D12_Frame    frame;
 	kD3D12_Upload   upload;
 	kD3D12_Resource resource;
@@ -157,7 +157,7 @@ static void kD3D12_WaitForGpu(void)
 		HRESULT hr    = d3d12.frame.queue->Signal(d3d12.frame.fence, value);
 		if (FAILED(hr))
 		{
-			kLogHresultError(hr, "Direct3D12", "Failed to signal fence");
+			kLogHresultError(hr, "D3D12", "Failed to signal fence");
 			continue;
 		}
 		d3d12.frame.fence->SetEventOnCompletion(value, d3d12.frame.event);
@@ -195,7 +195,7 @@ static kTexture *kD3D12_CreateTexture(const kTextureSpec &spec)
 
 	if (!r)
 	{
-		kLogError("Direct3D11: Failed to allocate memory for texture\n");
+		kLogErrorEx("D3D12", "Failed to allocate memory for texture\n");
 		return (kD3D12_Texture *)&kFallbackTexture;
 	}
 
@@ -232,7 +232,7 @@ static kTexture *kD3D12_CreateTexture(const kTextureSpec &spec)
 	if (FAILED(hr))
 	{
 		r->state = kResourceState_Error;
-		kLogHresultError(hr, "Direct3D12", "Failed to create texture");
+		kLogHresultError(hr, "D3D12", "Failed to create texture");
 		return (kD3D12_Texture *)&kFallbackTexture;
 	}
 
@@ -265,7 +265,7 @@ static kTexture *kD3D12_CreateTexture(const kTextureSpec &spec)
 
 		if (FAILED(hr))
 		{
-			kLogHresultError(hr, "Direct3D12", "Failed to create upload heap");
+			kLogHresultError(hr, "D3D12", "Failed to create upload heap");
 			return r;
 		}
 
@@ -276,7 +276,7 @@ static kTexture *kD3D12_CreateTexture(const kTextureSpec &spec)
 
 		if (FAILED(hr))
 		{
-			kLogHresultError(hr, "Direct3D12", "Failed to map upload heap");
+			kLogHresultError(hr, "D3D12", "Failed to map upload heap");
 			return r;
 		}
 
@@ -360,7 +360,7 @@ static void kD3D12_ResizeTexture(kTexture *texture, u32 w, u32 h)
 		if (FAILED(hr))
 		{
 			r->state = kResourceState_Error;
-			kLogHresultError(hr, "Direct3D12", "Failed to resize texture");
+			kLogHresultError(hr, "D3D12", "Failed to resize texture");
 			return;
 		}
 
@@ -371,7 +371,7 @@ static void kD3D12_ResizeTexture(kTexture *texture, u32 w, u32 h)
 		desc.Height = h;
 
 		hr          = d3d12.device->CreateCommittedResource(&heap, flags, &desc, D3D12_RESOURCE_STATE_COMMON, 0,
-		                                                    IID_PPV_ARGS(&r->resource));
+                                                   IID_PPV_ARGS(&r->resource));
 
 		if (FAILED(hr))
 		{
@@ -390,7 +390,7 @@ static void kD3D12_ResizeTexture(kTexture *texture, u32 w, u32 h)
 
 static void kD3D12_DestroySwapChainBuffers(kD3D12_SwapChain *r)
 {
-	kLogTrace("Direct3D12: Destroying swap chain render targets.\n");
+	kDebugTraceEx("D3D12", "Destroying swap chain render targets.\n");
 
 	for (uint i = 0; i < K_BACK_BUFFER_COUNT; ++i)
 	{
@@ -402,7 +402,7 @@ static void kD3D12_DestroySwapChainBuffers(kD3D12_SwapChain *r)
 
 static void kD3D12_CreateSwapChainBuffers(kD3D12_SwapChain *r)
 {
-	kLogTrace("Direct3D12: Creating swap chain render targets.\n");
+	kDebugTraceEx("D3D12", "Creating swap chain render targets.\n");
 
 	for (uint i = 0; i < K_BACK_BUFFER_COUNT; ++i)
 	{
@@ -418,7 +418,7 @@ static void kD3D12_CreateSwapChainBuffers(kD3D12_SwapChain *r)
 		}
 
 		{
-			ID3D12DescriptorHeap       *descriptor = d3d12.resource.rtv_descriptor;
+			ID3D12DescriptorHeap *      descriptor = d3d12.resource.rtv_descriptor;
 
 			D3D12_CPU_DESCRIPTOR_HANDLE rtv        = descriptor->GetCPUDescriptorHandleForHeapStart();
 
@@ -444,7 +444,7 @@ static void kD3D12_ResizeSwapChainBuffers(kSwapChain *swap_chain, uint w, uint h
 	kD3D12_SwapChain *r = (kD3D12_SwapChain *)swap_chain;
 	if (r->state == kResourceState_Ready)
 	{
-		kD3D12_Texture     *rt   = &r->targets[0];
+		kD3D12_Texture *    rt   = &r->targets[0];
 		D3D12_RESOURCE_DESC desc = rt->resource->GetDesc();
 
 		if (desc.Width == w && desc.Height == h)
@@ -452,7 +452,7 @@ static void kD3D12_ResizeSwapChainBuffers(kSwapChain *swap_chain, uint w, uint h
 			return;
 		}
 
-		kLogTrace("Direct3D12: Resizing swap chain render targets to %ux%u.\n", w, h);
+		kDebugTraceEx("D3D12", "Resizing swap chain render targets to %ux%u.\n", w, h);
 
 		kD3D12_DestroySwapChainBuffers(r);
 		r->native->ResizeBuffers(K_BACK_BUFFER_COUNT, 0, 0, DXGI_FORMAT_UNKNOWN, 0);
@@ -464,7 +464,7 @@ static void kD3D12_ResizeSwapChainBuffers(kSwapChain *swap_chain, uint w, uint h
 
 static void kD3D12_DestroySwapChain(kSwapChain *swap_chain)
 {
-	kLogTrace("Destroying swap chain.\n");
+	kLogInfoEx("D3D12", "Destroying swap chain.\n");
 
 	kD3D12_WaitForGpu();
 
@@ -481,7 +481,7 @@ static void kD3D12_DestroySwapChain(kSwapChain *swap_chain)
 
 static kSwapChain *kD3D12_CreateSwapChain(void *_window, const kRenderTargetConfig &config)
 {
-	kLogTrace("Direct3D12: Creating swap chain.\n");
+	kLogInfoEx("D3D12", "Creating swap chain.\n");
 
 	HWND                  wnd             = (HWND)_window;
 
@@ -538,7 +538,7 @@ static kSwapChain *kD3D12_CreateSwapChain(void *_window, const kRenderTargetConf
 
 	if (!r)
 	{
-		kLogError("DirectX12: Failed to allocate memory for create swap chain\n");
+		kLogErrorEx("DirectX12", "Failed to allocate memory for create swap chain\n");
 		swapchain3->Release();
 		// descriptor->Release();
 		return (kSwapChain *)&kFallbackSwapChain;
@@ -564,6 +564,18 @@ static kTexture *kD3D12_GetSwapChainRenderTarget(kSwapChain *swap_chain)
 	return &r->targets[r->index];
 }
 
+kRenderTargetConfig kD3D12_GetRenderTargetConfig(kSwapChain *swap_chain)
+{
+	kLogWarningEx("D3D12", "kGetRenderTargetConfig it not yet implemented.\n");
+	return kRenderTargetConfig{};
+}
+
+bool kD3D12_ApplyRenderTargetConfig(kSwapChain *swap_chain, const kRenderTargetConfig &config)
+{
+	kLogWarningEx("D3D12", "kApplyRenderTargetConfigFallback it not yet implemented.\n");
+	return false;
+}
+
 static void kD3D12_Present(kSwapChain *swap_chain)
 {
 	kD3D12_SwapChain *r = (kD3D12_SwapChain *)swap_chain;
@@ -579,7 +591,7 @@ static void kD3D12_Present(kSwapChain *swap_chain)
 
 static void kD3D12_DestroyRenderResources(void)
 {
-	kLogTrace("Direct3D12: Destroying resources.\n");
+	kLogTraceEx("D3D12", "Destroying resources.\n");
 
 	for (int i = 0; i < K_FRAME_COUNT; ++i)
 	{
@@ -643,7 +655,7 @@ static ID3D12RootSignature *kD3D12_RootSignature2D(void)
 		HRESULT   hr = D3D12SerializeVersionedRootSignature(&desc, &rootsig, &err);
 		if (FAILED(hr))
 		{
-			kLogHresultError(hr, "Direct3D12", "Failed to create root signature: %s\n", err->GetBufferPointer());
+			kLogHresultError(hr, "D3D12", "Failed to create root signature: %s\n", err->GetBufferPointer());
 			kRelease(&err);
 		}
 
@@ -651,7 +663,7 @@ static ID3D12RootSignature *kD3D12_RootSignature2D(void)
 		                                       IID_PPV_ARGS(&d3d12.resource.render2d.root_sig));
 		if (FAILED(hr))
 		{
-			kLogHresultError(hr, "Direct3D12", "Failed to create root signature");
+			kLogHresultError(hr, "D3D12", "Failed to create root signature");
 		}
 	}
 	return d3d12.resource.render2d.root_sig;
@@ -698,7 +710,7 @@ static ID3D12PipelineState *kD3D12_PipelineState2D(kBlendMode blend)
 		desc.SampleDesc.Count                                 = 1;
 		desc.SampleDesc.Quality                               = 0;
 
-		desc.BlendState.RenderTarget[0].BlendEnable           = blend != kBlendMode_None;
+		desc.BlendState.RenderTarget[0].BlendEnable           = blend != kBlendMode_Opaque;
 		desc.BlendState.RenderTarget[0].SrcBlend              = D3D12_BLEND_SRC_ALPHA;
 		desc.BlendState.RenderTarget[0].DestBlend             = D3D12_BLEND_INV_SRC_ALPHA;
 		desc.BlendState.RenderTarget[0].BlendOp               = D3D12_BLEND_OP_ADD;
@@ -712,7 +724,7 @@ static ID3D12PipelineState *kD3D12_PipelineState2D(kBlendMode blend)
 
 		if (FAILED(hr))
 		{
-			kLogHresultError(hr, "Direct3D12", "Failed to create graphics pipeline state");
+			kLogHresultError(hr, "D3D12", "Failed to create graphics pipeline state");
 		}
 	}
 	return d3d12.resource.render2d.pipelines[blend];
@@ -751,7 +763,7 @@ static ID3D12Resource *kD3D12_VertexBuffer2D(uint sz)
 		                                          0, IID_PPV_ARGS(&d3d12.resource.render2d.vertex[i]));
 		if (FAILED(hr))
 		{
-			kLogHresultError(hr, "Direct3D12", "Failed to create vertex shader (%d)", i);
+			kLogHresultError(hr, "D3D12", "Failed to create vertex shader (%d)", i);
 		}
 	}
 
@@ -793,7 +805,7 @@ static ID3D12Resource *kD3D12_IndexBuffer2D(uint sz)
 		                                          0, IID_PPV_ARGS(&d3d12.resource.render2d.index[i]));
 		if (FAILED(hr))
 		{
-			kLogHresultError(hr, "Direct3D12", "Failed to create index shader (%d)", i);
+			kLogHresultError(hr, "D3D12", "Failed to create index shader (%d)", i);
 		}
 	}
 
@@ -805,12 +817,12 @@ static ID3D12Resource *kD3D12_IndexBuffer2D(uint sz)
 //
 //
 
-static void kD3D12_ExecuteCommands(const kRenderData2D &data)
+static void kD3D12_ExecuteFrame(const kRenderFrame2D &frame)
 {
-	if (data.vertices.count == 0 || data.indices.count == 0) return;
+	if (frame.vertices.count == 0 || frame.indices.count == 0) return;
 
-	uint            vb_size = (uint)data.vertices.Size();
-	uint            ib_size = (uint)data.indices.Size();
+	uint            vb_size = (uint)frame.vertices.Size();
+	uint            ib_size = (uint)frame.indices.Size();
 
 	ID3D12Resource *vb      = kD3D12_VertexBuffer2D(vb_size);
 	ID3D12Resource *ib      = kD3D12_IndexBuffer2D(ib_size);
@@ -823,19 +835,19 @@ static void kD3D12_ExecuteCommands(const kRenderData2D &data)
 	hr = vb->Map(0, 0, &mapped);
 	if (FAILED(hr))
 	{
-		kLogHresultError(hr, "Direct3D12", "Failed to map vertex buffer");
+		kLogHresultError(hr, "D3D12", "Failed to map vertex buffer");
 		return;
 	}
-	memcpy(mapped, data.vertices.data, vb_size);
+	memcpy(mapped, frame.vertices.data, vb_size);
 	vb->Unmap(0, 0);
 
 	hr = ib->Map(0, 0, &mapped);
 	if (FAILED(hr))
 	{
-		kLogHresultError(hr, "Direct3D12", "Failed to map index buffer");
+		kLogHresultError(hr, "D3D12", "Failed to map index buffer");
 		return;
 	}
-	memcpy(mapped, data.indices.data, ib_size);
+	memcpy(mapped, frame.indices.data, ib_size);
 	ib->Unmap(0, 0);
 
 	d3d12.frame.allocators[d3d12.frame.index]->Reset();
@@ -862,15 +874,16 @@ static void kD3D12_ExecuteCommands(const kRenderData2D &data)
 
 	UINT srv_stride = d3d12.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-	ID3D12DescriptorHeap       *srv_descriptor = d3d12.resource.srv_descriptor[d3d12.frame.index];
+	ID3D12DescriptorHeap *      srv_descriptor = d3d12.resource.srv_descriptor[d3d12.frame.index];
 	D3D12_GPU_DESCRIPTOR_HANDLE gpu            = srv_descriptor->GetGPUDescriptorHandleForHeapStart();
 	D3D12_CPU_DESCRIPTOR_HANDLE cpu            = srv_descriptor->GetCPUDescriptorHandleForHeapStart();
 
-	ID3D12DescriptorHeap *heaps[] = { d3d12.resource.srv_descriptor[d3d12.frame.index], d3d12.resource.sampler_descriptor };
+	ID3D12DescriptorHeap *      heaps[]        = {d3d12.resource.srv_descriptor[d3d12.frame.index],
+                                     d3d12.resource.sampler_descriptor};
 
 	gc->SetDescriptorHeaps(kArrayCount(heaps), heaps);
 
-	for (const kRenderPass2D &pass : data.passes)
+	for (const kRenderPass2D &pass : frame.passes)
 	{
 		kD3D12_Texture *rt = (kD3D12_Texture *)pass.rt;
 		kD3D12_Texture *ds = (kD3D12_Texture *)pass.ds;
@@ -920,32 +933,61 @@ static void kD3D12_ExecuteCommands(const kRenderData2D &data)
 		gc->OMSetRenderTargets(1, &rtv, TRUE, ds ? &dsv : nullptr);
 		gc->RSSetViewports(1, &viewport);
 
-		for (const kRenderCommand2D &cmd : pass.commands)
-		{
-			ID3D12PipelineState *ps = kD3D12_PipelineState2D(cmd.shader.blend);
+		u32            material  = UINT32_MAX;
+		u32            transform = UINT32_MAX;
+		kBlendMode     blend     = kBlendMode_Count;
+		kTextureFilter filter    = kTextureFilter_Count;
+		u16            rect      = UINT16_MAX;
 
-			if (ps)
+		for (u32 index = pass.commands.beg; index < pass.commands.end; ++index)
+		{
+			const kRenderCommand2D &cmd = frame.commands[index];
+
+			if (cmd.blend ^ blend)
 			{
-				gc->SetPipelineState(ps);
+				blend                   = cmd.blend;
+				ID3D12PipelineState *ps = kD3D12_PipelineState2D(blend);
+				if (ps)
+				{
+					gc->SetPipelineState(ps);
+				}
 			}
 
-			gc->SetGraphicsRootDescriptorTable(2, d3d12.resource.samplers[cmd.filter]);
-
-			for (const kRenderParam2D &param : cmd.params)
+			if (cmd.filter ^ filter)
 			{
-				kD3D12_Texture *r1 = (kD3D12_Texture *)param.textures[0];
-				kD3D12_Texture *r2 = (kD3D12_Texture *)param.textures[1];
+				filter = cmd.filter;
+				gc->SetGraphicsRootDescriptorTable(2, d3d12.resource.samplers[filter]);
+			}
 
-				D3D12_RECT      rect;
-				rect.left   = (LONG)(param.rect.min.x);
-				rect.top    = (LONG)(param.rect.min.y);
-				rect.right  = (LONG)(param.rect.max.x);
-				rect.bottom = (LONG)(param.rect.max.y);
+			if (cmd.rect ^ rect)
+			{
+				rect             = cmd.rect;
+
+				kRect      prect = frame.rects[rect];
+
+				D3D12_RECT drect;
+				drect.left   = (LONG)(prect.min.x);
+				drect.top    = (LONG)(prect.min.y);
+				drect.right  = (LONG)(prect.max.x);
+				drect.bottom = (LONG)(prect.max.y);
+
+				gc->RSSetScissorRects(1, &drect);
+			}
+
+			if (cmd.transform ^ transform)
+			{
+				transform = cmd.transform;
+				gc->SetGraphicsRoot32BitConstants(0, 16, frame.transforms[transform].m, 0);
+			}
+
+			if (cmd.material ^ material)
+			{
+				const kMaterial2D &mat = frame.materials[cmd.material];
+
+				kD3D12_Texture *   r1  = (kD3D12_Texture *)mat.textures[kTextureType_Color];
+				kD3D12_Texture *   r2  = (kD3D12_Texture *)mat.textures[kTextureType_MaskSDF];
 
 				if (r1->state != kResourceState_Ready || r2->state != kResourceState_Ready) continue;
-
-				// D3D12_GPU_VIRTUAL_ADDRESS srv1 = r1->resource->GetGPUVirtualAddress();
-				// D3D12_GPU_VIRTUAL_ADDRESS srv2 = r2->resource->GetGPUVirtualAddress();
 
 				D3D12_RESOURCE_BARRIER barriers[2]   = {};
 				uint                   barrier_count = 0;
@@ -985,17 +1027,15 @@ static void kD3D12_ExecuteCommands(const kRenderData2D &data)
 				d3d12.device->CreateShaderResourceView(r1->resource, 0, srv1);
 				d3d12.device->CreateShaderResourceView(r2->resource, 0, srv2);
 
-				gc->SetGraphicsRoot32BitConstants(0, 16, param.transform.m, 0);
 				gc->SetGraphicsRootDescriptorTable(1, gpu);
-				// gc->SetGraphicsRootShaderResourceView(1, srv1);
-				// gc->SetGraphicsRootShaderResourceView(2, srv2);
-				//  gc->SetGraphicsRootDescriptorTable(3, ?);
-				gc->RSSetScissorRects(1, &rect);
-				gc->DrawIndexedInstanced(param.count, 1, param.index, param.vertex, 0);
 
 				gpu.ptr += srv_stride;
 				gpu.ptr += srv_stride;
+
+				material = cmd.material;
 			}
+
+			gc->DrawIndexedInstanced(cmd.count, 1, cmd.index, cmd.vertex, 0);
 		}
 
 		{
@@ -1026,15 +1066,15 @@ static void kD3D12_MessageCallback(D3D12_MESSAGE_CATEGORY category, D3D12_MESSAG
 {
 	if (severity == D3D12_MESSAGE_SEVERITY_CORRUPTION || severity == D3D12_MESSAGE_SEVERITY_ERROR)
 	{
-		kLogError("Direct3D12: %s\n", desc);
+		kLogErrorEx("D3D12", "%s\n", desc);
 	}
 	else if (severity == D3D12_MESSAGE_SEVERITY_WARNING)
 	{
-		kLogWarning("Direct3D12: %s\n", desc);
+		kLogWarningEx("D3D12", "%s\n", desc);
 	}
 	else
 	{
-		kLogTrace("Direct3D12: %s\n", desc);
+		kLogInfoEx("D3D12", "%s\n", desc);
 	}
 }
 
@@ -1068,26 +1108,26 @@ static bool kD3D12_CreateGraphicsDevice(void)
 
 	if (kEnableDebugLayer)
 	{
-		ID3D12Debug  *debug;
+		ID3D12Debug * debug;
 		ID3D12Debug1 *debug1;
 
 		hr = D3D12GetDebugInterface(IID_PPV_ARGS(&debug));
 		if (SUCCEEDED(hr))
 		{
-			kLogTrace("Direct3D12: Debug layer enabled.\n");
+			kLogTraceEx("D3D12", "Debug layer enabled.\n");
 			debug->EnableDebugLayer();
 			flags |= DXGI_CREATE_FACTORY_DEBUG;
 
 			hr = debug->QueryInterface(IID_PPV_ARGS(&debug1));
 			if (SUCCEEDED(hr))
 			{
-				kLogTrace("Direct3D12: GPU validation enabled.\n");
+				kLogTraceEx("D3D12", "GPU validation enabled.\n");
 				debug1->SetEnableGPUBasedValidation(true);
 			}
 		}
 		else
 		{
-			kLogTrace("Direct3D12: Failed to enable debug layer.\n");
+			kLogTraceEx("D3D12", "Failed to enable debug layer.\n");
 		}
 	}
 
@@ -1106,7 +1146,7 @@ static bool kD3D12_CreateGraphicsDevice(void)
 
 	if (adapter == nullptr)
 	{
-		kLogError("Direct3D12: Supported adaptor not found!\n");
+		kLogErrorEx("D3D12", "Supported adaptor not found!\n");
 		return false;
 	}
 
@@ -1135,7 +1175,7 @@ static bool kD3D12_CreateGraphicsDevice(void)
 			                                         &cookie);
 			if (SUCCEEDED(hr))
 			{
-				kLogTrace("Direct3D12: Registered message callback.\n");
+				kLogTraceEx("D3D12", "Registered message callback.\n");
 			}
 		}
 	}
@@ -1149,7 +1189,7 @@ static bool kD3D12_CreateGraphicsDevice(void)
 
 		if (FAILED(hr))
 		{
-			kLogHresultError(hr, "Direct3D12", "Failed to create command queue");
+			kLogHresultError(hr, "D3D12", "Failed to create command queue");
 			return false;
 		}
 	}
@@ -1163,14 +1203,14 @@ static bool kD3D12_CreateGraphicsDevice(void)
 
 		if (FAILED(hr))
 		{
-			kLogHresultError(hr, "Direct3D12", "Failed to create command queue");
+			kLogHresultError(hr, "D3D12", "Failed to create command queue");
 			return false;
 		}
 
 		hr = d3d12.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COPY, IID_PPV_ARGS(&d3d12.upload.allocator));
 		if (FAILED(hr))
 		{
-			kLogHresultError(hr, "Direct3D12", "Failed to create command allocator");
+			kLogHresultError(hr, "D3D12", "Failed to create command allocator");
 			return false;
 		}
 
@@ -1178,7 +1218,7 @@ static bool kD3D12_CreateGraphicsDevice(void)
 		                                     IID_PPV_ARGS(&d3d12.upload.commands));
 		if (FAILED(hr))
 		{
-			kLogHresultError(hr, "Direct3D12", "Failed to create command list");
+			kLogHresultError(hr, "D3D12", "Failed to create command list");
 			return false;
 		}
 
@@ -1201,7 +1241,7 @@ static bool kD3D12_CreateGraphicsDevice(void)
 	hr                = d3d12.device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&d3d12.frame.fence));
 	if (FAILED(hr))
 	{
-		kLogHresultError(hr, "Direct3D12", "Failed to create fence");
+		kLogHresultError(hr, "D3D12", "Failed to create fence");
 		return false;
 	}
 
@@ -1215,7 +1255,7 @@ static bool kD3D12_CreateGraphicsDevice(void)
 		                                          IID_PPV_ARGS(&d3d12.frame.allocators[i]));
 		if (FAILED(hr))
 		{
-			kLogHresultError(hr, "Direct3D12", "Failed to create command allocator (%d)", i);
+			kLogHresultError(hr, "D3D12", "Failed to create command allocator (%d)", i);
 			return false;
 		}
 	}
@@ -1224,7 +1264,7 @@ static bool kD3D12_CreateGraphicsDevice(void)
 	                                     IID_PPV_ARGS(&d3d12.frame.commands));
 	if (FAILED(hr))
 	{
-		kLogHresultError(hr, "Direct3D12", "Failed to create command list");
+		kLogHresultError(hr, "D3D12", "Failed to create command list");
 		return false;
 	}
 
@@ -1276,19 +1316,19 @@ static bool kD3D12_CreateGraphicsDevice(void)
 			D3D12_GPU_DESCRIPTOR_HANDLE gpu   = descriptor->GetGPUDescriptorHandleForHeapStart();
 			d3d12.resource.samplers[0]        = gpu;
 			gpu.ptr += stride;
-			d3d12.resource.samplers[1] = gpu;
+			d3d12.resource.samplers[1]              = gpu;
 
-			D3D12_SAMPLER_DESC linear  = {};
-			linear.Filter              = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-			linear.AddressU            = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-			linear.AddressV            = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-			linear.AddressW            = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+			D3D12_SAMPLER_DESC linear               = {};
+			linear.Filter                           = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+			linear.AddressU                         = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+			linear.AddressV                         = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+			linear.AddressW                         = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 
-			D3D12_SAMPLER_DESC point   = linear;
-			point.Filter               = D3D12_FILTER_MIN_MAG_MIP_POINT;
+			D3D12_SAMPLER_DESC point                = linear;
+			point.Filter                            = D3D12_FILTER_MIN_MAG_MIP_POINT;
 
 			D3D12_CPU_DESCRIPTOR_HANDLE linear_dest = descriptor->GetCPUDescriptorHandleForHeapStart();
-			D3D12_CPU_DESCRIPTOR_HANDLE point_dest = linear_dest;
+			D3D12_CPU_DESCRIPTOR_HANDLE point_dest  = linear_dest;
 			point_dest.ptr += stride;
 
 			d3d12.device->CreateSampler(&linear, linear_dest);
@@ -1301,7 +1341,7 @@ static bool kD3D12_CreateGraphicsDevice(void)
 		{
 			D3D12_DESCRIPTOR_HEAP_DESC heap  = {};
 			heap.Type                        = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-			heap.NumDescriptors              = 512;
+			heap.NumDescriptors              = 16*1024;
 			heap.Flags                       = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 
 			ID3D12DescriptorHeap *descriptor = nullptr;
@@ -1322,21 +1362,21 @@ static bool kD3D12_CreateGraphicsDevice(void)
 
 bool kD3D12_CreateRenderBackend(kRenderBackend *backend)
 {
-	kLogTrace("Direct3D12: Creating graphics devices\n");
+	kLogInfoEx("D3D12", "Creating graphics devices\n");
 	if (!kD3D12_CreateGraphicsDevice())
 	{
 		kD3D12_DestroyGraphicsDevice();
 		return false;
 	}
 
-	kLogTrace("Direct3D12: Registering render backend.\n");
+	kLogInfoEx("D3D12", "Registering render backend.\n");
 
 	backend->CreateSwapChain         = kD3D12_CreateSwapChain;
 	backend->DestroySwapChain        = kD3D12_DestroySwapChain;
 	backend->ResizeSwapChain         = kD3D12_ResizeSwapChainBuffers;
 	backend->SwapChainRenderTarget   = kD3D12_GetSwapChainRenderTarget;
-	backend->GetRenderTargetConfig   = kGetRenderTargetConfigFallback;
-	backend->ApplyRenderTargetConfig = kApplyRenderTargetConfigFallback;
+	backend->GetRenderTargetConfig   = kD3D12_GetRenderTargetConfig;
+	backend->ApplyRenderTargetConfig = kD3D12_ApplyRenderTargetConfig;
 	backend->Present                 = kD3D12_Present;
 
 	backend->CreateTexture           = kD3D12_CreateTexture;
@@ -1344,8 +1384,8 @@ bool kD3D12_CreateRenderBackend(kRenderBackend *backend)
 	backend->GetTextureSize          = kD3D12_GetTextureSize;
 	backend->ResizeTexture           = kD3D12_ResizeTexture;
 
-	backend->ExecuteCommands         = kD3D12_ExecuteCommands;
-	backend->NextFrame               = kD3D12_MoveToNextFrame; //? this before kD3D12_Present??
+	backend->ExecuteFrame            = kD3D12_ExecuteFrame;
+	backend->NextFrame               = kD3D12_MoveToNextFrame;
 
 	backend->Destroy                 = kD3D12_DestroyGraphicsDevice;
 

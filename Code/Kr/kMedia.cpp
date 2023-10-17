@@ -4,10 +4,26 @@
 #include "kRender.h"
 #include "kRenderBackend.h"
 
+static int          FallbackFontHeight = 32;
+static int          FallbackFontWidth  = (3 * FallbackFontHeight) / 2;
+
+static const kGlyph FallbackGlyph      = {
+    kRect{kVec2(0), kVec2(0)},
+    kVec2i(0),
+    kVec2i(FallbackFontWidth, FallbackFontHeight),
+    kVec2i(FallbackFontWidth + 2, FallbackFontHeight + 2),
+};
+
 typedef struct kMediaBackend
 {
 	kRenderBackend render;
 } kMediaBackend;
+
+typedef struct kMediaBuiltin
+{
+	kTexture *texture;
+	kFont     font;
+} kMediaBuiltin;
 
 typedef struct kMedia
 {
@@ -18,6 +34,7 @@ typedef struct kMedia
 	kWindowState     window;
 	kMediaUserEvents user;
 	kMediaBackend    backend;
+	kMediaBuiltin    builtin;
 } kMedia;
 
 static kMedia media;
@@ -351,7 +368,7 @@ static DWORD kGetWindowStyleFromFlags(u32 flags)
 
 static void kWin32_ResizeWindow(kWindow id, u32 w, u32 h)
 {
-	kLogTrace("Windows: Resizing window to size %ux%u.\n", w, h);
+	kDebugTraceEx("Windows", "Resizing window to size %ux%u.\n", w, h);
 
 	kPlatformWindow *window = id.resource;
 	DWORD            style  = (DWORD)GetWindowLongPtrW(window->wnd, GWL_STYLE);
@@ -367,7 +384,7 @@ static void kWin32_ToggleWindowFullscreen(kWindow id)
 	kPlatformWindow *window = id.resource;
 	if (!window->fullscreen)
 	{
-		kLogTrace("Windows: Switching to fullscreen mode.\n");
+		kLogInfoEx("Windows", "Switching to fullscreen mode.\n");
 
 		DWORD       style = (DWORD)GetWindowLongPtrW(window->wnd, GWL_STYLE);
 		MONITORINFO mi    = {.cbSize = sizeof(mi)};
@@ -384,7 +401,7 @@ static void kWin32_ToggleWindowFullscreen(kWindow id)
 	}
 	else
 	{
-		kLogTrace("Windows: Restoring window from fullscreen mode.\n");
+		kLogInfoEx("Windows", "Restoring window from fullscreen mode.\n");
 
 		SetWindowLongPtrW(window->wnd, GWL_STYLE, window->style);
 		SetWindowPlacement(window->wnd, &window->placement);
@@ -397,7 +414,7 @@ static void kWin32_ToggleWindowFullscreen(kWindow id)
 
 static void kWin32_ClipCursorToWindow(kWindow id)
 {
-	kLogTrace("Windows: Clipping cursor to window.\n");
+	kDebugTraceEx("Windows", "Clipping cursor to window.\n");
 
 	kPlatformWindow *window = id.resource;
 
@@ -419,7 +436,7 @@ static void kWin32_ClipCursorToWindow(kWindow id)
 
 static void kWin32_ForceReleaseCursor(kWindow id)
 {
-	kLogTrace("Windows: Releasing cursor from window.\n");
+	kDebugTraceEx("Windows", "Releasing cursor from window.\n");
 
 	kPlatformWindow *window = id.resource;
 
@@ -434,7 +451,7 @@ static void kWin32_ForceReleaseCursor(kWindow id)
 
 static void kWin32_ForceCaptureCursor(kWindow id)
 {
-	kLogTrace("Windows: Capturing cursor in window.\n");
+	kDebugTraceEx("Windows", "Capturing cursor in window.\n");
 
 	kPlatformWindow *window = id.resource;
 	if (GetActiveWindow() == window->wnd)
@@ -466,28 +483,28 @@ static int  kWin32_GetWindowCaptionSize(kWindow id) { return id.resource->border
 
 static void kWin32_MaximizeWindow(kWindow id)
 {
-	kLogTrace("Windows: Maximizing window.\n");
+	kDebugTraceEx("Windows", "Maximizing window.\n");
 	kPlatformWindow *window = id.resource;
 	ShowWindow(window->wnd, SW_MAXIMIZE);
 }
 
 static void kWin32_RestoreWindow(kWindow id)
 {
-	kLogTrace("Windows: Restoring window.\n");
+	kDebugTraceEx("Windows", "Restoring window.\n");
 	kPlatformWindow *window = id.resource;
 	ShowWindow(window->wnd, SW_RESTORE);
 }
 
 static void kWin32_MinimizeWindow(kWindow id)
 {
-	kLogTrace("Windows: Minimizing window.\n");
+	kDebugTraceEx("Windows", "Minimizing window.\n");
 	kPlatformWindow *window = id.resource;
 	ShowWindow(window->wnd, SW_MINIMIZE);
 }
 
 static void kWin32_CloseWindow(kWindow id)
 {
-	kLogTrace("Windows: Closing window.\n");
+	kDebugTraceEx("Windows", "Closing window.\n");
 	kPlatformWindow *window = id.resource;
 	PostMessageW(window->wnd, WM_CLOSE, 0, 0);
 }
@@ -1006,7 +1023,7 @@ static LRESULT kWin32_ClientWndProc(HWND wnd, UINT msg, WPARAM wparam, LPARAM lp
 				}
 			}
 
-			kLogTrace("Windows: Window focus %s.\n", focused ? "gained" : "lost");
+			kDebugTraceEx("Windows", "Window focus %s.\n", focused ? "gained" : "lost");
 
 			return 0;
 		}
@@ -1221,7 +1238,7 @@ static void kWin32_DestroyWindow(kWindowState *ws)
 
 	if (window)
 	{
-		kLogTrace("Windows: Destroying window.\n");
+		kLogInfoEx("Windows", "Destroying window.\n");
 
 		media.backend.render.DestroySwapChain(ws->swap_chain);
 		kWin32_RequestDestroyWindow(window->wnd);
@@ -1243,7 +1260,7 @@ static void kWin32_CreateWindow(kWindowState *ws, const kWindowSpec &spec)
 		title[len] = 0;
 	}
 
-	kLogTrace("Windows: Creating window: %S.\n", title);
+	kLogInfoEx("Windows", "Creating window: %S.\n", title);
 
 	int width  = CW_USEDEFAULT;
 	int height = CW_USEDEFAULT;
@@ -1275,7 +1292,7 @@ static void kWin32_CreateWindow(kWindowState *ws, const kWindowSpec &spec)
 	kPlatformWindow *window = (kPlatformWindow *)kAlloc(sizeof(kPlatformWindow));
 	if (!window)
 	{
-		kLogError("Windows: Failed to create window: out of memory");
+		kLogErrorEx("Windows", "Failed to create window: out of memory.\n");
 		return;
 	}
 
@@ -1323,7 +1340,8 @@ static void kWin32_CreateWindow(kWindowState *ws, const kWindowSpec &spec)
 		kWin32_ToggleWindowFullscreen(window);
 	}
 
-	ws->swap_chain = media.backend.render.CreateSwapChain(window->wnd, spec.rt);
+	ws->swap_chain    = media.backend.render.CreateSwapChain(window->wnd, spec.rt);
+	window->rt_config = media.backend.render.GetRenderTargetConfig(ws->swap_chain);
 
 	//
 	//
@@ -1410,23 +1428,29 @@ static int kWin32_EventLoop(void)
 
 		if (window->rt_apply)
 		{
-			media.backend.render.ApplyRenderTargetConfig(media.window.swap_chain, window->rt_config);
+			if (!media.backend.render.ApplyRenderTargetConfig(media.window.swap_chain, window->rt_config))
+			{
+				kLogWarningEx("Windows", "Failed to apply given render target configuration.\n");
+				window->rt_config = media.backend.render.GetRenderTargetConfig(media.window.swap_chain);
+			}
 			window->rt_apply = false;
 		}
 
 		media.keyboard.mods = kWin32_GetKeyModFlags();
 
 		{
-			kBeginFrame();
+			kResetFrame();
 
 			media.user.update(dt);
 
 			if (kIsWindowClosed()) break;
 
-			kEndFrame();
+			kRenderFrame2D frame;
+			kGetFrameData(&frame);
 
-			media.backend.render.Present(media.window.swap_chain);
+			media.backend.render.ExecuteFrame(frame);
 			media.backend.render.NextFrame();
+			media.backend.render.Present(media.window.swap_chain);
 		}
 
 		u64 new_counter = kGetPerformanceCounter();
@@ -1457,6 +1481,89 @@ void                kApplyRenderTargetConfig(const kRenderTargetConfig &config)
 	kWin32_ApplyRenderTargetConfig(media.window.window, config);
 }
 
+//
+//
+//
+
+#include "Font/kFont.h"
+
+static void kCreateBuiltinResources(void)
+{
+	{
+		u8           pixels[] = {0xff, 0xff, 0xff, 0xff};
+
+		kTextureSpec spec     = {};
+		spec.width            = 1;
+		spec.height           = 1;
+		spec.num_samples      = 1;
+		spec.pitch            = 1 * sizeof(u32);
+		spec.format           = kFormat_RGBA8_UNORM;
+		spec.flags            = 0;
+		spec.pixels           = pixels;
+
+		media.builtin.texture = media.backend.render.CreateTexture(spec);
+	}
+
+	{
+		kFont *      font = &media.builtin.font;
+
+		kTextureSpec spec = {};
+		spec.num_samples  = 1;
+		spec.format       = kFormat_R8_UNORM;
+		spec.flags        = 0;
+		spec.width        = kEmFontAtlasWidth;
+		spec.height       = kEmFontAtlasHeight;
+		spec.pitch        = kEmFontAtlasWidth;
+		spec.pixels       = (u8 *)kEmFontAtlasPixels;
+
+		font->texture     = media.backend.render.CreateTexture(spec);
+
+		if (!font->texture)
+		{
+			font->texture  = media.builtin.texture;
+			font->map      = nullptr;
+			font->glyphs   = nullptr;
+			font->fallback = (kGlyph *)&FallbackGlyph;
+			font->mincp    = 0;
+			font->maxcp    = 0;
+			font->count    = 0;
+			font->size     = (i16)FallbackFontHeight;
+			font->ascent   = (i16)FallbackFontHeight;
+			font->descent  = (i16)FallbackFontHeight;
+			font->linegap  = (i16)FallbackFontHeight;
+			return;
+		}
+
+		font->map      = (u16 *)kEmFontGlyphMap;
+		font->glyphs   = (kGlyph *)kEmFontGlyphs;
+		font->fallback = (kGlyph *)&font->glyphs[kEmFontGlyphCount - 1];
+		font->mincp    = kEmFontMinCodepoint;
+		font->maxcp    = kEmFontMaxCodepoint;
+		font->count    = kEmFontGlyphCount;
+		font->size     = (i16)kEmFontSize;
+		font->ascent   = (i16)kEmFontAscent;
+		font->descent  = (i16)kEmFontDescent;
+		font->linegap  = (i16)kEmFontLineGap;
+	}
+}
+
+static void kDestroyBuiltinResources(void)
+{
+	if (media.builtin.font.texture != media.builtin.texture)
+	{
+		media.backend.render.DestroyTexture(media.builtin.font.texture);
+	}
+
+	if (media.builtin.texture)
+	{
+		media.backend.render.DestroyTexture(media.builtin.texture);
+	}
+}
+
+//
+//
+//
+
 int kEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user)
 {
 	DWORD  task_index  = 0;
@@ -1471,7 +1578,7 @@ int kEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user)
 
 	memset(&media, 0, sizeof(media));
 
-	kLogTrace("Windows: Creating render backend.\n");
+	kLogInfoEx("Windows", "Creating render backend.\n");
 	kCreateRenderBackend(&media.backend.render);
 
 	kWin32_CreateWindow(&media.window, spec.window);
@@ -1516,23 +1623,34 @@ int kEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user)
 	kAllocator *allocator = kGetContextAllocator();
 	media.arena           = kAllocArena(spec.arena, allocator);
 
-	if (media.arena == &kFallbackArena)
+	if (media.arena != &kFallbackArena)
 	{
-		kLogWarning("Failed to allocate frame arena\n");
+		kLogInfoEx("Windows", "Allocated frame arena of size: %ull bytes\n", (long long unsigned)media.arena->cap);
+	}
+	else
+	{
+		kLogWarningEx("Windows", "Failed to allocate frame arena.\n");
 	}
 
-	kCreateRenderContext(&media.backend.render);
+	kCreateBuiltinResources();
 
-	kLogTrace("Windows: Calling user load.\n");
+	kMaterial2D material;
+	for (int i = 0; i < kTextureType_Count; ++i)
+		material.textures[i] = media.builtin.texture;
+
+	kCreateRenderContext(kDefaultRenderSpec, material, &media.builtin.font);
+
+	kLogInfoEx("Windows", "Calling user load.\n");
 	media.user.load();
 
 	int status = kWin32_EventLoop();
 
-	kLogTrace("Windows: Calling user release.\n");
+	kLogInfoEx("Windows", "Calling user release.\n");
 	media.user.release();
 
 	kFreeArena(media.arena, allocator);
 	kDestroyRenderContext();
+	kDestroyBuiltinResources();
 
 	kWin32_DestroyWindow(&media.window);
 	media.backend.render.Destroy();

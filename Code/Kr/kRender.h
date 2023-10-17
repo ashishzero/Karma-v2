@@ -14,9 +14,9 @@ typedef struct kGlyph
 typedef struct kFont
 {
 	kTexture *texture;
-	u16      *map;
-	kGlyph   *glyphs;
-	kGlyph   *fallback;
+	u16 *     map;
+	kGlyph *  glyphs;
+	kGlyph *  fallback;
 	u32       mincp;
 	u32       maxcp;
 	u32       count;
@@ -25,6 +25,39 @@ typedef struct kFont
 	i16       descent;
 	i16       linegap;
 } kFont;
+
+//
+//
+//
+
+typedef struct kRenderStackMemoryUsage
+{
+	imem textures[kTextureType_Count];
+	imem transforms;
+	imem rects;
+	imem blends;
+	imem scratch;
+} kRenderStackMemoryUsage;
+
+typedef struct kRenderMemoryUsage
+{
+	imem                    vertices;
+	imem                    indices;
+	imem                    materials;
+	imem                    transforms;
+	imem                    rects;
+	imem                    passes;
+	imem                    commands;
+	kRenderStackMemoryUsage stack;
+	float                   megabytes;
+} kRenderMemoryUsage;
+
+typedef struct kRenderMemoryStatistics
+{
+	kRenderMemoryUsage allocated;
+	kRenderMemoryUsage last_frame;
+	kRenderMemoryUsage max_used;
+} kRenderMemoryStatistics;
 
 //
 //
@@ -40,8 +73,8 @@ typedef struct kRenderSpec
 	u32   passes;
 	u32   rects;
 	u32   transforms;
-	u32   textures;
-	u32   builder;
+	u32   materials;
+	u32   scratch;
 } kRenderSpec;
 
 static constexpr kRenderSpec kDefaultRenderSpec = {.thickness  = 1,
@@ -52,24 +85,25 @@ static constexpr kRenderSpec kDefaultRenderSpec = {.thickness  = 1,
                                                    .passes     = 64,
                                                    .rects      = 256,
                                                    .transforms = 256,
-                                                   .textures   = 256,
-                                                   .builder    = 16384};
+                                                   .materials  = 256,
+                                                   .scratch    = 16384};
 
 //
 //
 //
 
-void kCreateRenderContext(struct kRenderBackend *backend, const kRenderSpec &spec = kDefaultRenderSpec);
-void kDestroyRenderContext(void);
+void                           kCreateRenderContext(const kRenderSpec &spec, const kMaterial2D &material, kFont *font);
+void                           kDestroyRenderContext(void);
+const kRenderMemoryStatistics *kGetRenderMemoryStatistics(void);
 
-void kBeginFrame(void);
-void kEndFrame(void);
+void                           kResetFrame(void);
+void                           kGetFrameData(kRenderFrame2D *frame);
 
 //
 //
 //
 
-void kBeginRenderPass(kTexture *texture, kTexture *depth_stencil = nullptr, uint flags = kRenderPass_ClearColor,
+void kBeginRenderPass(const kViewport &vp, kTexture *rt, kTexture *ds = nullptr, uint flags = kRenderPass_ClearColor,
                       kVec4 color = kVec4(0), float depth = 1.0f);
 void kEndRenderPass(void);
 
@@ -87,11 +121,9 @@ void kEndBlendMode(void);
 
 void kSetTextureFilter(kTextureFilter filter);
 
-void kFlushRenderParam(void);
-
-void kSetTexture(kTexture *texture, uint idx);
-void kPushTexture(kTexture *texture, uint idx);
-void kPopTexture(uint idx);
+void kSetTexture(kTexture *texture, kTextureType idx);
+void kPushTexture(kTexture *texture, kTextureType idx);
+void kPopTexture(kTextureType idx);
 
 void kSetRect(kRect rect);
 void kSetRectEx(float x, float y, float w, float h);
@@ -227,13 +259,36 @@ void kDrawRoundedRect(kVec2 pos, kVec2 dim, kVec4 color, float radius = 1.0f);
 void kDrawRoundedRectOutline(kVec3 pos, kVec2 dim, kVec4 color, float radius = 1.0f);
 void kDrawRoundedRectOutline(kVec2 pos, kVec2 dim, kVec4 color, float radius = 1.0f);
 
-kGlyph *kFindFontGlyph(const kFont &font, u32 codepoint);
-kVec2   kAdjectCursorToBaseline(const kFont &font, kVec2 cursor, float scale);
-bool    kCalculateGlyphMetrics(const kFont &font, u32 codepoint, float scale, kVec2 *cursor, kVec2 *rpos, kVec2 *rsize,
+kGlyph *kFindFontGlyph(const kFont *font, u32 codepoint);
+kVec2   kAdjectCursorToBaseline(const kFont *font, kVec2 cursor, float scale);
+bool    kCalculateGlyphMetrics(const kFont *font, u32 codepoint, float scale, kVec2 *cursor, kVec2 *rpos, kVec2 *rsize,
                                kRect *rect);
-kVec2   kCalculateText(kString text, const kFont &font, float scale = 1);
+
+void    kDrawTextQuad(u32 codepoint, const kFont *font, kVec3 pos, kVec4 color, float scale = 1);
+void    kDrawTextQuad(u32 codepoint, const kFont *font, kVec2 pos, kVec4 color, float scale = 1);
+void    kDrawTextQuadRotated(u32 codepoint, const kFont *font, kVec3 pos, float angle, kVec4 color, float scale = 1);
+void    kDrawTextQuadRotated(u32 codepoint, const kFont *font, kVec2 pos, float angle, kVec4 color, float scale = 1);
+void    kDrawTextQuadCentered(u32 codepoint, const kFont *font, kVec3 pos, kVec4 color, float scale = 1);
+void    kDrawTextQuadCentered(u32 codepoint, const kFont *font, kVec2 pos, kVec4 color, float scale = 1);
+void    kDrawTextQuadCenteredRotated(u32 codepoint, const kFont *font, kVec3 pos, float angle, kVec4 color,
+                                     float scale = 1);
+void    kDrawTextQuadCenteredRotated(u32 codepoint, const kFont *font, kVec2 pos, float angle, kVec4 color,
+                                     float scale = 1);
+
+void    kDrawTextQuad(u32 codepoint, kVec3 pos, kVec4 color, float scale = 1);
+void    kDrawTextQuad(u32 codepoint, kVec2 pos, kVec4 color, float scale = 1);
+void    kDrawTextQuadRotated(u32 codepoint, kVec3 pos, float angle, kVec4 color, float scale = 1);
+void    kDrawTextQuadRotated(u32 codepoint, kVec2 pos, float angle, kVec4 color, float scale = 1);
+void    kDrawTextQuadCentered(u32 codepoint, kVec3 pos, kVec4 color, float scale = 1);
+void    kDrawTextQuadCentered(u32 codepoint, kVec2 pos, kVec4 color, float scale = 1);
+void    kDrawTextQuadCenteredRotated(u32 codepoint, kVec3 pos, float angle, kVec4 color,
+                                     float scale = 1);
+void    kDrawTextQuadCenteredRotated(u32 codepoint, kVec2 pos, float angle, kVec4 color,
+                                     float scale = 1);
+
+kVec2   kCalculateText(kString text, const kFont *font, float scale = 1);
 kVec2   kCalculateText(kString text, float scale = 1);
-void    kDrawText(kString text, kVec3 pos, const kFont &font, kVec4 color = kVec4(1), float scale = 1);
-void    kDrawText(kString text, kVec2 pos, const kFont &font, kVec4 color = kVec4(1), float scale = 1);
+void    kDrawText(kString text, kVec3 pos, const kFont *font, kVec4 color = kVec4(1), float scale = 1);
+void    kDrawText(kString text, kVec2 pos, const kFont *font, kVec4 color = kVec4(1), float scale = 1);
 void    kDrawText(kString text, kVec3 pos, kVec4 color = kVec4(1), float scale = 1);
 void    kDrawText(kString text, kVec2 pos, kVec4 color = kVec4(1), float scale = 1);

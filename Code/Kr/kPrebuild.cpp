@@ -94,7 +94,7 @@ bool kCompileShader(const char *proc, kString src, kString path, kString *compil
 	}
 	else
 	{
-		kLogError("HLSL: Failed to detect shader type: %s\n", proc);
+		kLogErrorEx("HLSL", "Failed to detect shader type: %s\n", proc);
 		return false;
 	}
 
@@ -104,13 +104,13 @@ bool kCompileShader(const char *proc, kString src, kString path, kString *compil
 	{
 		if (err)
 		{
-			kLogError("HLSL: Failed to compile shader: %s, Reason:\n%s\n", proc, err->GetBufferPointer());
+			kLogErrorEx("HLSL", "Failed to compile shader: %s, Reason:\n%s\n", proc, err->GetBufferPointer());
 			err->Release();
 			err = nullptr;
 		}
 		else
 		{
-			kLogError("HLSL: Failed to compile shader: %s, Reason: Unimplemented\n", proc);
+			kLogErrorEx("HLSL", "Failed to compile shader: %s, Reason: Unimplemented\n", proc);
 		}
 		succeeded = false;
 	}
@@ -163,7 +163,7 @@ static bool kWriteShaderFile(kStringBuilder<> *builder, kString path, kSpan<cons
 
 	for (const char *src : shaders)
 	{
-		kLogTrace("Compiling shader: %.*s:%s...\n", kStrArg(path), src);
+		kLogInfoEx("HLSL", "Compiling shader: %.*s:%s...\n", kStrArg(path), src);
 
 		kString compiled;
 		if (kCompileShader(src, source, path, &compiled))
@@ -210,11 +210,11 @@ static bool kRebuildShader(kString input, kSpan<const char *> shaders)
 
 	if (!rebuild)
 	{
-		kLogTrace("Shaders are upto date : %.*s...\n", kStrArg(input));
+		kLogInfoEx("Prebuild", "Shaders are upto date : %.*s...\n", kStrArg(input));
 		return true;
 	}
 
-	kLogTrace("Generating shaders :%.*s...\n", kStrArg(input));
+	kLogInfoEx("Prebuild", "Generating shaders :%.*s...\n", kStrArg(input));
 
 	kStringBuilder builder;
 	builder.Write("#pragma once\n");

@@ -460,7 +460,7 @@ int kExecuteProcess(kString cmdline)
 
 	if (!cmd)
 	{
-		kLogError("Windows: Failed to execute process. Reason: Out of memory");
+		kLogErrorEx("Windows", "Failed to execute process. Reason: Out of memory");
 		return 1;
 	}
 

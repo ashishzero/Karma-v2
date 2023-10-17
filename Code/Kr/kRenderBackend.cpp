@@ -13,15 +13,15 @@ bool kEnableDebugLayer = false;
 kSwapChain *kCreateSwapChainFallback(void *, const kRenderTargetConfig &) { return (kSwapChain *)&kFallbackSwapChain; }
 void        kDestroySwapChainFallback(kSwapChain *) {}
 void        kResizeSwapChainFallback(kSwapChain *, uint, uint) {}
-kTexture   *kSwapChainRenderTargetFallback(kSwapChain *) { return (kTexture *)&kFallbackTexture; }
+kTexture *  kSwapChainRenderTargetFallback(kSwapChain *) { return (kTexture *)&kFallbackTexture; }
 kRenderTargetConfig kGetRenderTargetConfigFallback(kSwapChain *) { return kRenderTargetConfig{}; }
-void                kApplyRenderTargetConfigFallback(kSwapChain *, const kRenderTargetConfig &) {}
+bool                kApplyRenderTargetConfigFallback(kSwapChain *, const kRenderTargetConfig &) { return false; }
 void                kPresentFallback(kSwapChain *) {}
-kTexture           *kCreateTextureFallback(const kTextureSpec &) { return (kTexture *)&kFallbackTexture; }
+kTexture *          kCreateTextureFallback(const kTextureSpec &) { return (kTexture *)&kFallbackTexture; }
 void                kDestroyTextureFallback(kTexture *) {}
 kVec2i              kGetTextureSizeFallback(kTexture *) { return kVec2i(0); }
 void                kResizeTextureFallback(kTexture *, u32, u32) {}
-void                kExecuteCommandsFallback(const kRenderData2D &) {}
+void                kExecuteFrameFallback(const kRenderFrame2D &) {}
 void                kNextFrameFallback(void) {}
 void                kDestroyFallback(void) {}
 
@@ -43,7 +43,7 @@ void kFallbackRenderBackend(kRenderBackend *backend)
 	backend->DestroyTexture          = kDestroyTextureFallback;
 	backend->GetTextureSize          = kGetTextureSizeFallback;
 	backend->ResizeTexture           = kResizeTextureFallback;
-	backend->ExecuteCommands         = kExecuteCommandsFallback;
+	backend->ExecuteFrame            = kExecuteFrameFallback;
 	backend->NextFrame               = kNextFrameFallback;
 	backend->Destroy                 = kDestroyFallback;
 }
@@ -51,7 +51,7 @@ void kFallbackRenderBackend(kRenderBackend *backend)
 extern bool kD3D11_CreateRenderBackend(kRenderBackend *backend);
 extern bool kD3D12_CreateRenderBackend(kRenderBackend *backend);
 
-void kCreateRenderBackend(kRenderBackend *backend)
+void        kCreateRenderBackend(kRenderBackend *backend)
 {
 	if (kD3D12_CreateRenderBackend(backend)) return;
 	if (kD3D11_CreateRenderBackend(backend)) return;
