@@ -558,42 +558,49 @@ static ID3D12RootSignature *kD3D12_RootSignature2D(void)
 {
 	if (!d3d12.resource.render2d.root_sig)
 	{
-		D3D12_ROOT_PARAMETER params[3]     = {};
-		params[0].ParameterType            = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-		params[0].Constants.Num32BitValues = 16;
-		params[0].Constants.ShaderRegister = 0;
-		params[0].Constants.RegisterSpace  = 0;
-		params[0].ShaderVisibility         = D3D12_SHADER_VISIBILITY_VERTEX;
+		D3D12_ROOT_PARAMETER   params[2 + kTextureType_Count] = {};
 
-		D3D12_DESCRIPTOR_RANGE srvs[1];
-		srvs[0].RangeType                             = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-		srvs[0].NumDescriptors                        = 2;
-		srvs[0].BaseShaderRegister                    = 0;
-		srvs[0].RegisterSpace                         = 0;
-		srvs[0].OffsetInDescriptorsFromTableStart     = 0;
+		D3D12_DESCRIPTOR_RANGE srvs[kTextureType_Count];
+		for (int i = 0; i < kTextureType_Count; ++i)
+		{
+			srvs[i].RangeType                             = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+			srvs[i].NumDescriptors                        = 1;
+			srvs[i].BaseShaderRegister                    = i;
+			srvs[i].RegisterSpace                         = 0;
+			srvs[i].OffsetInDescriptorsFromTableStart     = 0;
 
-		params[1].ParameterType                       = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-		params[1].DescriptorTable.NumDescriptorRanges = kArrayCount(srvs);
-		params[1].DescriptorTable.pDescriptorRanges   = srvs;
-		params[1].ShaderVisibility                    = D3D12_SHADER_VISIBILITY_PIXEL;
+			params[i].ParameterType                       = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+			params[i].DescriptorTable.NumDescriptorRanges = 1;
+			params[i].DescriptorTable.pDescriptorRanges   = &srvs[i];
+			params[i].ShaderVisibility                    = D3D12_SHADER_VISIBILITY_PIXEL;
+		}
+
+		uint idx                             = kTextureType_Count;
+
+		params[idx].ParameterType            = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+		params[idx].Constants.Num32BitValues = 16;
+		params[idx].Constants.ShaderRegister = 0;
+		params[idx].Constants.RegisterSpace  = 0;
+		params[idx].ShaderVisibility         = D3D12_SHADER_VISIBILITY_VERTEX;
+		idx += 1;
 
 		D3D12_DESCRIPTOR_RANGE samplers[1];
-		samplers[0].RangeType                         = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
-		samplers[0].NumDescriptors                    = 1;
-		samplers[0].BaseShaderRegister                = 0;
-		samplers[0].RegisterSpace                     = 0;
-		samplers[0].OffsetInDescriptorsFromTableStart = 0;
+		samplers[0].RangeType                           = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
+		samplers[0].NumDescriptors                      = 1;
+		samplers[0].BaseShaderRegister                  = 0;
+		samplers[0].RegisterSpace                       = 0;
+		samplers[0].OffsetInDescriptorsFromTableStart   = 0;
 
-		params[2].ParameterType                       = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-		params[2].DescriptorTable.NumDescriptorRanges = kArrayCount(samplers);
-		params[2].DescriptorTable.pDescriptorRanges   = samplers;
-		params[2].ShaderVisibility                    = D3D12_SHADER_VISIBILITY_PIXEL;
+		params[idx].ParameterType                       = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		params[idx].DescriptorTable.NumDescriptorRanges = kArrayCount(samplers);
+		params[idx].DescriptorTable.pDescriptorRanges   = samplers;
+		params[idx].ShaderVisibility                    = D3D12_SHADER_VISIBILITY_PIXEL;
 
-		D3D12_VERSIONED_ROOT_SIGNATURE_DESC desc      = {};
-		desc.Version                                  = D3D_ROOT_SIGNATURE_VERSION_1;
-		desc.Desc_1_0.Flags                           = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-		desc.Desc_1_0.NumParameters                   = kArrayCount(params);
-		desc.Desc_1_0.pParameters                     = params;
+		D3D12_VERSIONED_ROOT_SIGNATURE_DESC desc        = {};
+		desc.Version                                    = D3D_ROOT_SIGNATURE_VERSION_1;
+		desc.Desc_1_0.Flags                             = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+		desc.Desc_1_0.NumParameters                     = kArrayCount(params);
+		desc.Desc_1_0.pParameters                       = params;
 
 		ID3DBlob *rootsig, *err;
 		HRESULT   hr = D3D12SerializeVersionedRootSignature(&desc, &rootsig, &err);
@@ -858,14 +865,13 @@ static void kD3D12_ExecuteFrame(const kRenderFrame2D &frame)
 		{
 			kMat4 proj = kOrthographicLH(scene.camera.left, scene.camera.right, scene.camera.top, scene.camera.bottom,
 			                             scene.camera.near, scene.camera.far);
-			gc->SetGraphicsRoot32BitConstants(0, 16, proj.m, 0);
+			gc->SetGraphicsRoot32BitConstants(2, 16, proj.m, 0);
 		}
 
-		u32            prev_textures[kTextureType_Count] = {UINT32_MAX, UINT32_MAX};
-		u32            prev_transform                    = UINT32_MAX;
-		kBlendMode     prev_blend                        = kBlendMode_Count;
-		kTextureFilter prev_filter                       = kTextureFilter_Count;
-		u16            prev_rect                         = UINT16_MAX;
+		u32            prev_transform = UINT32_MAX;
+		kBlendMode     prev_blend     = kBlendMode_Count;
+		kTextureFilter prev_filter    = kTextureFilter_Count;
+		u16            prev_rect      = UINT16_MAX;
 
 		for (u32 index = scene.commands.beg; index < scene.commands.end; ++index)
 		{
@@ -884,7 +890,7 @@ static void kD3D12_ExecuteFrame(const kRenderFrame2D &frame)
 			if (cmd.filter != prev_filter)
 			{
 				prev_filter = cmd.filter;
-				gc->SetGraphicsRootDescriptorTable(2, d3d12.resource.samplers[cmd.filter]);
+				gc->SetGraphicsRootDescriptorTable(3, d3d12.resource.samplers[cmd.filter]);
 			}
 
 			if (cmd.rect != prev_rect)
@@ -902,9 +908,57 @@ static void kD3D12_ExecuteFrame(const kRenderFrame2D &frame)
 				gc->RSSetScissorRects(1, &drect);
 			}
 
-			// TODO: implement textures
+			u32                    idx1          = cmd.textures[kTextureType_Color];
+			kD3D12_Texture        *r1            = (kD3D12_Texture *)frame.textures[kTextureType_Color][idx1];
 
-			kUnimplemented();
+			u32                    idx2          = cmd.textures[kTextureType_MaskSDF];
+			kD3D12_Texture        *r2            = (kD3D12_Texture *)frame.textures[kTextureType_MaskSDF][idx2];
+
+			D3D12_RESOURCE_BARRIER barriers[2]   = {};
+			uint                   barrier_count = 0;
+
+			if (r1->d3dstate != D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE)
+			{
+				D3D12_RESOURCE_BARRIER *barrier = &barriers[barrier_count++];
+				barrier->Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+				barrier->Transition.pResource   = r1->resource;
+				barrier->Transition.StateBefore = r1->d3dstate;
+				barrier->Transition.StateAfter  = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+				barrier->Transition.Subresource = 0;
+				r1->d3dstate                    = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+			}
+
+			if (r2->d3dstate != D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE)
+			{
+				D3D12_RESOURCE_BARRIER *barrier = &barriers[barrier_count++];
+				barrier->Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+				barrier->Transition.pResource   = r2->resource;
+				barrier->Transition.StateBefore = r2->d3dstate;
+				barrier->Transition.StateAfter  = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+				barrier->Transition.Subresource = 0;
+				r2->d3dstate                    = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+			}
+
+			if (barrier_count)
+			{
+				gc->ResourceBarrier(barrier_count, barriers);
+			}
+
+			if (cmd.flags & kRenderDirty_TextureColor)
+			{
+				d3d12.device->CreateShaderResourceView(r1->resource, 0, cpu);
+				gc->SetGraphicsRootDescriptorTable(0, gpu);
+				gpu.ptr += srv_stride;
+				cpu.ptr += srv_stride;
+			}
+
+			if (cmd.flags & kRenderDirty_TextureMaskSDF)
+			{
+				d3d12.device->CreateShaderResourceView(r2->resource, 0, cpu);
+				gc->SetGraphicsRootDescriptorTable(1, gpu);
+				gpu.ptr += srv_stride;
+				cpu.ptr += srv_stride;
+			}
 
 			gc->DrawIndexedInstanced(cmd.index, 1, index_offset, vertex_offset, 0);
 			vertex_offset += cmd.vertex;
@@ -1218,20 +1272,20 @@ bool kD3D12_CreateRenderBackend(kRenderBackend *backend)
 
 	kLogInfoEx("D3D12", "Registering render backend.\n");
 
-	backend->CreateSwapChain         = kD3D12_CreateSwapChain;
-	backend->DestroySwapChain        = kD3D12_DestroySwapChain;
-	backend->ResizeSwapChain         = kD3D12_ResizeSwapChainBuffers;
-	backend->Present                 = kD3D12_Present;
+	backend->CreateSwapChain  = kD3D12_CreateSwapChain;
+	backend->DestroySwapChain = kD3D12_DestroySwapChain;
+	backend->ResizeSwapChain  = kD3D12_ResizeSwapChainBuffers;
+	backend->Present          = kD3D12_Present;
 
-	backend->CreateTexture           = kD3D12_CreateTexture;
-	backend->DestroyTexture          = kD3D12_DestroyTexture;
-	backend->GetTextureSize          = kD3D12_GetTextureSize;
-	backend->ResizeTexture           = kD3D12_ResizeTexture;
+	backend->CreateTexture    = kD3D12_CreateTexture;
+	backend->DestroyTexture   = kD3D12_DestroyTexture;
+	backend->GetTextureSize   = kD3D12_GetTextureSize;
+	backend->ResizeTexture    = kD3D12_ResizeTexture;
 
-	backend->ExecuteFrame            = kD3D12_ExecuteFrame;
-	backend->NextFrame               = kD3D12_MoveToNextFrame;
+	backend->ExecuteFrame     = kD3D12_ExecuteFrame;
+	backend->NextFrame        = kD3D12_MoveToNextFrame;
 
-	backend->Destroy                 = kD3D12_DestroyGraphicsDevice;
+	backend->Destroy          = kD3D12_DestroyGraphicsDevice;
 
 	return true;
 }
