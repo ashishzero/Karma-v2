@@ -1,6 +1,5 @@
 #pragma once
 #include "kCommon.h"
-#include "kRenderBackend.h"
 
 typedef enum kKey
 {
@@ -286,6 +285,7 @@ void          kGetWindowState(kWindowState *state);
 
 void          kSetKeyboardState(const kKeyboardState &keyboard);
 void          kSetKeyState(const kKeyState &state, kKey key);
+void          kSetKeyModFlags(uint mods);
 void          kSetMouseState(const kMouseState &mouse);
 void          kSetButtonState(const kKeyState &state, kButton button);
 
@@ -328,6 +328,15 @@ void kMaximizeWindow(void);
 void kRestoreWindow(void);
 void kMinimizeWindow(void);
 void kCloseWindow(void);
+
+//
+//
+//
+
+void kUserLoad(void);
+void kUserUpdate(float dt);
+void kUserRelease(void);
+void kUpdateFrame(float dt);
 
 //
 //
