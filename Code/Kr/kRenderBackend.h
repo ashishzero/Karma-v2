@@ -131,6 +131,7 @@ kVec2i      kGetTextureSizeFallback(kTexture *);
 void        kResizeTextureFallback(kTexture *, u32, u32);
 void        kExecuteFrameFallback(const kRenderFrame2D &);
 void        kNextFrameFallback(void);
+void        kFlushFallback(void);
 void        kDestroyFallback(void);
 
 void        kFallbackRenderBackend(kRenderBackend *backend);

@@ -1007,11 +1007,11 @@ static void kD3D11_DestroyRenderResources(void)
 		kRelease(&d3d11.resource.deferred.blends[i]);
 	}
 
-	//kRelease(&d3d11.resource.deferred.postprocess.vs);
-	//for (int i = 0; i < kToneMappingMethod_Count; ++i)
+	// kRelease(&d3d11.resource.deferred.postprocess.vs);
+	// for (int i = 0; i < kToneMappingMethod_Count; ++i)
 	//{
 	//	kRelease(&d3d11.resource.deferred.postprocess.tonemapping[i]);
-	//}
+	// }
 }
 
 //
@@ -1178,20 +1178,21 @@ bool kD3D11_CreateRenderBackend(kRenderBackend *backend)
 
 	kDListInit(&d3d11.resource.textures.first);
 
-	backend->CreateSwapChain         = kD3D11_CreateSwapChain;
-	backend->DestroySwapChain        = kD3D11_DestroySwapChain;
-	backend->ResizeSwapChain         = kD3D11_ResizeSwapChainBuffers;
-	backend->Present                 = kD3D11_Present;
+	backend->CreateSwapChain  = kD3D11_CreateSwapChain;
+	backend->DestroySwapChain = kD3D11_DestroySwapChain;
+	backend->ResizeSwapChain  = kD3D11_ResizeSwapChainBuffers;
+	backend->Present          = kD3D11_Present;
 
-	backend->CreateTexture           = kD3D11_CreateTexture;
-	backend->DestroyTexture          = kD3D11_DestroyTexture;
-	backend->GetTextureSize          = kD3D11_GetTextureSize;
-	backend->ResizeTexture           = kD3D11_ResizeTexture;
+	backend->CreateTexture    = kD3D11_CreateTexture;
+	backend->DestroyTexture   = kD3D11_DestroyTexture;
+	backend->GetTextureSize   = kD3D11_GetTextureSize;
+	backend->ResizeTexture    = kD3D11_ResizeTexture;
 
-	backend->ExecuteFrame            = kD3D11_ExecuteFrame;
-	backend->NextFrame               = kNextFrameFallback;
+	backend->ExecuteFrame     = kD3D11_ExecuteFrame;
+	backend->NextFrame        = kNextFrameFallback;
+	backend->Flush            = kD3D11_Flush;
 
-	backend->Destroy                 = kD3D11_DestroyGraphicsDevice;
+	backend->Destroy          = kD3D11_DestroyGraphicsDevice;
 
 	return true;
 }

@@ -21,6 +21,7 @@ kVec2i    kGetTextureSizeFallback(kTexture *) { return kVec2i(0); }
 void      kResizeTextureFallback(kTexture *, u32, u32) {}
 void      kExecuteFrameFallback(const kRenderFrame2D &) {}
 void      kNextFrameFallback(void) {}
+void      kFlushFallback(void) {}
 void      kDestroyFallback(void) {}
 
 //
@@ -29,18 +30,21 @@ void      kDestroyFallback(void) {}
 
 void kFallbackRenderBackend(kRenderBackend *backend)
 {
-	backend->CreateSwapChain         = kCreateSwapChainFallback;
-	backend->DestroySwapChain        = kDestroySwapChainFallback;
-	backend->ResizeSwapChain         = kResizeSwapChainFallback;
-	backend->Present                 = kPresentFallback;
+	backend->CreateSwapChain  = kCreateSwapChainFallback;
+	backend->DestroySwapChain = kDestroySwapChainFallback;
+	backend->ResizeSwapChain  = kResizeSwapChainFallback;
+	backend->Present          = kPresentFallback;
 
-	backend->CreateTexture           = kCreateTextureFallback;
-	backend->DestroyTexture          = kDestroyTextureFallback;
-	backend->GetTextureSize          = kGetTextureSizeFallback;
-	backend->ResizeTexture           = kResizeTextureFallback;
-	backend->ExecuteFrame            = kExecuteFrameFallback;
-	backend->NextFrame               = kNextFrameFallback;
-	backend->Destroy                 = kDestroyFallback;
+	backend->CreateTexture    = kCreateTextureFallback;
+	backend->DestroyTexture   = kDestroyTextureFallback;
+	backend->GetTextureSize   = kGetTextureSizeFallback;
+	backend->ResizeTexture    = kResizeTextureFallback;
+
+	backend->ExecuteFrame     = kExecuteFrameFallback;
+	backend->NextFrame        = kNextFrameFallback;
+	backend->Flush            = kFlushFallback;
+
+	backend->Destroy          = kDestroyFallback;
 }
 
 extern bool kD3D11_CreateRenderBackend(kRenderBackend *backend);
