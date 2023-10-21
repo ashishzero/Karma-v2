@@ -24,8 +24,6 @@ void                 Update(float dt)
 {
 	kArena *            arena     = kGetFrameArena();
 
-	kRenderTargetConfig rt_config = kGetRenderTargetConfig();
-
 	if (kKeyPressed(kKey_Escape))
 	{
 		kBreakLoop(0);
@@ -79,27 +77,27 @@ void                 Update(float dt)
 		kToggleWindowFullscreen();
 	}
 
-	if (kKeyPressed(kKey_H))
-	{
-		rt_config.tonemapping = (kToneMappingMethod)((rt_config.tonemapping + 1) % kToneMappingMethod_Count);
-		kApplyRenderTargetConfig(rt_config);
-	}
+	//if (kKeyPressed(kKey_H))
+	//{
+	//	rt_config.tonemapping = (kToneMappingMethod)((rt_config.tonemapping + 1) % kToneMappingMethod_Count);
+	//	kApplyRenderTargetConfig(rt_config);
+	//}
 
-	if (kKeyPressed(kKey_A))
-	{
-		rt_config.antialiasing = (kAntiAliasingMethod)((rt_config.antialiasing + 1) % kAntiAliasingMethod_Count);
-		kApplyRenderTargetConfig(rt_config);
-	}
+	//if (kKeyPressed(kKey_A))
+	//{
+	//	rt_config.antialiasing = (kAntiAliasingMethod)((rt_config.antialiasing + 1) % kAntiAliasingMethod_Count);
+	//	kApplyRenderTargetConfig(rt_config);
+	//}
 
 	kVec2i    size    = kGetWindowSize();
 	float     ar      = kGetWindowAspectRatio();
 	float     yfactor = kGetWindowDpiScale();
 
 	kVec4     clear   = kVec4(0.01f, 0.01f, 0.01f, 1.0f);
-	kTexture *rt      = kGetWindowRenderTarget();
+	//kTexture *rt      = kGetWindowRenderTarget();
 
-	kString   tm      = kFormatString(arena, "ToneMapping : %s", kToneMappingMethodStrings[rt_config.tonemapping]);
-	kString   aa      = kFormatString(arena, "AntiAliasing: %s", kAntiAliasingMethodStrings[rt_config.antialiasing]);
+	//kString   tm      = kFormatString(arena, "ToneMapping : %s", kToneMappingMethodStrings[rt_config.tonemapping]);
+	//kString   aa      = kFormatString(arena, "AntiAliasing: %s", kAntiAliasingMethodStrings[rt_config.antialiasing]);
 
 	stabilized_dt     = kLerp(dt, stabilized_dt, 0.9f);
 
@@ -110,8 +108,8 @@ void                 Update(float dt)
         arena, "FPS: %d (%.2fms)\nRender Memory: %.3f / %.3f MB\nLast Frame Render Memory: %.3f MB", fps,
         1000 * stabilized_dt, mem->max_used.megabytes, mem->allocated.megabytes, mem->last_frame.megabytes);
 
-	kViewport vp = {.x = 0, .y = 0, .w = (float)size.x, .h = (float)size.y, .n = 0, .f = 1};
 
+	kRect rect = kRect(0.0f, 0.0f, (float)size.x, (float)size.y);
 
 	while (DissappearTFactors.count && DissappearTFactors.Last() < 0.001f)
 	{
@@ -127,9 +125,8 @@ void                 Update(float dt)
 
 	time += dt;
 
-	kBeginRenderPass(vp, rt, 0, kRenderPass_ClearColor, clear);
 
-	kBeginCamera(ar, 100);
+	kBeginScene(ar, 100, rect);
 
 	float chfactor = kSin(time);
 
@@ -139,7 +136,7 @@ void                 Update(float dt)
 	{
 		float t     = kEaseInOutBounce(TFactors[i]);
 		Colors[i].w = kEaseInCirc(TFactors[i]);
-		kMat4   rot = kRotationZ(kLerp(0.0f, Angles[i], t));
+		kMat3   rot = kRotation3x3(kLerp(0.0f, Angles[i], t));
 		kPushTransform(rot);
 		float rf = Rotations[i];
 		kDrawTextQuadCenteredRotated(Chars[i], kLerp(kVec2(0), Rects[i], t), rf * chfactor, Colors[i], tdim);
@@ -151,7 +148,7 @@ void                 Update(float dt)
 	{
 		float t     = kEaseOutExpo(DissappearTFactors[i]);
 		DissappearColors[i].w = kEaseOutCirc(DissappearTFactors[i]);
-		kMat4   rot = kRotationZ(kLerp(0.0f, DissappearAngles[i], t));
+		kMat3   rot = kRotation3x3(kLerp(0.0f, DissappearAngles[i], t));
 		kPushTransform(rot);
 		float rf = DissappearRotations[i];
 		kDrawTextQuadCenteredRotated(DissappearChars[i], kLerp(kVec2(0), Dissappear[i], t), rf * chfactor, DissappearColors[i], tdim);
@@ -159,9 +156,9 @@ void                 Update(float dt)
 		DissappearTFactors[i] = kLerp(DissappearTFactors[i], 0.0f, 0.09f);
 	}
 
-	kEndCamera();
+	kEndScene();
 
-	kBeginCameraRect(0, (float)size.x, 0, (float)size.y);
+	kBeginScene(0, (float)size.x, 0, (float)size.y, -1.0f, 1.0f, rect);
 
 	kVec2 dd = kCalculateText(pf, 0.75f * yfactor);
 	kDrawRect(kVec2(0), dd, kVec4(0, 0, 0, 0.75f));
@@ -169,9 +166,7 @@ void                 Update(float dt)
 
 	//kDrawRect(kVec2(0), kVec2(10), kVec4(1, 1, 0, 1));
 
-	kEndCamera();
-
-	kEndRenderPass();
+	kEndScene();
 }
 
 void Main(int argc, const char **argv)

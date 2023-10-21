@@ -162,7 +162,8 @@ typedef struct kTextEvent
 typedef struct kEvent
 {
 	kEventKind kind;
-	union {
+	union
+	{
 		kResizedEvent    resized;
 		kDpiChangedEvent dpi;
 		kCursorEvent     cursor;
@@ -213,18 +214,12 @@ typedef enum kWindowFlag
 	kWindow_FlagCount
 } kWindowFlag;
 
-struct kPlatformWindow;
-struct kSwapChain;
-using kWindow = kHandle<kPlatformWindow>;
-
 typedef struct kWindowState
 {
-	kWindow     window;
-	kSwapChain *swap_chain;
-	u32         width;
-	u32         height;
-	float       yfactor;
-	u32         flags[kWindow_FlagCount];
+	u32   width;
+	u32   height;
+	float yfactor;
+	u32   flags[kWindow_FlagCount];
 } kWindowState;
 
 typedef struct kMediaUserEvents
@@ -248,9 +243,9 @@ void kFallbackUserUpdateProc(float dt);
 //
 
 kSpan<kEvent> kGetEvents(void);
-kArena *      kGetFrameArena(void);
+kArena       *kGetFrameArena(void);
 
-void *        kGetUserEventData(void);
+void         *kGetUserEventData(void);
 void          kSetUserEventData(void *);
 void          kGetUserEvents(kMediaUserEvents *user);
 void          kSetUserEvents(const kMediaUserEvents &user);
@@ -279,7 +274,6 @@ bool          kIsWindowMaximized(void);
 kVec2i        kGetWindowSize(void);
 float         kGetWindowAspectRatio(void);
 float         kGetWindowDpiScale(void);
-kTexture *    kGetWindowRenderTarget(void);
 
 bool          kIsCursorCaptured(void);
 bool          kIsCursorHovered(void);
@@ -325,17 +319,15 @@ void kAddWindowDpiChangedEvent(float scale);
 //
 //
 
-void                kResizeWindow(u32 w, u32 h);
-void                kToggleWindowFullscreen(void);
-void                kReleaseCursor(void);
-void                kCaptureCursor(void);
-int                 kGetWindowCaptionSize(void);
-void                kMaximizeWindow(void);
-void                kRestoreWindow(void);
-void                kMinimizeWindow(void);
-void                kCloseWindow(void);
-kRenderTargetConfig kGetRenderTargetConfig(void);
-void                kApplyRenderTargetConfig(const kRenderTargetConfig &config);
+void kResizeWindow(u32 w, u32 h);
+void kToggleWindowFullscreen(void);
+void kReleaseCursor(void);
+void kCaptureCursor(void);
+int  kGetWindowCaptionSize(void);
+void kMaximizeWindow(void);
+void kRestoreWindow(void);
+void kMinimizeWindow(void);
+void kCloseWindow(void);
 
 //
 //
@@ -351,11 +343,10 @@ enum kWindowStyleFlags
 
 typedef struct kWindowSpec
 {
-	kString             title;
-	u32                 width;
-	u32                 height;
-	uint                flags;
-	kRenderTargetConfig rt;
+	kString title;
+	u32     width;
+	u32     height;
+	uint    flags;
 } kWindowSpec;
 
 typedef struct kMediaSpec
@@ -364,9 +355,7 @@ typedef struct kMediaSpec
 	kArenaSpec  arena;
 } kMediaSpec;
 
-static const kMediaSpec kDefaultSpec = {
-	.window = {.rt = {.antialiasing = kAntiAliasingMethod_MSAAx8, .tonemapping = kToneMappingMethod_HDR_AES}},
-	.arena  = {.alignment = sizeof(8), .capacity = kMegaByte * 64}};
+static const kMediaSpec kDefaultSpec = {.arena = {.alignment = sizeof(8), .capacity = kMegaByte * 64}};
 
-int  kEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user);
-void kBreakLoop(int status);
+int                     kEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user);
+void                    kBreakLoop(int status);

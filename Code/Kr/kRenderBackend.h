@@ -9,43 +9,32 @@ typedef enum kResourceState
 	kResourceState_Ready,
 } kResourceState;
 
-typedef struct kSwapChain
-{
-	kResourceState state;
-} kSwapChain;
-
 typedef struct kTexture
 {
 	kResourceState state;
 } kTexture;
 
-typedef enum kAntiAliasingMethod
-{
-	kAntiAliasingMethod_None,
-	kAntiAliasingMethod_MSAAx2,
-	kAntiAliasingMethod_MSAAx4,
-	kAntiAliasingMethod_MSAAx8,
-	kAntiAliasingMethod_Count
-} kAntiAliasingMethod;
-
-static const char *kAntiAliasingMethodStrings[] = {"None", "MSAAx2", "MSAAx4", "MSAAx8"};
-static_assert(kArrayCount(kAntiAliasingMethodStrings) == kAntiAliasingMethod_Count, "");
-
-typedef enum kToneMappingMethod
-{
-	kToneMappingMethod_SDR,
-	kToneMappingMethod_HDR_AES,
-	kToneMappingMethod_Count
-} kToneMappingMethod;
-
-static const char *kToneMappingMethodStrings[] = {"Standard Dynamic Range", "High Dynamic Range AES"};
-static_assert(kArrayCount(kToneMappingMethodStrings) == kToneMappingMethod_Count, "");
-
-typedef struct kRenderTargetConfig
-{
-	kAntiAliasingMethod antialiasing;
-	kToneMappingMethod  tonemapping;
-} kRenderTargetConfig;
+//typedef enum kAntiAliasingMethod
+//{
+//	kAntiAliasingMethod_None,
+//	kAntiAliasingMethod_MSAAx2,
+//	kAntiAliasingMethod_MSAAx4,
+//	kAntiAliasingMethod_MSAAx8,
+//	kAntiAliasingMethod_Count
+//} kAntiAliasingMethod;
+//
+//static const char *kAntiAliasingMethodStrings[] = {"None", "MSAAx2", "MSAAx4", "MSAAx8"};
+//static_assert(kArrayCount(kAntiAliasingMethodStrings) == kAntiAliasingMethod_Count, "");
+//
+//typedef enum kToneMappingMethod
+//{
+//	kToneMappingMethod_SDR,
+//	kToneMappingMethod_HDR_AES,
+//	kToneMappingMethod_Count
+//} kToneMappingMethod;
+//
+//static const char *kToneMappingMethodStrings[] = {"Standard Dynamic Range", "High Dynamic Range AES"};
+//static_assert(kArrayCount(kToneMappingMethodStrings) == kToneMappingMethod_Count, "");
 
 typedef enum kFormat
 {
@@ -88,22 +77,18 @@ typedef struct kTextureSpec
 	u32     width;
 	u32     height;
 	u32     pitch;
-	u8 *    pixels;
+	u8     *pixels;
 	u32     flags;
 	u32     num_samples;
 } kTextureSpec;
 
-extern bool             kEnableDebugLayer;
-static const kSwapChain kFallbackSwapChain;
-static const kTexture   kFallbackTexture;
+extern bool           kEnableDebugLayer;
+static const kTexture kFallbackTexture;
 
-typedef kSwapChain *(*kSwapChainCreateProc)(void *, const kRenderTargetConfig &);
-typedef void (*kSwapChainDestroyProc)(kSwapChain *);
-typedef void (*kSwapChainResizeProc)(kSwapChain *, uint, uint);
-typedef kTexture *(*kSwapChainTargetProc)(kSwapChain *);
-typedef kRenderTargetConfig (*kSwapChainRenderTargetConfig)(kSwapChain *);
-typedef bool (*kApplySwapChainRenderTargetConfig)(kSwapChain *, const kRenderTargetConfig &);
-typedef void (*kSwapChainPresentProc)(kSwapChain *);
+typedef void (*kSwapChainCreateProc)(void *);
+typedef void (*kSwapChainDestroyProc)(void);
+typedef void (*kSwapChainResizeProc)(uint, uint);
+typedef void (*kSwapChainPresentProc)(void);
 
 typedef kTexture *(*kRenderBackendTextureCreateProc)(const kTextureSpec &);
 typedef void (*kkRenderBackendTextureDestroyProc)(kTexture *);
@@ -120,9 +105,6 @@ typedef struct kRenderBackend
 	kSwapChainCreateProc              CreateSwapChain;
 	kSwapChainDestroyProc             DestroySwapChain;
 	kSwapChainResizeProc              ResizeSwapChain;
-	kSwapChainTargetProc              SwapChainRenderTarget;
-	kSwapChainRenderTargetConfig      GetRenderTargetConfig;
-	kApplySwapChainRenderTargetConfig ApplyRenderTargetConfig;
 	kSwapChainPresentProc             Present;
 
 	kRenderBackendTextureCreateProc   CreateTexture;
@@ -136,20 +118,18 @@ typedef struct kRenderBackend
 	kRenderBackendDestroyProc         Destroy;
 } kRenderBackend;
 
-kSwapChain *        kCreateSwapChainFallback(void *, const kRenderTargetConfig &);
-void                kDestroySwapChainFallback(kSwapChain *);
-void                kResizeSwapChainFallback(kSwapChain *, uint, uint);
-kTexture *          kSwapChainRenderTargetFallback(kSwapChain *);
-kRenderTargetConfig kGetRenderTargetConfigFallback(kSwapChain *);
-bool                kApplyRenderTargetConfigFallback(kSwapChain *, const kRenderTargetConfig &);
-void                kPresentFallback(kSwapChain *);
-kTexture *          kCreateTextureFallback(const kTextureSpec &);
-void                kDestroyTextureFallback(kTexture *);
-kVec2i              kGetTextureSizeFallback(kTexture *);
-void                kResizeTextureFallback(kTexture *, u32, u32);
-void                kExecuteFrameFallback(const kRenderFrame2D &);
-void                kNextFrameFallback(void);
-void                kDestroyFallback(void);
+void        kCreateSwapChainFallback(void *);
+void        kDestroySwapChainFallback(void);
+void        kResizeSwapChainFallback(uint, uint);
+void        kPresentFallback(void);
 
-void                kFallbackRenderBackend(kRenderBackend *backend);
-extern void         kCreateRenderBackend(kRenderBackend *backend);
+kTexture   *kCreateTextureFallback(const kTextureSpec &);
+void        kDestroyTextureFallback(kTexture *);
+kVec2i      kGetTextureSizeFallback(kTexture *);
+void        kResizeTextureFallback(kTexture *, u32, u32);
+void        kExecuteFrameFallback(const kRenderFrame2D &);
+void        kNextFrameFallback(void);
+void        kDestroyFallback(void);
+
+void        kFallbackRenderBackend(kRenderBackend *backend);
+extern void kCreateRenderBackend(kRenderBackend *backend);

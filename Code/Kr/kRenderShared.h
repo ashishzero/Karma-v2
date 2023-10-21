@@ -19,13 +19,6 @@ typedef struct kVertex2D
 
 typedef u32 kIndex2D;
 
-typedef struct kViewport
-{
-	float x, y;
-	float w, h;
-	float n, f;
-} kViewport;
-
 typedef enum kBlendMode : u8
 {
 	kBlendMode_Opaque,
@@ -42,37 +35,21 @@ typedef enum kTextureFilter : u8
 	kTextureFilter_Count
 } kTextureFilter;
 
-enum kRenderPassFlags
-{
-	kRenderPass_ClearColor   = 0x1,
-	kRenderPass_ClearDepth   = 0x2,
-	kRenderPass_ClearStencil = 0x4,
-};
-
-typedef struct kRenderClear2D
-{
-	kVec4 color;
-	float depth;
-	u8    stencil;
-} kRenderClear2D;
-
 enum kRenderDirtyFlags2D
 {
 	kRenderDirty_TextureColor   = 0x1,
 	kRenderDirty_TextureMaskSDF = 0x2,
-	kRenderDirty_Transform      = 0x4,
-	kRenderDirty_Rect           = 0x8,
-	kRenderDirty_Blend          = 0x10,
-	kRenderDirty_TextureFilter  = 0x20,
-	kRenderDirty_Everything     = kRenderDirty_TextureColor | kRenderDirty_TextureMaskSDF | kRenderDirty_Transform |
-	                          kRenderDirty_Rect | kRenderDirty_Blend | kRenderDirty_TextureFilter
+	kRenderDirty_Rect           = 0x4,
+	kRenderDirty_Blend          = 0x8,
+	kRenderDirty_TextureFilter  = 0x10,
+	kRenderDirty_Everything     = kRenderDirty_TextureColor | kRenderDirty_TextureMaskSDF | kRenderDirty_Rect |
+	                          kRenderDirty_Blend | kRenderDirty_TextureFilter
 };
 
 typedef struct kRenderCommand2D
 {
 	u32            flags;
 	u32            textures[kTextureType_Count];
-	u32            transform;
 	kBlendMode     blend;
 	kTextureFilter filter;
 	u16            rect;
@@ -80,22 +57,28 @@ typedef struct kRenderCommand2D
 	u32            index;
 } kRenderCommand2D;
 
-typedef struct kRenderPass2D
+typedef struct kCamera2D
 {
-	kTexture      *rt;
-	kTexture      *ds;
-	kViewport      viewport;
-	u32            flags;
-	kRenderClear2D clear;
-	kRange<u32>    commands;
-} kRenderPass2D;
+	float left;
+	float right;
+	float top;
+	float bottom;
+	float near;
+	float far;
+} kCamera2D;
+
+typedef struct kRenderScene2D
+{
+	kCamera2D   camera;
+	kRect       region;
+	kRange<u32> commands;
+} kRenderScene2D;
 
 typedef struct kRenderFrame2D
 {
-	kSpan<kRenderPass2D>    passes;
+	kSpan<kRenderScene2D>   scenes;
 	kSpan<kRenderCommand2D> commands;
 	kSpan<kTexture *>       textures[kTextureType_Count];
-	kSpan<kMat4>            transforms;
 	kSpan<kRect>            rects;
 	kSpan<kVertex2D>        vertices;
 	kSpan<kIndex2D>         indices;

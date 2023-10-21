@@ -14,9 +14,9 @@ typedef struct kGlyph
 typedef struct kFont
 {
 	kTexture *texture;
-	u16 *     map;
-	kGlyph *  glyphs;
-	kGlyph *  fallback;
+	u16      *map;
+	kGlyph   *glyphs;
+	kGlyph   *fallback;
 	u32       mincp;
 	u32       maxcp;
 	u32       count;
@@ -44,7 +44,6 @@ typedef struct kRenderMemoryUsage
 	imem                    vertices;
 	imem                    indices;
 	imem                    textures[kTextureType_Count];
-	imem                    transforms;
 	imem                    rects;
 	imem                    passes;
 	imem                    commands;
@@ -85,15 +84,15 @@ static constexpr kRenderSpec kDefaultRenderSpec = {.thickness  = 1,
                                                    .passes     = 64,
                                                    .rects      = 256,
                                                    .transforms = 256,
-                                                   .textures  = 256,
+                                                   .textures   = 256,
                                                    .scratch    = 16384};
 
 //
 //
 //
 
-void                           kCreateRenderContext(const kRenderSpec &spec, kTexture *textures[kTextureType_Count], kFont *font);
-void                           kDestroyRenderContext(void);
+void kCreateRenderContext(const kRenderSpec &spec, kTexture *textures[kTextureType_Count], kFont *font);
+void kDestroyRenderContext(void);
 const kRenderMemoryStatistics *kGetRenderMemoryStatistics(void);
 
 void                           kResetFrame(void);
@@ -103,13 +102,10 @@ void                           kGetFrameData(kRenderFrame2D *frame);
 //
 //
 
-void kBeginRenderPass(const kViewport &vp, kTexture *rt, kTexture *ds = nullptr, uint flags = kRenderPass_ClearColor,
-                      kVec4 color = kVec4(0), float depth = 1.0f);
-void kEndRenderPass(void);
-
-void kBeginCameraRect(float left, float right, float top, float bottom);
-void kBeginCamera(float aspect_ratio, float height);
-void kEndCamera(void);
+void kBeginScene(const kCamera2D &camera, kRect region);
+void kBeginScene(float left, float right, float top, float bottom, float near, float far, kRect region);
+void kBeginScene(float ar, float height, kRect region);
+void kEndScene(void);
 
 void kLineThickness(float thickness);
 
@@ -129,8 +125,8 @@ void kPushRect(kRect rect);
 void kPushRectEx(float x, float y, float w, float h);
 void kPopRect(void);
 
-void kSetTransform(const kMat4 &transform);
-void kPushTransform(const kMat4 &transform);
+void kSetTransform(const kMat3 &transform);
+void kPushTransform(const kMat3 &transform);
 void kPushTransform(kVec2 pos, float angle);
 void kPopTransform(void);
 
@@ -279,10 +275,8 @@ void    kDrawTextQuadRotated(u32 codepoint, kVec3 pos, float angle, kVec4 color,
 void    kDrawTextQuadRotated(u32 codepoint, kVec2 pos, float angle, kVec4 color, float scale = 1);
 void    kDrawTextQuadCentered(u32 codepoint, kVec3 pos, kVec4 color, float scale = 1);
 void    kDrawTextQuadCentered(u32 codepoint, kVec2 pos, kVec4 color, float scale = 1);
-void    kDrawTextQuadCenteredRotated(u32 codepoint, kVec3 pos, float angle, kVec4 color,
-                                     float scale = 1);
-void    kDrawTextQuadCenteredRotated(u32 codepoint, kVec2 pos, float angle, kVec4 color,
-                                     float scale = 1);
+void    kDrawTextQuadCenteredRotated(u32 codepoint, kVec3 pos, float angle, kVec4 color, float scale = 1);
+void    kDrawTextQuadCenteredRotated(u32 codepoint, kVec2 pos, float angle, kVec4 color, float scale = 1);
 
 kVec2   kCalculateText(kString text, const kFont *font, float scale = 1);
 kVec2   kCalculateText(kString text, float scale = 1);
