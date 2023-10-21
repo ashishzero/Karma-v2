@@ -1284,6 +1284,7 @@ bool kD3D12_CreateRenderBackend(kRenderBackend *backend)
 
 	backend->ExecuteFrame     = kD3D12_ExecuteFrame;
 	backend->NextFrame        = kD3D12_MoveToNextFrame;
+	backend->Flush            = kD3D12_WaitForGpu;
 
 	backend->Destroy          = kD3D12_DestroyGraphicsDevice;
 

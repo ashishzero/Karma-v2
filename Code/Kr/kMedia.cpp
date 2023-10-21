@@ -458,6 +458,8 @@ int kEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user)
 
 	int status = media.backend.EventLoop();
 
+	media.render.Flush();
+
 	kLogInfoEx("Windows", "Calling user release.\n");
 	media.user.release();
 

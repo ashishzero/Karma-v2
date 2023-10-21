@@ -14,27 +14,27 @@ typedef struct kTexture
 	kResourceState state;
 } kTexture;
 
-//typedef enum kAntiAliasingMethod
+// typedef enum kAntiAliasingMethod
 //{
 //	kAntiAliasingMethod_None,
 //	kAntiAliasingMethod_MSAAx2,
 //	kAntiAliasingMethod_MSAAx4,
 //	kAntiAliasingMethod_MSAAx8,
 //	kAntiAliasingMethod_Count
-//} kAntiAliasingMethod;
+// } kAntiAliasingMethod;
 //
-//static const char *kAntiAliasingMethodStrings[] = {"None", "MSAAx2", "MSAAx4", "MSAAx8"};
-//static_assert(kArrayCount(kAntiAliasingMethodStrings) == kAntiAliasingMethod_Count, "");
+// static const char *kAntiAliasingMethodStrings[] = {"None", "MSAAx2", "MSAAx4", "MSAAx8"};
+// static_assert(kArrayCount(kAntiAliasingMethodStrings) == kAntiAliasingMethod_Count, "");
 //
-//typedef enum kToneMappingMethod
+// typedef enum kToneMappingMethod
 //{
 //	kToneMappingMethod_SDR,
 //	kToneMappingMethod_HDR_AES,
 //	kToneMappingMethod_Count
-//} kToneMappingMethod;
+// } kToneMappingMethod;
 //
-//static const char *kToneMappingMethodStrings[] = {"Standard Dynamic Range", "High Dynamic Range AES"};
-//static_assert(kArrayCount(kToneMappingMethodStrings) == kToneMappingMethod_Count, "");
+// static const char *kToneMappingMethodStrings[] = {"Standard Dynamic Range", "High Dynamic Range AES"};
+// static_assert(kArrayCount(kToneMappingMethodStrings) == kToneMappingMethod_Count, "");
 
 typedef enum kFormat
 {
@@ -97,6 +97,7 @@ typedef void (*kkRenderBackendTextureResizeProc)(kTexture *, u32, u32);
 
 typedef void (*kRenderBackendExecuteFrameProc)(const kRenderFrame2D &);
 typedef void (*kRenderBackendNextFrame)(void);
+typedef void (*kRenderBackendFlush)(void);
 
 typedef void (*kRenderBackendDestroyProc)(void);
 
@@ -114,6 +115,7 @@ typedef struct kRenderBackend
 
 	kRenderBackendExecuteFrameProc    ExecuteFrame;
 	kRenderBackendNextFrame           NextFrame;
+	kRenderBackendFlush               Flush;
 
 	kRenderBackendDestroyProc         Destroy;
 } kRenderBackend;
