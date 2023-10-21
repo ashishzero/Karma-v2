@@ -261,6 +261,8 @@ void kAddWindowResizeEvent(u32 width, u32 height, bool fullscreen)
 	media.window.flags[kWindow_Fullscreen] = fullscreen;
 	kEvent ev                              = {.kind = kEvent_Resized, .resized = {.width = width, .height = height}};
 	kAddEvent(ev);
+
+	media.render.ResizeSwapChain(width, height);
 }
 
 void kAddWindowActivateEvent(bool active)
@@ -422,7 +424,8 @@ int kEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user)
 	kLogInfoEx("Windows", "Creating render backend.\n");
 	kCreateRenderBackend(&media.render);
 
-	media.backend.CreateWindow(&media.window, spec.window, media.render);
+	void *window = media.backend.CreateWindow(&media.window, spec.window);
+	media.render.CreateSwapChain(window);
 
 	media.events.Reserve(64);
 	media.backend.LoadMouseState(&media.mouse);
@@ -453,7 +456,7 @@ int kEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user)
 	kLogInfoEx("Windows", "Calling user load.\n");
 	media.user.load();
 
-	int status = media.backend.EventLoop(media.render);
+	int status = media.backend.EventLoop();
 
 	kLogInfoEx("Windows", "Calling user release.\n");
 	media.user.release();
@@ -462,7 +465,8 @@ int kEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user)
 	kDestroyRenderContext();
 	kDestroyBuiltinResources();
 
-	media.backend.DestroyWindow(media.render);
+	media.render.DestroySwapChain();
+	media.backend.DestroyWindow();
 	media.render.Destroy();
 
 	memset(&media, 0, sizeof(media));

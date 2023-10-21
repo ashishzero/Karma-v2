@@ -1,9 +1,8 @@
 #pragma once
 #include "kMedia.h"
-#include "kRenderBackend.h"
 
-typedef void (*kMediaBackendCreateWindow)(kWindowState *, const kWindowSpec &, const kRenderBackend &);
-typedef void (*kMediaBackendDestroyWindow)(const kRenderBackend &);
+typedef void *(*kMediaBackendCreateWindow)(kWindowState *, const kWindowSpec &);
+typedef void (*kMediaBackendDestroyWindow)(void);
 typedef void (*kMediaBackendResizeWindow)(u32 w, u32 h);
 typedef void (*kMediaBackendToggleWindowFullscreen)(void);
 typedef void (*kMediaBackendReleaseCursor)(void);
@@ -17,7 +16,7 @@ typedef void (*kMediaBackendCloseWindow)(void);
 typedef void (*kMediaBackendLoadKeyboardState)(kKeyboardState *);
 typedef void (*kMediaBackendLoadMouseState)(kMouseState *);
 
-typedef int (*kMediaBackendEventLoop)(const kRenderBackend &render);
+typedef int (*kMediaBackendEventLoop)(void);
 typedef void (*kMediaBackendBreakLoop)(int);
 
 typedef void (*kMediaBackendDestroy)(void);

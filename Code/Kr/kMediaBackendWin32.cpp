@@ -1,5 +1,4 @@
 #include "kMedia.h"
-#include "kPlatform.h"
 #include "kMediaBackend.h"
 
 #if K_PLATFORM_WINDOWS == 1
@@ -937,15 +936,14 @@ static kWin32Backend win32;
 //
 //
 
-static void kWin32_DestroyWindow(const kRenderBackend &render)
+static void kWin32_DestroyWindow(void)
 {
 	kLogInfoEx("Windows", "Destroying window.\n");
-	render.DestroySwapChain();
 	kWin32_RequestDestroyWindow(win32.window.wnd);
 	memset(&win32.window, 0, sizeof(win32.window));
 }
 
-static void kWin32_CreateWindow(kWindowState *ws, const kWindowSpec &spec, const kRenderBackend &render)
+static void *kWin32_CreateWindow(kWindowState *ws, const kWindowSpec &spec)
 {
 	HMODULE instance    = GetModuleHandleW(0);
 
@@ -996,8 +994,7 @@ static void kWin32_CreateWindow(kWindowState *ws, const kWindowSpec &spec, const
 	if (!win32.window.wnd)
 	{
 		kLogHresultError(GetLastError(), "Windows", "Failed to create window");
-		kFatalError("Failed to create window");
-		return;
+		return 0;
 	}
 
 	BOOL dark = TRUE;
@@ -1026,8 +1023,6 @@ static void kWin32_CreateWindow(kWindowState *ws, const kWindowSpec &spec, const
 	{
 		kWin32_ToggleWindowFullscreen(&win32.window);
 	}
-
-	render.CreateSwapChain(win32.window.wnd);
 
 	//
 	//
@@ -1058,14 +1053,30 @@ static void kWin32_CreateWindow(kWindowState *ws, const kWindowSpec &spec, const
 
 	ws->flags[kWindow_Fullscreen] = win32.window.fullscreen;
 	ws->yfactor                   = (float)dpi / USER_DEFAULT_SCREEN_DPI;
+
+	return (void *)win32.window.wnd;
 }
 
-static int kWin32_EventLoop(const kRenderBackend &render)
+static u64 kWin32_GetPerformanceFrequency(void)
+{
+	LARGE_INTEGER frequency;
+	QueryPerformanceFrequency(&frequency);
+	return frequency.QuadPart;
+}
+
+static u64 kWin32_GetPerformanceCounter(void)
+{
+	LARGE_INTEGER counter;
+	QueryPerformanceCounter(&counter);
+	return counter.QuadPart;
+}
+
+static int kWin32_EventLoop(void)
 {
 	int   status    = 0;
 	float dt        = 1.0f / 60.0f;
-	u64   counter   = kGetPerformanceCounter();
-	u64   frequency = kGetPerformanceFrequency();
+	u64   counter   = kWin32_GetPerformanceCounter();
+	u64   frequency = kWin32_GetPerformanceFrequency();
 
 	while (1)
 	{
@@ -1103,8 +1114,6 @@ static int kWin32_EventLoop(const kRenderBackend &render)
 			u32 width  = (u32)(rc.right - rc.left);
 			u32 height = (u32)(rc.bottom - rc.top);
 
-			render.ResizeSwapChain(width, height);
-
 			kAddWindowResizeEvent(width, height, win32.window.fullscreen);
 
 			win32.window.resized = false;
@@ -1115,7 +1124,7 @@ static int kWin32_EventLoop(const kRenderBackend &render)
 
 		kUpdateFrame(dt);
 
-		u64 new_counter = kGetPerformanceCounter();
+		u64 new_counter = kWin32_GetPerformanceCounter();
 		u64 counts      = new_counter - counter;
 		counter         = new_counter;
 		dt              = (float)(((1000000.0 * (double)counts) / (double)frequency) / 1000000.0);
