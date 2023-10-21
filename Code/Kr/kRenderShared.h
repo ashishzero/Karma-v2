@@ -56,38 +56,45 @@ typedef struct kRenderClear2D
 	u8    stencil;
 } kRenderClear2D;
 
+enum kRenderDirtyFlags2D
+{
+	kRenderDirty_TextureColor   = 0x1,
+	kRenderDirty_TextureMaskSDF = 0x2,
+	kRenderDirty_Transform      = 0x4,
+	kRenderDirty_Rect           = 0x8,
+	kRenderDirty_Blend          = 0x10,
+	kRenderDirty_TextureFilter  = 0x20,
+	kRenderDirty_Everything     = kRenderDirty_TextureColor | kRenderDirty_TextureMaskSDF | kRenderDirty_Transform |
+	                          kRenderDirty_Rect | kRenderDirty_Blend | kRenderDirty_TextureFilter
+};
+
 typedef struct kRenderCommand2D
 {
-	u32            material;
+	u32            flags;
+	u32            textures[kTextureType_Count];
 	u32            transform;
 	kBlendMode     blend;
 	kTextureFilter filter;
 	u16            rect;
-	i32            vertex;
+	u32            vertex;
 	u32            index;
-	u32            count;
 } kRenderCommand2D;
 
 typedef struct kRenderPass2D
 {
-	kTexture *     rt;
-	kTexture *     ds;
+	kTexture      *rt;
+	kTexture      *ds;
 	kViewport      viewport;
 	u32            flags;
 	kRenderClear2D clear;
 	kRange<u32>    commands;
 } kRenderPass2D;
 
-typedef struct kMaterial2D
-{
-	kTexture *textures[kTextureType_Count];
-} kMaterial2D;
-
 typedef struct kRenderFrame2D
 {
 	kSpan<kRenderPass2D>    passes;
 	kSpan<kRenderCommand2D> commands;
-	kSpan<kMaterial2D>      materials;
+	kSpan<kTexture *>       textures[kTextureType_Count];
 	kSpan<kMat4>            transforms;
 	kSpan<kRect>            rects;
 	kSpan<kVertex2D>        vertices;

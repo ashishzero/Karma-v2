@@ -112,7 +112,6 @@ void                 Update(float dt)
 
 	kViewport vp = {.x = 0, .y = 0, .w = (float)size.x, .h = (float)size.y, .n = 0, .f = 1};
 
-	kBeginRenderPass(vp, rt, 0, kRenderPass_ClearColor, clear);
 
 	while (DissappearTFactors.count && DissappearTFactors.Last() < 0.001f)
 	{
@@ -128,21 +127,9 @@ void                 Update(float dt)
 
 	time += dt;
 
+	kBeginRenderPass(vp, rt, 0, kRenderPass_ClearColor, clear);
+
 	kBeginCamera(ar, 100);
-	// kVec2 pos1 = kVec2(ar * 50, 50) - kVec2(10);
-	// kVec2 pos2 = -kVec2(ar * 50, 50);
-	// kDrawRect(pos1, kVec2(10), kVec4(0, 1, 1, 1));
-	// kDrawRect(pos2, kVec2(10), kVec4(1, 1, 0, 1));
-	// kDrawRect(kVec2(0), kVec2(10), kVec4(50, 50, 0, 1));
-
-	//kPushTransform(kVec2(-0.5f, 0.0f), 0.0f);
-	//kPushTransform(kVec2(0), 0.0f);
-
-	//kPushTransform(kVec2(-0.8f, -0.8f), 0.0f);
-
-	//kPushTransform(kTranslation(-8.0f, -0.8f, 0.0f));
-
-	//kDrawRectCentered(kVec2(0), kVec2(10), kVec4(1, 1, 0, 1));
 
 	float chfactor = kSin(time);
 
@@ -157,8 +144,6 @@ void                 Update(float dt)
 		float rf = Rotations[i];
 		kDrawTextQuadCenteredRotated(Chars[i], kLerp(kVec2(0), Rects[i], t), rf * chfactor, Colors[i], tdim);
 		kPopTransform();
-
-		//kDrawRect(kLerp(kVec2(0), Rects[i], t), kVec2(dim), Colors[i]);
 		TFactors[i] = kLerp(TFactors[i], 1.0f, 0.09f);
 	}
 
@@ -174,25 +159,16 @@ void                 Update(float dt)
 		DissappearTFactors[i] = kLerp(DissappearTFactors[i], 0.0f, 0.09f);
 	}
 
-	//kPopTransform();
-
-	// kString text = "Karma";
-	// kVec2   ts   = kCalculateText(text);
-
-	// kDrawRect(kVec2(0), ts, kVec4(1));
-	// kDrawRect(kVec2(0, -32), kVec2(32, 33), kVec4(1, 0, 1, 1));
-	// kDrawText(text, kVec2(0), kVec4(1, 1, 0, 1), 1.0f);
-	// kDrawLine(kVec2(-30), kVec2(50, 70), kVec4(1));
 	kEndCamera();
 
 	kBeginCameraRect(0, (float)size.x, 0, (float)size.y);
 
 	kVec2 dd = kCalculateText(pf, 0.75f * yfactor);
-
 	kDrawRect(kVec2(0), dd, kVec4(0, 0, 0, 0.75f));
 	kDrawText(pf, kVec2(0), kVec4(1, 0, 0, 1), 0.75f * yfactor);
-	//kDrawText(aa, kVec2(50, 100), kVec4(1, 0, 0, 1), yfactor);
-	//kDrawText(tm, kVec2(50, 150), kVec4(1, 0, 0, 1), yfactor);
+
+	//kDrawRect(kVec2(0), kVec2(10), kVec4(1, 1, 0, 1));
+
 	kEndCamera();
 
 	kEndRenderPass();

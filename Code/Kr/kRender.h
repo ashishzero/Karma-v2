@@ -43,7 +43,7 @@ typedef struct kRenderMemoryUsage
 {
 	imem                    vertices;
 	imem                    indices;
-	imem                    materials;
+	imem                    textures[kTextureType_Count];
 	imem                    transforms;
 	imem                    rects;
 	imem                    passes;
@@ -73,7 +73,7 @@ typedef struct kRenderSpec
 	u32   passes;
 	u32   rects;
 	u32   transforms;
-	u32   materials;
+	u32   textures;
 	u32   scratch;
 } kRenderSpec;
 
@@ -85,14 +85,14 @@ static constexpr kRenderSpec kDefaultRenderSpec = {.thickness  = 1,
                                                    .passes     = 64,
                                                    .rects      = 256,
                                                    .transforms = 256,
-                                                   .materials  = 256,
+                                                   .textures  = 256,
                                                    .scratch    = 16384};
 
 //
 //
 //
 
-void                           kCreateRenderContext(const kRenderSpec &spec, const kMaterial2D &material, kFont *font);
+void                           kCreateRenderContext(const kRenderSpec &spec, kTexture *textures[kTextureType_Count], kFont *font);
 void                           kDestroyRenderContext(void);
 const kRenderMemoryStatistics *kGetRenderMemoryStatistics(void);
 
@@ -112,8 +112,6 @@ void kBeginCamera(float aspect_ratio, float height);
 void kEndCamera(void);
 
 void kLineThickness(float thickness);
-
-void kFlushRenderCommand(void);
 
 void kSetBlendMode(kBlendMode mode);
 void kBeginBlendMode(kBlendMode mode);

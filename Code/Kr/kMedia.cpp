@@ -1625,7 +1625,7 @@ int kEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user)
 
 	if (media.arena != &kFallbackArena)
 	{
-		kLogInfoEx("Windows", "Allocated frame arena of size: %ull bytes\n", (long long unsigned)media.arena->cap);
+		kLogInfoEx("Windows", "Allocated frame arena of size: %zu bytes\n", (u64)media.arena->cap);
 	}
 	else
 	{
@@ -1634,11 +1634,11 @@ int kEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user)
 
 	kCreateBuiltinResources();
 
-	kMaterial2D material;
+	kTexture *textures[kTextureType_Count];
 	for (int i = 0; i < kTextureType_Count; ++i)
-		material.textures[i] = media.builtin.texture;
+		textures[i] = media.builtin.texture;
 
-	kCreateRenderContext(kDefaultRenderSpec, material, &media.builtin.font);
+	kCreateRenderContext(kDefaultRenderSpec, textures, &media.builtin.font);
 
 	kLogInfoEx("Windows", "Calling user load.\n");
 	media.user.load();
