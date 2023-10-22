@@ -41,6 +41,7 @@ typedef enum kD3D11_RenderTargetKind
 	kD3D11_RenderTarget_Depth,
 	kD3D11_RenderTarget_MASS,
 	kD3D11_RenderTarget_ResolveMASS,
+	kD3D11_RenderTarget_Tonemap,
 	kD3D11_RenderTarget_Count,
 } kD3D11_RenderTargetKind;
 
@@ -57,6 +58,12 @@ typedef enum kD3D11_PixelShader
 	kD3D11_PixelShader_Blit,
 	kD3D11_PixelShader_Count,
 } kD3D11_PixelShader;
+
+typedef enum kD3D11_ComputeShader
+{
+	kD3D11_ComputeShader_Tonemap,
+	kD3D11_ComputeShader_Count,
+} kD3D11_ComputeShader;
 
 typedef struct kD3D11_SwapChain
 {
@@ -84,17 +91,19 @@ typedef struct kD3D11_Resource
 	ID3D11DepthStencilState *depths[2];
 	ID3D11VertexShader      *vs[kD3D11_VertexShader_Count];
 	ID3D11PixelShader       *ps[kD3D11_PixelShader_Count];
+	ID3D11ComputeShader     *cs[kD3D11_ComputeShader_Count];
 	ID3D11SamplerState      *samplers[kTextureFilter_Count];
 	ID3D11BlendState        *blends[kBlendMode_Count];
 } kD3D11_Resource;
 
-typedef void (*kD3D11_RenderPassProc)(const struct kD3D11_RenderPass &, const kRenderFrame &, void *);
+typedef void (*kD3D11_RenderPassProc)(const struct kD3D11_RenderPass &, const kRenderFrame &);
 
 enum kRenderPassFlags
 {
 	kRenderPass_ClearColor = 0x1,
 	kRenderPass_ClearDepth = 0x2,
-	kRenderPass_Disabled   = 0x10
+	kRenderPass_Compute    = 0x10,
+	kRenderPass_Disabled   = 0x20,
 };
 
 typedef struct kD3D11_RenderPass
@@ -106,13 +115,14 @@ typedef struct kD3D11_RenderPass
 	float                 depth;
 	DXGI_FORMAT           format;
 	kD3D11_Texture       *resolve;
-	void                 *param;
+	kD3D11_Texture       *params[2];
 	kD3D11_RenderPassProc Execute;
 } kD3D11_RenderPass;
 
 typedef enum kRenderPass
 {
 	kRenderPass_Render2D,
+	kRenderPass_Tonemap,
 	kRenderPass_Blit,
 	kRenderPass_Count,
 } kRenderPass;
@@ -150,7 +160,7 @@ static void kD3D11_Flush(void)
 	d3d11.device_context->ClearState();
 }
 
-static void kD3D11_RenderPassFallback(const kD3D11_RenderPass &, const kRenderFrame &, void *) {}
+static void kD3D11_RenderPassFallback(const kD3D11_RenderPass &, const kRenderFrame &) {}
 
 //
 // Mappings
@@ -184,6 +194,9 @@ static_assert(kArrayCount(kD3D11_VertexShaders) == kD3D11_VertexShader_Count, ""
 
 static kString kD3D11_PixelShaders[] = {kString(kQuadPS), kString(kToneMapSdrPS)};
 static_assert(kArrayCount(kD3D11_PixelShaders) == kD3D11_PixelShader_Count, "");
+
+static kString kD3D11_ComputeShaders[] = {kString(kToneMapAcesCS)};
+static_assert(kArrayCount(kD3D11_ComputeShaders) == kD3D11_ComputeShader_Count, "");
 
 //
 // Render State Objects
@@ -360,47 +373,23 @@ static bool kD3D11_CreatePixelShaders(void)
 	return true;
 }
 
-// static ID3D11ComputeShader *kD3D11_GetPostProcessToneMappingComputeShader(void)
-//{
-//	if (d3d11.resource.deferred.postprocess.tonemapping_cs)
-//	{
-//		return d3d11.resource.deferred.postprocess.tonemapping_cs;
-//	}
-//
-//	kString ps = kString(kToneMapAcesCS);
-//
-//	kLogInfoEx("D3D11", "Compiling tone mapping compute shader.\n");
-//
-//	HRESULT hr =
-//		d3d11.device->CreateComputeShader(ps.data, ps.count, 0, &d3d11.resource.deferred.postprocess.tonemapping_cs);
-//	if (FAILED(hr))
-//	{
-//		kLogHresultError(hr, "DirectX11", "Failed to create tone mapping compute shader");
-//	}
-//
-//	return d3d11.resource.deferred.postprocess.tonemapping_cs;
-// }
-//
-// static ID3D11PixelShader *kD3D11_GetPostProcessToneMappingShader(kToneMappingMethod method)
-//{
-//	if (d3d11.resource.deferred.postprocess.tonemapping[method])
-//	{
-//		return d3d11.resource.deferred.postprocess.tonemapping[method];
-//	}
-//
-//	kString ps = kD3D11_ToneMappingPS[method];
-//
-//	kLogInfoEx("D3D11", "Compiling %s pixel shader.\n", kD3D11_ToneMappingPSNames[method]);
-//
-//	HRESULT hr =
-//		d3d11.device->CreatePixelShader(ps.data, ps.count, 0, &d3d11.resource.deferred.postprocess.tonemapping[method]);
-//	if (FAILED(hr))
-//	{
-//		kLogHresultError(hr, "DirectX11", "Failed to create post processing pixel shader");
-//	}
-//
-//	return d3d11.resource.deferred.postprocess.tonemapping[method];
-// }
+static bool kD3D11_CreateComputeShaders(void)
+{
+	kLogInfoEx("D3D11", "Compiling compute shaders.\n");
+
+	for (int i = 0; i < kD3D11_ComputeShader_Count; ++i)
+	{
+		kString cs = kD3D11_ComputeShaders[i];
+		HRESULT hr = d3d11.device->CreateComputeShader(cs.data, cs.count, 0, &d3d11.resource.cs[i]);
+		if (FAILED(hr))
+		{
+			kLogHresultError(hr, "DirectX11", "Failed to create compute shader (%d)", i);
+			return false;
+		}
+	}
+
+	return true;
+}
 
 //
 // Textures
@@ -649,7 +638,7 @@ static ID3D11Buffer *kD3D11_UploadIndices2D(kSpan<kIndex2D> indices)
 	return d3d11.resource.render2d.index;
 }
 
-static void kD3D11_RenderPass2D(const kD3D11_RenderPass &pass, const kRenderFrame &render, void *data)
+static void kD3D11_RenderPass2D(const kD3D11_RenderPass &pass, const kRenderFrame &render)
 {
 	const kRenderFrame2D &frame = render.render2d;
 
@@ -757,7 +746,7 @@ static void kD3D11_RenderPass2D(const kD3D11_RenderPass &pass, const kRenderFram
 	}
 }
 
-static void kD3D11_RenderPassBlit(const kD3D11_RenderPass &pass, const kRenderFrame &frame, void *data)
+static void kD3D11_RenderPassBlit(const kD3D11_RenderPass &pass, const kRenderFrame &frame)
 {
 	ID3D11DeviceContext1 *ctx = d3d11.device_context;
 
@@ -769,7 +758,7 @@ static void kD3D11_RenderPassBlit(const kD3D11_RenderPass &pass, const kRenderFr
 	viewport.MinDepth                     = 0;
 	viewport.MaxDepth                     = 1;
 
-	kD3D11_Texture           *src         = (kD3D11_Texture *)data;
+	kD3D11_Texture           *src         = pass.params[0];
 	ID3D11ShaderResourceView *resources[] = {src->srv};
 
 	ctx->RSSetViewports(1, &viewport);
@@ -780,6 +769,24 @@ static void kD3D11_RenderPassBlit(const kD3D11_RenderPass &pass, const kRenderFr
 	ctx->OMSetBlendState(d3d11.resource.blends[kBlendMode_Opaque], 0, 0xffffffff);
 	ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	ctx->Draw(6, 0);
+}
+
+static void kD3D11_RenderPassTonemap(const kD3D11_RenderPass &pass, const kRenderFrame &render)
+{
+	kD3D11_Texture            *src     = pass.params[0];
+	kD3D11_Texture            *tonemap = pass.params[1];
+
+	ID3D11ShaderResourceView  *srvs[]  = {src->srv};
+	ID3D11UnorderedAccessView *uavs[]  = {tonemap->uav};
+
+	d3d11.device_context->CSSetShader(d3d11.resource.cs[kD3D11_ComputeShader_Tonemap], 0, 0);
+	d3d11.device_context->CSSetShaderResources(0, kArrayCount(srvs), srvs);
+	d3d11.device_context->CSSetUnorderedAccessViews(0, kArrayCount(uavs), uavs, 0);
+
+	UINT x_thrd_group = (UINT)ceilf(tonemap->size.x / 32.0f);
+	UINT y_thrd_group = (UINT)ceilf(tonemap->size.y / 16.0f);
+	d3d11.device_context->Dispatch(x_thrd_group, y_thrd_group, 1);
+	d3d11.device_context->ClearState();
 }
 
 //
@@ -881,7 +888,31 @@ static void kD3D11_CreateSwapChainBuffers(void)
 		desc.SampleDesc.Count       = 1;
 		desc.SampleDesc.Quality     = 0;
 		desc.Usage                  = D3D11_USAGE_DEFAULT;
-		desc.BindFlags              = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+		desc.BindFlags              = D3D11_BIND_SHADER_RESOURCE;
+
+		hr                          = d3d11.device->CreateTexture2D(&desc, 0, &target.texture2d);
+		if (FAILED(hr))
+		{
+			kLogHresultError(hr, "DirectX11", "Failed to create MSAA texture 2d");
+			return;
+		}
+
+		kD3D11_PrepareTexture(&target);
+	}
+
+	{
+		kD3D11_Texture      &target = d3d11.swapchain.targets[kD3D11_RenderTarget_Tonemap];
+
+		D3D11_TEXTURE2D_DESC desc   = {};
+		desc.Width                  = rt.size.x;
+		desc.Height                 = rt.size.y;
+		desc.MipLevels              = 1;
+		desc.ArraySize              = 1;
+		desc.Format                 = DXGI_FORMAT_R11G11B10_FLOAT;
+		desc.SampleDesc.Count       = 1;
+		desc.SampleDesc.Quality     = 0;
+		desc.Usage                  = D3D11_USAGE_DEFAULT;
+		desc.BindFlags              = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
 
 		hr                          = d3d11.device->CreateTexture2D(&desc, 0, &target.texture2d);
 		if (FAILED(hr))
@@ -906,12 +937,20 @@ static void kD3D11_CreateSwapChainBuffers(void)
 	}
 
 	{
+		kD3D11_RenderPass &pass = d3d11.passes[kRenderPass_Tonemap];
+		pass.flags              = kRenderPass_Compute;
+		pass.params[0]          = &d3d11.swapchain.targets[kD3D11_RenderTarget_ResolveMASS];
+		pass.params[1]          = &d3d11.swapchain.targets[kD3D11_RenderTarget_Tonemap];
+		pass.Execute            = kD3D11_RenderPassTonemap;
+	}
+
+	{
 		kD3D11_RenderPass &pass = d3d11.passes[kRenderPass_Blit];
 		pass.rt                 = &d3d11.swapchain.targets[kD3D11_RenderTarget_Final];
 		pass.flags              = 0;
 		pass.color              = kVec4(0, 0, 0, 1);
 		pass.depth              = 1;
-		pass.param              = (void *)&d3d11.swapchain.targets[kD3D11_RenderTarget_ResolveMASS];
+		pass.params[0]          = &d3d11.swapchain.targets[kD3D11_RenderTarget_Tonemap];
 		pass.Execute            = kD3D11_RenderPassBlit;
 	}
 }
@@ -982,104 +1021,40 @@ static void kD3D11_CreateSwapChain(void *_window)
 	kD3D11_CreateSwapChainBuffers();
 }
 
-static void kD3D11_Present(void)
-{
-	// kD3D11_SwapChain *r = (kD3D11_SwapChain *)swap_chain;
-	// if (r->state != kResourceState_Ready) return;
-
-	// kD3D11_RenderTarget rt = r->rt;
-
-	// if (rt == kD3D11_RenderTarget_MSAA)
-	//{
-	//	kD3D11_Texture *src = &r->targets[kD3D11_RenderTarget_MSAA];
-	//	kD3D11_Texture *dst = &r->targets[kD3D11_RenderTarget_Resolved];
-	//	d3d11.device_context->ResolveSubresource(dst->texture2d, 0, src->texture2d, 0, DXGI_FORMAT_R16G16B16A16_FLOAT);
-	//	rt = kD3D11_RenderTarget_Resolved;
-	// }
-
-	// if (rt == kD3D11_RenderTarget_Resolved && r->rt_config.tonemapping != kToneMappingMethod_SDR)
-	//{
-	//	kD3D11_Texture            *resolved    = &r->targets[kD3D11_RenderTarget_Resolved];
-	//	kD3D11_Texture            *tonemapping = &r->targets[kD3D11_RenderTarget_ToneMapping];
-
-	//	ID3D11ComputeShader       *cs          = kD3D11_GetPostProcessToneMappingComputeShader();
-
-	//	ID3D11ShaderResourceView  *srvs[]      = {resolved->srv};
-	//	ID3D11UnorderedAccessView *uavs[]      = {tonemapping->uav};
-
-	//	d3d11.device_context->CSSetShader(cs, 0, 0);
-	//	d3d11.device_context->CSSetShaderResources(0, 1, srvs);
-	//	d3d11.device_context->CSSetUnorderedAccessViews(0, 1, uavs, 0);
-
-	//	UINT x_thrd_group = (UINT)ceilf(tonemapping->size.x / 32.0f);
-	//	UINT y_thrd_group = (UINT)ceilf(tonemapping->size.y / 16.0f);
-	//	d3d11.device_context->Dispatch(x_thrd_group, y_thrd_group, 1);
-	//	d3d11.device_context->ClearState();
-
-	//	rt = kD3D11_RenderTarget_ToneMapping;
-	//}
-
-	// if (rt != kD3D11_RenderTarget_Final)
-	//{
-	//	kD3D11_Texture *src    = &r->targets[rt];
-	//	kD3D11_Texture *target = &r->targets[kD3D11_RenderTarget_Final];
-
-	//	D3D11_VIEWPORT  viewport;
-	//	viewport.TopLeftX = 0;
-	//	viewport.TopLeftY = 0;
-	//	viewport.Width    = (float)target->size.x;
-	//	viewport.Height   = (float)target->size.y;
-	//	viewport.MinDepth = 0;
-	//	viewport.MaxDepth = 1;
-
-	//	float clear[]     = {0.0f, 0.0f, 0.0f, 0.0f};
-	//	d3d11.device_context->ClearRenderTargetView(target->rtv, clear);
-
-	//	ID3D11VertexShader       *vs          = kD3D11_GetPostProcessVertexShader();
-	//	ID3D11PixelShader        *ps          = kD3D11_GetPostProcessToneMappingShader(kToneMappingMethod_SDR);
-	//	ID3D11SamplerState       *sampler     = kD3D11_GetSampleState(kTextureFilter_Linear);
-	//	ID3D11BlendState         *blend       = kD3D11_GetBlendState(kBlendMode_Opaque);
-	//	ID3D11ShaderResourceView *resources[] = {src->srv};
-
-	//	d3d11.device_context->OMSetRenderTargets(1, &target->rtv, 0);
-	//	d3d11.device_context->RSSetViewports(1, &viewport);
-	//	d3d11.device_context->VSSetShader(vs, 0, 0);
-	//	d3d11.device_context->PSSetShader(ps, 0, 0);
-	//	d3d11.device_context->PSSetShaderResources(0, 1, resources);
-	//	d3d11.device_context->PSSetSamplers(0, 1, &sampler);
-	//	d3d11.device_context->OMSetBlendState(blend, 0, 0xffffffff);
-	//	d3d11.device_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	//	d3d11.device_context->Draw(6, 0);
-
-	//	d3d11.device_context->ClearState();
-	//}
-
-	d3d11.swapchain.native->Present(1, 0);
-}
+static void kD3D11_Present(void) { d3d11.swapchain.native->Present(1, 0); }
 
 static void kD3D11_ExecuteRenderPass(const kD3D11_RenderPass &pass, const kRenderFrame &frame)
 {
-	if (pass.flags & kRenderPass_Disabled)
-		return;
+	if (pass.flags & kRenderPass_Disabled) return;
 
-	ID3D11DeviceContext1 *ctx = d3d11.device_context;
+	ID3D11DeviceContext1 *ctx     = d3d11.device_context;
 
-	if (pass.flags & kRenderPass_ClearColor)
+	b32                   compute = (pass.flags & kRenderPass_Compute);
+
+	if (!compute)
 	{
-		ctx->ClearRenderTargetView(pass.rt->rtv, pass.color.m);
+		if (pass.flags & kRenderPass_ClearColor)
+		{
+			ctx->ClearRenderTargetView(pass.rt->rtv, pass.color.m);
+		}
+
+		if (pass.flags & kRenderPass_ClearDepth)
+		{
+			ctx->ClearDepthStencilView(pass.ds->dsv, D3D11_CLEAR_DEPTH, pass.depth, 0);
+		}
+
+		ctx->OMSetRenderTargets(1, &pass.rt->rtv, pass.ds ? pass.ds->dsv : nullptr);
+
+		pass.Execute(pass, frame);
+
+		if (pass.resolve)
+		{
+			ctx->ResolveSubresource(pass.resolve->texture2d, 0, pass.rt->texture2d, 0, pass.format);
+		}
 	}
-
-	if (pass.flags & kRenderPass_ClearDepth)
+	else
 	{
-		ctx->ClearDepthStencilView(pass.ds->dsv, D3D11_CLEAR_DEPTH, pass.depth, 0);
-	}
-
-	ctx->OMSetRenderTargets(1, &pass.rt->rtv, pass.ds ? pass.ds->dsv : nullptr);
-	pass.Execute(pass, frame, pass.param);
-
-	if (pass.resolve)
-	{
-		ctx->ResolveSubresource(pass.resolve->texture2d, 0, pass.rt->texture2d, 0, pass.format);
+		pass.Execute(pass, frame);
 	}
 
 	ctx->ClearState();
@@ -1172,6 +1147,11 @@ static void kD3D11_DestroyRenderResources(void)
 	for (int i = 0; i < kD3D11_PixelShader_Count; ++i)
 	{
 		kRelease(&d3d11.resource.ps[i]);
+	}
+
+	for (int i = 0; i < kD3D11_ComputeShader_Count; ++i)
+	{
+		kRelease(&d3d11.resource.cs[i]);
 	}
 
 	kRelease(&d3d11.resource.rasterizer);
@@ -1337,6 +1317,7 @@ static bool kD3D11_CreateGraphicsDevice(void)
 	if (!kD3D11_CreateSamplerState()) return false;
 	if (!kD3D11_CreateVertexShaders()) return false;
 	if (!kD3D11_CreatePixelShaders()) return false;
+	if (!kD3D11_CreateComputeShaders()) return false;
 
 	for (int pass = 0; pass < kRenderPass_Count; ++pass)
 	{
