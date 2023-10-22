@@ -243,16 +243,19 @@ bool kExecutePrebuild(void)
 	kArray<kShaderSource> sources;
 
 	const char *          render2d[] = {"kQuadVS", "kQuadPS"};
-	sources.Add({"Code/Kr/Shaders/kRender2D.hlsl", render2d});
+	sources.Add({"Code/Kr/Shaders/kQuad.hlsl", render2d});
 
-	const char *ppvs[] = {"kPostProcessVS"};
-	sources.Add({"Code/Kr/Shaders/kPostProcessVS.hlsl", ppvs});
+	const char *ppvs[] = {"kFullscreenQuadVS"};
+	sources.Add({"Code/Kr/Shaders/kFullscreenQuadVS.hlsl", ppvs});
 
-	const char *tm[] = {"kToneMapSdrPS", "kToneMapAcesApproxPS"};
-	sources.Add({"Code/Kr/Shaders/kToneMapping.hlsl", tm});
+	const char *blitps[] = {"kBlitPS"};
+	sources.Add({"Code/Kr/Shaders/kBlitPS.hlsl", blitps});
 
-	const char *tmcs[] = { "kToneMapAcesCS" };
-	sources.Add({"Code/Kr/Shaders/kToneMappingCS.hlsl", tmcs});
+	const char *thresholdcs[] = { "kToneMapAcesCS" };
+	sources.Add({"Code/Kr/Shaders/kToneMapCS.hlsl", thresholdcs});
+
+	const char *tmcs[] = { "kThresholdCS" };
+	sources.Add({"Code/Kr/Shaders/kThresholdCS.hlsl", tmcs});
 
 	for (kShaderSource &src : sources)
 	{

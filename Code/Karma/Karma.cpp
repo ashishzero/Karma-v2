@@ -158,7 +158,7 @@ void                 Update(float dt)
 
 	kLineThickness(2.0f);
 
-	kDrawLine(kVec2(0), kVec2(20), kVec4(1, 0, 0, 1));
+	kDrawLine(kVec2(0), kVec2(20), kVec4(50, 50, 0, 1));
 
 	kEndScene();
 

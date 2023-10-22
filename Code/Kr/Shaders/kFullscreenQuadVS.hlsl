@@ -29,7 +29,7 @@ static const float2 TexCoords[] =
 	{ 1, 1 }
 };
 
-kVertexOutput kPostProcessVS(kVertexInput input)
+kVertexOutput kFullscreenQuadVS(kVertexInput input)
 {
 	kVertexOutput output;
 	output.pos = float4(Vertices[input.Id], 0, 1);
