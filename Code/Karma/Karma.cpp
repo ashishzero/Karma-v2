@@ -156,6 +156,10 @@ void                 Update(float dt)
 		DissappearTFactors[i] = kLerp(DissappearTFactors[i], 0.0f, 0.09f);
 	}
 
+	kLineThickness(2.0f);
+
+	kDrawLine(kVec2(0), kVec2(20), kVec4(1, 0, 0, 1));
+
 	kEndScene();
 
 	kBeginScene(0, (float)size.x, 0, (float)size.y, -1.0f, 1.0f, rect);

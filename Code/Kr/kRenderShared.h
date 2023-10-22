@@ -83,3 +83,8 @@ typedef struct kRenderFrame2D
 	kSpan<kVertex2D>        vertices;
 	kSpan<kIndex2D>         indices;
 } kRenderFrame2D;
+
+typedef struct kRenderFrame
+{
+	kRenderFrame2D render2d;
+} kRenderFrame;

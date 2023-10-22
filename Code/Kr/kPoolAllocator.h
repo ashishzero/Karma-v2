@@ -21,7 +21,7 @@ struct kMemoryBlock
 };
 
 template <typename T>
-using kMemoryPoolResourceFreeProc = void (*)(kResouceType<T> *, void *);
+using kMemoryPoolResourceFreeProc = void (*)(T *, void *);
 
 template <typename T>
 struct kMemoryPool
@@ -44,7 +44,7 @@ struct kMemoryPool
 			while (!kDListIsEmpty(&first))
 			{
 				kResouceType *r = kDListPopFront(&first);
-				dtor(r, data);
+				dtor(&r->resource, data);
 
 				memset(r, 0, sizeof(*r));
 				r->next = free;
@@ -69,13 +69,13 @@ struct kMemoryPool
 		{
 			while (!kDListIsEmpty(&first))
 			{
-				kResouceType *r = kDListPopFront(&first);
-				dtor(r, data);
+				kResouceType<T> *r = kDListPopFront(&first);
+				dtor(&r->resource, data);
 			}
 		}
 
-		kMemoryBlock *prev  = nullptr;
-		kMemoryBlock *block = blocks;
+		kMemoryBlock<T> *prev  = nullptr;
+		kMemoryBlock<T> *block = blocks;
 
 		while (block)
 		{

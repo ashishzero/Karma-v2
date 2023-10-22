@@ -324,8 +324,8 @@ void kUpdateFrame(float dt)
 		kBreakLoop(0);
 	}
 
-	kRenderFrame2D frame;
-	kGetFrameData(&frame);
+	kRenderFrame frame;
+	kGetFrameData(&frame.render2d);
 
 	media.render.ExecuteFrame(frame);
 	media.render.Present();

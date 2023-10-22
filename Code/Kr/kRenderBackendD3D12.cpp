@@ -768,8 +768,10 @@ static ID3D12Resource *kD3D12_IndexBuffer2D(uint sz)
 //
 //
 
-static void kD3D12_ExecuteFrame(const kRenderFrame2D &frame)
+static void kD3D12_ExecuteFrame(const kRenderFrame &render)
 {
+	const kRenderFrame2D &frame = render.render2d;
+
 	if (frame.vertices.count == 0 || frame.indices.count == 0) return;
 
 	uint            vb_size = (uint)frame.vertices.Size();

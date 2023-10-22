@@ -1,6 +1,7 @@
 #include "kRenderBackend.h"
 #include "kLinkedList.h"
 #include "kMath.h"
+#include "kPoolAllocator.h"
 #include <math.h>
 
 #if K_PLATFORM_WINDOWS == 1
@@ -26,82 +27,93 @@ constexpr uint K_TEXTURE_MAX_PER_BLOCK = 32;
 
 typedef struct kD3D11_Texture : kTexture
 {
-	kVec2i                     size;
+	kVec2u                     size;
 	ID3D11ShaderResourceView  *srv;
 	ID3D11UnorderedAccessView *uav;
+	ID3D11RenderTargetView    *rtv;
+	ID3D11DepthStencilView    *dsv;
 	ID3D11Texture2D           *texture2d;
-	kD3D11_Texture            *prev;
-	kD3D11_Texture            *next;
 } kD3D11_Texture;
+
+typedef enum kD3D11_RenderTargetKind
+{
+	kD3D11_RenderTarget_Final,
+	kD3D11_RenderTarget_Depth,
+	kD3D11_RenderTarget_MASS,
+	kD3D11_RenderTarget_ResolveMASS,
+	kD3D11_RenderTarget_Count,
+} kD3D11_RenderTargetKind;
+
+typedef enum kD3D11_VertexShader
+{
+	kD3D11_VertexShader_Render2D,
+	kD3D11_VertexShader_FullscreenQuad,
+	kD3D11_VertexShader_Count,
+} kD3D11_VertexShader;
+
+typedef enum kD3D11_PixelShader
+{
+	kD3D11_PixelShader_Render2D,
+	kD3D11_PixelShader_Blit,
+	kD3D11_PixelShader_Count,
+} kD3D11_PixelShader;
 
 typedef struct kD3D11_SwapChain
 {
-	IDXGISwapChain1        *native;
-	ID3D11RenderTargetView *rtv;
-	ID3D11DepthStencilView *dsv;
-	ID3D11Texture2D        *rtv_texture2d;
-	ID3D11Texture2D        *dsv_texture2d;
+	IDXGISwapChain1 *native;
+	kD3D11_Texture   targets[kD3D11_RenderTarget_Count];
 } kD3D11_SwapChain;
-
-typedef struct kD3D11_TextureBlock
-{
-	kD3D11_TextureBlock *next;
-	kD3D11_Texture       data[K_TEXTURE_MAX_PER_BLOCK];
-} kD3D11_TextureBlock;
-
-typedef struct kD3D11_TexturePool
-{
-	kD3D11_Texture       first;
-	kD3D11_Texture      *free;
-	kD3D11_TextureBlock *blocks;
-} kD3D11_TexturePool;
 
 typedef struct kD3D11_Render2D
 {
-	uint                   vertex_sz;
-	uint                   index_sz;
-	ID3D11Buffer          *vertex;
-	ID3D11Buffer          *index;
-	ID3D11Buffer          *constant;
-	ID3D11VertexShader    *vs;
-	ID3D11PixelShader     *ps;
-	ID3D11InputLayout     *input;
-	ID3D11RasterizerState *rasterizer;
+	uint               vertex_sz;
+	uint               index_sz;
+	ID3D11Buffer      *vertex;
+	ID3D11Buffer      *index;
+	ID3D11Buffer      *xform;
+	ID3D11InputLayout *input;
 } kD3D11_Render2D;
+
+typedef kMemoryPool<kD3D11_Texture> kD3D11_TexturePool;
 
 typedef struct kD3D11_Resource
 {
 	kD3D11_TexturePool       textures;
 	kD3D11_Render2D          render2d;
-	ID3D11DepthStencilState *depth;
+	ID3D11RasterizerState   *rasterizer;
+	ID3D11DepthStencilState *depths[2];
+	ID3D11VertexShader      *vs[kD3D11_VertexShader_Count];
+	ID3D11PixelShader       *ps[kD3D11_PixelShader_Count];
 	ID3D11SamplerState      *samplers[kTextureFilter_Count];
 	ID3D11BlendState        *blends[kBlendMode_Count];
 } kD3D11_Resource;
 
-typedef void (*kD3D11_RenderPassProc)(const kRenderFrame2D &);
+typedef void (*kD3D11_RenderPassProc)(const struct kD3D11_RenderPass &, const kRenderFrame &, void *);
 
 enum kRenderPassFlags
 {
 	kRenderPass_ClearColor = 0x1,
 	kRenderPass_ClearDepth = 0x2,
+	kRenderPass_Disabled   = 0x10
 };
 
 typedef struct kD3D11_RenderPass
 {
-	ID3D11RenderTargetView *rtv;
-	ID3D11DepthStencilView *dsv;
-	UINT                    flags;
-	kVec4                   color;
-	float                   depth;
-	DXGI_FORMAT             format;
-	ID3D11Resource         *target;
-	ID3D11Resource         *resolve;
-	kD3D11_RenderPassProc   Execute;
+	kD3D11_Texture       *rt;
+	kD3D11_Texture       *ds;
+	UINT                  flags;
+	kVec4                 color;
+	float                 depth;
+	DXGI_FORMAT           format;
+	kD3D11_Texture       *resolve;
+	void                 *param;
+	kD3D11_RenderPassProc Execute;
 } kD3D11_RenderPass;
 
 typedef enum kRenderPass
 {
 	kRenderPass_Render2D,
+	kRenderPass_Blit,
 	kRenderPass_Count,
 } kRenderPass;
 
@@ -124,7 +136,11 @@ static kD3D11_Backend d3d11;
 template <typename T>
 static void kRelease(T **o)
 {
-	if (*o) (*o)->Release();
+	if (*o)
+	{
+		IUnknown *unknown = (*o);
+		unknown->Release();
+	}
 	*o = nullptr;
 }
 
@@ -134,7 +150,7 @@ static void kD3D11_Flush(void)
 	d3d11.device_context->ClearState();
 }
 
-static void kD3D11_RenderPassFallback(const kRenderFrame2D &) {}
+static void kD3D11_RenderPassFallback(const kD3D11_RenderPass &, const kRenderFrame &, void *) {}
 
 //
 // Mappings
@@ -163,22 +179,62 @@ static_assert(kArrayCount(kD3D11_FormatMap) == kFormat_Count, "");
 static constexpr D3D11_FILTER kD3D11_FilterMap[] = {D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_FILTER_MIN_MAG_MIP_POINT};
 static_assert(kArrayCount(kD3D11_FilterMap) == kTextureFilter_Count, "");
 
+static kString kD3D11_VertexShaders[] = {kString(kQuadVS), kString(kPostProcessVS)};
+static_assert(kArrayCount(kD3D11_VertexShaders) == kD3D11_VertexShader_Count, "");
+
+static kString kD3D11_PixelShaders[] = {kString(kQuadPS), kString(kToneMapSdrPS)};
+static_assert(kArrayCount(kD3D11_PixelShaders) == kD3D11_PixelShader_Count, "");
+
 //
 // Render State Objects
 //
 
-static bool kD3D11_CreateDepthStencilState(void)
+static bool kD3D11_CreateRasterizerState(void)
 {
-	D3D11_DEPTH_STENCIL_DESC depth = {};
-	depth.DepthEnable              = TRUE;
-	depth.DepthWriteMask           = D3D11_DEPTH_WRITE_MASK_ALL;
-	depth.DepthFunc                = D3D11_COMPARISON_LESS_EQUAL;
+	D3D11_RASTERIZER_DESC ras_desc = {};
+	ras_desc.FillMode              = D3D11_FILL_SOLID;
+	ras_desc.CullMode              = D3D11_CULL_NONE;
+	ras_desc.ScissorEnable         = TRUE;
+	ras_desc.MultisampleEnable     = TRUE;
+	ras_desc.AntialiasedLineEnable = TRUE;
 
-	HRESULT hr                     = d3d11.device->CreateDepthStencilState(&depth, &d3d11.resource.depth);
+	HRESULT hr                     = d3d11.device->CreateRasterizerState(&ras_desc, &d3d11.resource.rasterizer);
 	if (FAILED(hr))
 	{
-		kLogHresultError(hr, "DirectX11", "Failed to create depth stencil state");
+		kLogHresultError(hr, "DirectX11", "Failed to create rasterizer");
 		return false;
+	}
+
+	return true;
+}
+
+static bool kD3D11_CreateDepthStencilState(void)
+{
+	{
+		D3D11_DEPTH_STENCIL_DESC depth = {};
+		depth.DepthEnable              = FALSE;
+		depth.DepthWriteMask           = D3D11_DEPTH_WRITE_MASK_ALL;
+
+		HRESULT hr                     = d3d11.device->CreateDepthStencilState(&depth, &d3d11.resource.depths[0]);
+		if (FAILED(hr))
+		{
+			kLogHresultError(hr, "DirectX11", "Failed to create depth stencil state");
+			return false;
+		}
+	}
+
+	{
+		D3D11_DEPTH_STENCIL_DESC depth = {};
+		depth.DepthEnable              = TRUE;
+		depth.DepthWriteMask           = D3D11_DEPTH_WRITE_MASK_ALL;
+		depth.DepthFunc                = D3D11_COMPARISON_LESS_EQUAL;
+
+		HRESULT hr                     = d3d11.device->CreateDepthStencilState(&depth, &d3d11.resource.depths[1]);
+		if (FAILED(hr))
+		{
+			kLogHresultError(hr, "DirectX11", "Failed to create depth stencil state");
+			return false;
+		}
 	}
 	return true;
 }
@@ -268,25 +324,41 @@ static bool kD3D11_CreateBlendState(void)
 	return true;
 }
 
-// static ID3D11VertexShader *kD3D11_GetPostProcessVertexShader(void)
-//{
-//	if (d3d11.resource.deferred.postprocess.vs)
-//	{
-//		return d3d11.resource.deferred.postprocess.vs;
-//	}
-//
-//	kString vs = kString(kPostProcessVS);
-//
-//	kLogInfoEx("D3D11", "Compiling post process vertex shader.\n");
-//
-//	HRESULT hr = d3d11.device->CreateVertexShader(vs.data, vs.count, 0, &d3d11.resource.deferred.postprocess.vs);
-//	if (FAILED(hr))
-//	{
-//		kLogHresultError(hr, "DirectX11", "Failed to create post processing vertex shader");
-//	}
-//
-//	return d3d11.resource.deferred.postprocess.vs;
-// }
+static bool kD3D11_CreateVertexShaders(void)
+{
+	kLogInfoEx("D3D11", "Compiling vertex shaders.\n");
+
+	for (int i = 0; i < kD3D11_VertexShader_Count; ++i)
+	{
+		kString vs = kD3D11_VertexShaders[i];
+		HRESULT hr = d3d11.device->CreateVertexShader(vs.data, vs.count, 0, &d3d11.resource.vs[i]);
+		if (FAILED(hr))
+		{
+			kLogHresultError(hr, "DirectX11", "Failed to create vertex shader (%d)", i);
+			return false;
+		}
+	}
+
+	return true;
+}
+
+static bool kD3D11_CreatePixelShaders(void)
+{
+	kLogInfoEx("D3D11", "Compiling pixel shaders.\n");
+
+	for (int i = 0; i < kD3D11_PixelShader_Count; ++i)
+	{
+		kString ps = kD3D11_PixelShaders[i];
+		HRESULT hr = d3d11.device->CreatePixelShader(ps.data, ps.count, 0, &d3d11.resource.ps[i]);
+		if (FAILED(hr))
+		{
+			kLogHresultError(hr, "DirectX11", "Failed to create pixel shader (%d)", i);
+			return false;
+		}
+	}
+
+	return true;
+}
 
 // static ID3D11ComputeShader *kD3D11_GetPostProcessToneMappingComputeShader(void)
 //{
@@ -308,7 +380,7 @@ static bool kD3D11_CreateBlendState(void)
 //
 //	return d3d11.resource.deferred.postprocess.tonemapping_cs;
 // }
-
+//
 // static ID3D11PixelShader *kD3D11_GetPostProcessToneMappingShader(kToneMappingMethod method)
 //{
 //	if (d3d11.resource.deferred.postprocess.tonemapping[method])
@@ -334,81 +406,60 @@ static bool kD3D11_CreateBlendState(void)
 // Textures
 //
 
-static kD3D11_Texture *kD3D11_AllocTexture(void)
+static void kD3D11_PrepareTexture(kD3D11_Texture *target)
 {
-	kD3D11_TexturePool *pool = &d3d11.resource.textures;
+	D3D11_TEXTURE2D_DESC desc;
+	target->texture2d->GetDesc(&desc);
 
-	if (!pool->free)
+	target->state = kResourceState_Unready;
+
+	HRESULT hr    = 0;
+
+	if (desc.BindFlags & D3D11_BIND_SHADER_RESOURCE)
 	{
-		kD3D11_TextureBlock *block = (kD3D11_TextureBlock *)kAlloc(sizeof(kD3D11_TextureBlock));
-
-		if (!block) return nullptr;
-
-		memset(block, 0, sizeof(*block));
-
-		for (int i = 0; i < K_TEXTURE_MAX_PER_BLOCK - 1; ++i)
-		{
-			block->data[i].next = &block->data[i + 1];
-		}
-
-		pool->free   = block->data;
-		block->next  = pool->blocks;
-		pool->blocks = block;
-	}
-
-	kD3D11_Texture *r = pool->free;
-	pool->free        = r->next;
-
-	kDListPushBack(&pool->first, r);
-
-	return r;
-}
-
-static void kD3D11_FreeTexture(kD3D11_Texture *r)
-{
-	kD3D11_TexturePool *pool = &d3d11.resource.textures;
-	kDListRemove(r);
-	memset(r, 0, sizeof(*r));
-	r->next    = pool->free;
-	pool->free = r;
-}
-
-static void kD3D11_PrepareTexture(kD3D11_Texture *texture, UINT bind_flags)
-{
-	texture->state = kResourceState_Unready;
-
-	HRESULT hr     = 0;
-
-	if (bind_flags & D3D11_BIND_SHADER_RESOURCE)
-	{
-		hr = d3d11.device->CreateShaderResourceView(texture->texture2d, nullptr, &texture->srv);
+		hr = d3d11.device->CreateShaderResourceView(target->texture2d, nullptr, &target->srv);
 		if (FAILED(hr))
 		{
 			kLogHresultError(hr, "DirectX11", "Failed to create shader resource view");
 		}
 	}
 
-	if (bind_flags & D3D11_BIND_UNORDERED_ACCESS)
+	if (desc.BindFlags & D3D11_BIND_UNORDERED_ACCESS)
 	{
-		hr = d3d11.device->CreateUnorderedAccessView(texture->texture2d, nullptr, &texture->uav);
+		hr = d3d11.device->CreateUnorderedAccessView(target->texture2d, nullptr, &target->uav);
 		if (FAILED(hr))
 		{
 			kLogHresultError(hr, "DirectX11", "Failed to create unordered access view");
 		}
 	}
 
-	D3D11_TEXTURE2D_DESC desc;
-	texture->texture2d->GetDesc(&desc);
+	if (desc.BindFlags & D3D11_BIND_RENDER_TARGET)
+	{
+		hr = d3d11.device->CreateRenderTargetView(target->texture2d, 0, &target->rtv);
+		if (FAILED(hr))
+		{
+			kLogHresultError(hr, "DirectX11", "Failed to create unordered access view");
+		}
+	}
 
-	texture->size.x = (int)desc.Width;
-	texture->size.y = (int)desc.Height;
+	if (desc.BindFlags & D3D11_BIND_DEPTH_STENCIL)
+	{
+		hr = d3d11.device->CreateDepthStencilView(target->texture2d, 0, &target->dsv);
+		if (FAILED(hr))
+		{
+			kLogHresultError(hr, "DirectX11", "Failed to create unordered access view");
+		}
+	}
 
-	texture->state  = kResourceState_Ready;
+	target->size.x = (int)desc.Width;
+	target->size.y = (int)desc.Height;
+
+	target->state  = kResourceState_Ready;
 }
 
 static kTexture *kD3D11_CreateTexture(const kTextureSpec &spec)
 {
-	kD3D11_Texture *r = kD3D11_AllocTexture();
+	kD3D11_Texture *r = d3d11.resource.textures.Alloc();
 
 	if (!r)
 	{
@@ -451,7 +502,7 @@ static kTexture *kD3D11_CreateTexture(const kTextureSpec &spec)
 		return r;
 	}
 
-	kD3D11_PrepareTexture(r, desc.BindFlags);
+	kD3D11_PrepareTexture(r);
 
 	return r;
 }
@@ -462,7 +513,9 @@ static void kD3D11_UnprepareTexture(kD3D11_Texture *r)
 	{
 		kRelease(&r->srv);
 		kRelease(&r->uav);
-		r->size  = kVec2i(0);
+		kRelease(&r->rtv);
+		kRelease(&r->dsv);
+		r->size  = kVec2u(0);
 		r->state = kResourceState_Unready;
 	}
 }
@@ -474,7 +527,7 @@ static void kD3D11_DestroyTexture(kTexture *texture)
 	{
 		kD3D11_UnprepareTexture(r);
 		kRelease(&r->texture2d);
-		kD3D11_FreeTexture(r);
+		d3d11.resource.textures.Free(r);
 	}
 }
 
@@ -512,7 +565,7 @@ static void kD3D11_ResizeTexture(kTexture *texture, u32 w, u32 h)
 			return;
 		}
 
-		kD3D11_PrepareTexture(r, desc.BindFlags);
+		kD3D11_PrepareTexture(r);
 	}
 }
 
@@ -596,14 +649,16 @@ static ID3D11Buffer *kD3D11_UploadIndices2D(kSpan<kIndex2D> indices)
 	return d3d11.resource.render2d.index;
 }
 
-static void kD3D11_RenderPass2D(const kRenderFrame2D &frame)
+static void kD3D11_RenderPass2D(const kD3D11_RenderPass &pass, const kRenderFrame &render, void *data)
 {
+	const kRenderFrame2D &frame = render.render2d;
+
 	if (frame.vertices.count == 0 || frame.indices.count == 0) return;
 
 	ID3D11DeviceContext1 *ctx    = d3d11.device_context;
 	ID3D11Buffer         *vtx    = kD3D11_UploadVertices2D(frame.vertices);
 	ID3D11Buffer         *idx    = kD3D11_UploadIndices2D(frame.indices);
-	ID3D11Buffer         *xform  = d3d11.resource.render2d.constant;
+	ID3D11Buffer         *xform  = d3d11.resource.render2d.xform;
 	HRESULT               hr     = S_OK;
 	UINT                  stride = sizeof(kVertex2D);
 	UINT                  offset = 0;
@@ -614,11 +669,11 @@ static void kD3D11_RenderPass2D(const kRenderFrame2D &frame)
 	ctx->IASetVertexBuffers(0, 1, &vtx, &stride, &offset);
 	ctx->IASetIndexBuffer(idx, format, 0);
 	ctx->VSSetConstantBuffers(0, 1, &xform);
-	ctx->VSSetShader(d3d11.resource.render2d.vs, nullptr, 0);
-	ctx->PSSetShader(d3d11.resource.render2d.ps, nullptr, 0);
+	ctx->VSSetShader(d3d11.resource.vs[kD3D11_VertexShader_Render2D], nullptr, 0);
+	ctx->PSSetShader(d3d11.resource.ps[kD3D11_PixelShader_Render2D], nullptr, 0);
 	ctx->IASetInputLayout(d3d11.resource.render2d.input);
-	ctx->RSSetState(d3d11.resource.render2d.rasterizer);
-	ctx->OMSetDepthStencilState(d3d11.resource.depth, 0);
+	ctx->RSSetState(d3d11.resource.rasterizer);
+	ctx->OMSetDepthStencilState(d3d11.resource.depths[1], 0);
 	ctx->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	i32 vtx_offset = 0;
@@ -702,29 +757,45 @@ static void kD3D11_RenderPass2D(const kRenderFrame2D &frame)
 	}
 }
 
+static void kD3D11_RenderPassBlit(const kD3D11_RenderPass &pass, const kRenderFrame &frame, void *data)
+{
+	ID3D11DeviceContext1 *ctx = d3d11.device_context;
+
+	D3D11_VIEWPORT        viewport;
+	viewport.TopLeftX                     = 0;
+	viewport.TopLeftY                     = 0;
+	viewport.Width                        = (float)pass.rt->size.x;
+	viewport.Height                       = (float)pass.rt->size.y;
+	viewport.MinDepth                     = 0;
+	viewport.MaxDepth                     = 1;
+
+	kD3D11_Texture           *src         = (kD3D11_Texture *)data;
+	ID3D11ShaderResourceView *resources[] = {src->srv};
+
+	ctx->RSSetViewports(1, &viewport);
+	ctx->VSSetShader(d3d11.resource.vs[kD3D11_VertexShader_FullscreenQuad], nullptr, 0);
+	ctx->PSSetShader(d3d11.resource.ps[kD3D11_PixelShader_Blit], nullptr, 0);
+	ctx->PSSetShaderResources(0, kArrayCount(resources), resources);
+	ctx->PSSetSamplers(0, 1, &d3d11.resource.samplers[kTextureFilter_Linear]);
+	ctx->OMSetBlendState(d3d11.resource.blends[kBlendMode_Opaque], 0, 0xffffffff);
+	ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	ctx->Draw(6, 0);
+}
+
 //
 // SwapChain
 //
-
-// static void kD3D11_UnprepareSwapChainFeatureTextures(kD3D11_SwapChain *r)
-//{
-//	for (int i = 1; i < kD3D11_RenderTarget_Count; ++i)
-//	{
-//		kD3D11_UnprepareTexture(&r->targets[i]);
-//		kRelease(&r->targets[i].texture2d);
-//		memset(&r->targets[i], 0, sizeof(r->targets[i]));
-//	}
-//	r->rt = kD3D11_RenderTarget_Final;
-// }
 
 static void kD3D11_DestroySwapChainBuffers(void)
 {
 	kDebugTraceEx("D3D11", "Destroying swap chain render targets.\n");
 	memset(d3d11.passes, 0, sizeof(d3d11.passes));
-	kRelease(&d3d11.swapchain.rtv);
-	kRelease(&d3d11.swapchain.dsv);
-	kRelease(&d3d11.swapchain.rtv_texture2d);
-	kRelease(&d3d11.swapchain.dsv_texture2d);
+
+	for (int target = 0; target < kD3D11_RenderTarget_Count; ++target)
+	{
+		kD3D11_UnprepareTexture(&d3d11.swapchain.targets[target]);
+		kRelease(&d3d11.swapchain.targets[target].texture2d);
+	}
 
 	for (int pass = 0; pass < kRenderPass_Count; ++pass)
 	{
@@ -736,7 +807,9 @@ static void kD3D11_CreateSwapChainBuffers(void)
 {
 	kDebugTraceEx("D3D11", "Creating swap chain render targets.\n");
 
-	HRESULT hr = d3d11.swapchain.native->GetBuffer(0, IID_PPV_ARGS(&d3d11.swapchain.rtv_texture2d));
+	kD3D11_Texture &rt = d3d11.swapchain.targets[kD3D11_RenderTarget_Final];
+
+	HRESULT         hr = d3d11.swapchain.native->GetBuffer(0, IID_PPV_ARGS(&rt.texture2d));
 
 	if (FAILED(hr))
 	{
@@ -744,49 +817,103 @@ static void kD3D11_CreateSwapChainBuffers(void)
 		return;
 	}
 
-	hr = d3d11.device->CreateRenderTargetView(d3d11.swapchain.rtv_texture2d, 0, &d3d11.swapchain.rtv);
-	if (FAILED(hr))
+	kD3D11_PrepareTexture(&rt);
+
+	const int samples = 4;
+
 	{
-		kLogHresultError(hr, "DirectX11", "Failed to create swapchain render target view");
-		return;
+		kD3D11_Texture      &target = d3d11.swapchain.targets[kD3D11_RenderTarget_Depth];
+
+		D3D11_TEXTURE2D_DESC desc   = {};
+		desc.Width                  = rt.size.x;
+		desc.Height                 = rt.size.y;
+		desc.MipLevels              = 1;
+		desc.ArraySize              = 1;
+		desc.Format                 = DXGI_FORMAT_D32_FLOAT;
+		desc.SampleDesc.Count       = samples;
+		desc.SampleDesc.Quality     = 0;
+		desc.Usage                  = D3D11_USAGE_DEFAULT;
+		desc.BindFlags              = D3D11_BIND_DEPTH_STENCIL;
+
+		hr                          = d3d11.device->CreateTexture2D(&desc, 0, &target.texture2d);
+		if (FAILED(hr))
+		{
+			kLogHresultError(hr, "DirectX11", "Failed to create texture 2d");
+			return;
+		}
+
+		kD3D11_PrepareTexture(&target);
 	}
 
-	D3D11_TEXTURE2D_DESC rt;
-	d3d11.swapchain.rtv_texture2d->GetDesc(&rt);
-
-	D3D11_TEXTURE2D_DESC dt = {};
-	dt.Width                = rt.Width;
-	dt.Height               = rt.Height;
-	dt.MipLevels            = 1;
-	dt.ArraySize            = 1;
-	dt.Format               = DXGI_FORMAT_D32_FLOAT;
-	dt.SampleDesc.Count     = 1;
-	dt.SampleDesc.Quality   = 0;
-	dt.Usage                = D3D11_USAGE_DEFAULT;
-	dt.BindFlags            = D3D11_BIND_DEPTH_STENCIL;
-
-	hr                      = d3d11.device->CreateTexture2D(&dt, 0, &d3d11.swapchain.dsv_texture2d);
-	if (FAILED(hr))
 	{
-		kLogHresultError(hr, "DirectX11", "Failed to create texture 2d");
-		return;
+		kD3D11_Texture      &target = d3d11.swapchain.targets[kD3D11_RenderTarget_MASS];
+
+		D3D11_TEXTURE2D_DESC desc   = {};
+		desc.Width                  = rt.size.x;
+		desc.Height                 = rt.size.y;
+		desc.MipLevels              = 1;
+		desc.ArraySize              = 1;
+		desc.Format                 = DXGI_FORMAT_R16G16B16A16_FLOAT;
+		desc.SampleDesc.Count       = samples;
+		desc.SampleDesc.Quality     = 0;
+		desc.Usage                  = D3D11_USAGE_DEFAULT;
+		desc.BindFlags              = D3D11_BIND_RENDER_TARGET;
+
+		hr                          = d3d11.device->CreateTexture2D(&desc, 0, &target.texture2d);
+		if (FAILED(hr))
+		{
+			kLogHresultError(hr, "DirectX11", "Failed to create MSAA texture 2d");
+			return;
+		}
+
+		kD3D11_PrepareTexture(&target);
 	}
 
-	hr = d3d11.device->CreateDepthStencilView(d3d11.swapchain.dsv_texture2d, 0, &d3d11.swapchain.dsv);
-	if (FAILED(hr))
 	{
-		kLogHresultError(hr, "DirectX11", "Failed to create depth stencil view");
-		return;
+		kD3D11_Texture      &target = d3d11.swapchain.targets[kD3D11_RenderTarget_ResolveMASS];
+
+		D3D11_TEXTURE2D_DESC desc   = {};
+		desc.Width                  = rt.size.x;
+		desc.Height                 = rt.size.y;
+		desc.MipLevels              = 1;
+		desc.ArraySize              = 1;
+		desc.Format                 = DXGI_FORMAT_R16G16B16A16_FLOAT;
+		desc.SampleDesc.Count       = 1;
+		desc.SampleDesc.Quality     = 0;
+		desc.Usage                  = D3D11_USAGE_DEFAULT;
+		desc.BindFlags              = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+
+		hr                          = d3d11.device->CreateTexture2D(&desc, 0, &target.texture2d);
+		if (FAILED(hr))
+		{
+			kLogHresultError(hr, "DirectX11", "Failed to create MSAA texture 2d");
+			return;
+		}
+
+		kD3D11_PrepareTexture(&target);
 	}
 
-	kD3D11_RenderPass *pass = &d3d11.passes[kRenderPass_Render2D];
-	pass->rtv               = d3d11.swapchain.rtv;
-	pass->dsv               = d3d11.swapchain.dsv;
-	pass->flags             = kRenderPass_ClearColor | kRenderPass_ClearDepth;
-	pass->color             = kVec4(0, 0, 0, 1);
-	pass->depth             = 1;
-	pass->target            = d3d11.swapchain.rtv_texture2d;
-	pass->Execute           = kD3D11_RenderPass2D;
+	{
+		kD3D11_RenderPass &pass = d3d11.passes[kRenderPass_Render2D];
+		pass.rt                 = &d3d11.swapchain.targets[kD3D11_RenderTarget_MASS];
+		pass.ds                 = &d3d11.swapchain.targets[kD3D11_RenderTarget_Depth];
+		pass.flags              = kRenderPass_ClearColor | kRenderPass_ClearDepth;
+		pass.color              = kVec4(0, 0, 0, 1);
+		pass.depth              = 1;
+		pass.resolve            = &d3d11.swapchain.targets[kD3D11_RenderTarget_ResolveMASS];
+		pass.format             = DXGI_FORMAT_R16G16B16A16_FLOAT;
+		pass.Execute            = kD3D11_RenderPass2D;
+	}
+
+	{
+		kD3D11_RenderPass &pass = d3d11.passes[kRenderPass_Blit];
+		pass.rt                 = &d3d11.swapchain.targets[kD3D11_RenderTarget_Final];
+		pass.flags              = 0;
+		pass.color              = kVec4(0, 0, 0, 1);
+		pass.depth              = 1;
+		pass.param              = (void *)&d3d11.swapchain.targets[kD3D11_RenderTarget_ResolveMASS];
+		pass.Execute            = kD3D11_RenderPassBlit;
+	}
 }
 
 static void kD3D11_ResizeSwapChainBuffers(uint w, uint h)
@@ -797,9 +924,8 @@ static void kD3D11_ResizeSwapChainBuffers(uint w, uint h)
 
 	if (d3d11.swapchain.native)
 	{
-		D3D11_TEXTURE2D_DESC desc;
-		d3d11.swapchain.rtv_texture2d->GetDesc(&desc);
-		if (desc.Width == w && desc.Height == h) return;
+		kVec2u size = d3d11.swapchain.targets[0].size;
+		if (size.x == w && size.y == h) return;
 
 		kD3D11_DestroySwapChainBuffers();
 		d3d11.swapchain.native->ResizeBuffers(K_BACK_BUFFER_COUNT, 0, 0, DXGI_FORMAT_UNKNOWN, 0);
@@ -931,32 +1057,35 @@ static void kD3D11_Present(void)
 	d3d11.swapchain.native->Present(1, 0);
 }
 
-static void kD3D11_ExecuteRenderPass(const kD3D11_RenderPass &pass, const kRenderFrame2D &frame)
+static void kD3D11_ExecuteRenderPass(const kD3D11_RenderPass &pass, const kRenderFrame &frame)
 {
+	if (pass.flags & kRenderPass_Disabled)
+		return;
+
 	ID3D11DeviceContext1 *ctx = d3d11.device_context;
 
 	if (pass.flags & kRenderPass_ClearColor)
 	{
-		ctx->ClearRenderTargetView(pass.rtv, pass.color.m);
+		ctx->ClearRenderTargetView(pass.rt->rtv, pass.color.m);
 	}
 
 	if (pass.flags & kRenderPass_ClearDepth)
 	{
-		ctx->ClearDepthStencilView(pass.dsv, D3D11_CLEAR_DEPTH, pass.depth, 0);
+		ctx->ClearDepthStencilView(pass.ds->dsv, D3D11_CLEAR_DEPTH, pass.depth, 0);
 	}
 
-	ctx->OMSetRenderTargets(1, &pass.rtv, pass.dsv);
-	pass.Execute(frame);
+	ctx->OMSetRenderTargets(1, &pass.rt->rtv, pass.ds ? pass.ds->dsv : nullptr);
+	pass.Execute(pass, frame, pass.param);
 
 	if (pass.resolve)
 	{
-		ctx->ResolveSubresource(pass.resolve, 0, pass.target, 0, pass.format);
+		ctx->ResolveSubresource(pass.resolve->texture2d, 0, pass.rt->texture2d, 0, pass.format);
 	}
 
 	ctx->ClearState();
 }
 
-static void kD3D11_ExecuteFrame(const kRenderFrame2D &frame)
+static void kD3D11_ExecuteFrame(const kRenderFrame &frame)
 {
 	for (int pass = 0; pass < kRenderPass_Count; ++pass)
 	{
@@ -972,12 +1101,8 @@ static void kD3D11_DestroyRenderResources2D(void)
 {
 	kRelease(&d3d11.resource.render2d.vertex);
 	kRelease(&d3d11.resource.render2d.index);
-	kRelease(&d3d11.resource.render2d.constant);
-	kRelease(&d3d11.resource.render2d.rasterizer);
+	kRelease(&d3d11.resource.render2d.xform);
 	kRelease(&d3d11.resource.render2d.input);
-	kRelease(&d3d11.resource.render2d.vs);
-	kRelease(&d3d11.resource.render2d.ps);
-
 	d3d11.resource.render2d.vertex_sz = 0;
 	d3d11.resource.render2d.index_sz  = 0;
 }
@@ -993,24 +1118,10 @@ static bool kD3D11_CreateRenderResources2D(void)
 	cb_desc.BindFlags         = D3D11_BIND_CONSTANT_BUFFER;
 	cb_desc.CPUAccessFlags    = D3D11_CPU_ACCESS_WRITE;
 
-	HRESULT hr                = d3d11.device->CreateBuffer(&cb_desc, 0, &d3d11.resource.render2d.constant);
+	HRESULT hr                = d3d11.device->CreateBuffer(&cb_desc, 0, &d3d11.resource.render2d.xform);
 	if (FAILED(hr))
 	{
 		kLogHresultError(hr, "DirectX11", "Failed to allocate constant buffer");
-		return false;
-	}
-
-	D3D11_RASTERIZER_DESC ras_desc = {};
-	ras_desc.FillMode              = D3D11_FILL_SOLID;
-	ras_desc.CullMode              = D3D11_CULL_NONE;
-	ras_desc.ScissorEnable         = TRUE;
-	ras_desc.MultisampleEnable     = TRUE;
-	ras_desc.AntialiasedLineEnable = TRUE;
-
-	hr = d3d11.device->CreateRasterizerState(&ras_desc, &d3d11.resource.render2d.rasterizer);
-	if (FAILED(hr))
-	{
-		kLogHresultError(hr, "DirectX11", "Failed to create rasterizer");
 		return false;
 	}
 
@@ -1027,14 +1138,14 @@ static bool kD3D11_CreateRenderResources2D(void)
 		return false;
 	}
 
-	hr = d3d11.device->CreateVertexShader(vs.data, vs.count, 0, &d3d11.resource.render2d.vs);
+	hr = d3d11.device->CreateVertexShader(vs.data, vs.count, 0, &d3d11.resource.vs[kD3D11_VertexShader_Render2D]);
 	if (FAILED(hr))
 	{
 		kLogHresultError(hr, "DirectX11", "Failed to create vertex shader");
 		return false;
 	}
 
-	hr = d3d11.device->CreatePixelShader(ps.data, ps.count, 0, &d3d11.resource.render2d.ps);
+	hr = d3d11.device->CreatePixelShader(ps.data, ps.count, 0, &d3d11.resource.ps[kD3D11_PixelShader_Render2D]);
 	if (FAILED(hr))
 	{
 		kLogHresultError(hr, "DirectX11", "Failed to create pixel shader");
@@ -1044,35 +1155,31 @@ static bool kD3D11_CreateRenderResources2D(void)
 	return true;
 }
 
+static void kD3D11_TextureDtor(kD3D11_Texture *r, void *data) { kD3D11_UnprepareTexture(r); }
+
 static void kD3D11_DestroyRenderResources(void)
 {
-	kLogInfoEx("D3D11", "Destroying render 2d resources.\n");
+	kLogInfoEx("D3D11", "Destroying resources.\n");
+
 	kD3D11_DestroyRenderResources2D();
+	d3d11.resource.textures.Destroy(kD3D11_TextureDtor, 0);
 
+	for (int i = 0; i < kD3D11_VertexShader_Count; ++i)
 	{
-		kLogInfoEx("D3D11", "Destroying textures.\n");
-
-		kD3D11_TexturePool *pool = &d3d11.resource.textures;
-		while (!kDListIsEmpty(&pool->first))
-		{
-			kD3D11_Texture *r = kDListPopFront(&pool->first);
-			kD3D11_FreeTexture(r);
-		}
-
-		kD3D11_TextureBlock *prev  = nullptr;
-		kD3D11_TextureBlock *block = pool->blocks;
-
-		while (block)
-		{
-			prev  = block;
-			block = prev->next;
-			kFree(prev, sizeof(*prev));
-		}
+		kRelease(&d3d11.resource.vs[i]);
 	}
 
-	kLogInfoEx("D3D11", "Destroying deferred resources.\n");
+	for (int i = 0; i < kD3D11_PixelShader_Count; ++i)
+	{
+		kRelease(&d3d11.resource.ps[i]);
+	}
 
-	kRelease(&d3d11.resource.depth);
+	kRelease(&d3d11.resource.rasterizer);
+
+	for (int i = 0; i < 2; ++i)
+	{
+		kRelease(&d3d11.resource.depths[i]);
+	}
 
 	for (int i = 0; i < kTextureFilter_Count; ++i)
 	{
@@ -1224,9 +1331,12 @@ static bool kD3D11_CreateGraphicsDevice(void)
 
 	d3d11.device->GetImmediateContext1(&d3d11.device_context);
 
+	if (!kD3D11_CreateRasterizerState()) return false;
 	if (!kD3D11_CreateDepthStencilState()) return false;
 	if (!kD3D11_CreateBlendState()) return false;
 	if (!kD3D11_CreateSamplerState()) return false;
+	if (!kD3D11_CreateVertexShaders()) return false;
+	if (!kD3D11_CreatePixelShaders()) return false;
 
 	for (int pass = 0; pass < kRenderPass_Count; ++pass)
 	{

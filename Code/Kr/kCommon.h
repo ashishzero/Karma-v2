@@ -470,8 +470,11 @@ using kVec2  = kVec2T<float>;
 using kVec3  = kVec3T<float>;
 using kVec4  = kVec4T<float>;
 using kVec2i = kVec2T<int>;
+using kVec2u = kVec2T<int>;
 using kVec3i = kVec3T<int>;
+using kVec3u = kVec3T<int>;
 using kVec4i = kVec4T<int>;
+using kVec4u = kVec4T<int>;
 
 typedef union kMat2 {
 	kVec2 rows[2];

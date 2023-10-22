@@ -73,7 +73,7 @@ typedef void (*kkRenderBackendTextureDestroyProc)(kTexture *);
 typedef kVec2i (*kRenderBackendTextureSizeProc)(kTexture *);
 typedef void (*kkRenderBackendTextureResizeProc)(kTexture *, u32, u32);
 
-typedef void (*kRenderBackendExecuteFrameProc)(const kRenderFrame2D &);
+typedef void (*kRenderBackendExecuteFrameProc)(const kRenderFrame &);
 typedef void (*kRenderBackendNextFrame)(void);
 typedef void (*kRenderBackendFlush)(void);
 
@@ -107,7 +107,7 @@ kTexture   *kCreateTextureFallback(const kTextureSpec &);
 void        kDestroyTextureFallback(kTexture *);
 kVec2i      kGetTextureSizeFallback(kTexture *);
 void        kResizeTextureFallback(kTexture *, u32, u32);
-void        kExecuteFrameFallback(const kRenderFrame2D &);
+void        kExecuteFrameFallback(const kRenderFrame &);
 void        kNextFrameFallback(void);
 void        kFlushFallback(void);
 void        kDestroyFallback(void);
