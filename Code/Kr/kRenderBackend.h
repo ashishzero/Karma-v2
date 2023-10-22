@@ -14,28 +14,6 @@ typedef struct kTexture
 	kResourceState state;
 } kTexture;
 
-// typedef enum kAntiAliasingMethod
-//{
-//	kAntiAliasingMethod_None,
-//	kAntiAliasingMethod_MSAAx2,
-//	kAntiAliasingMethod_MSAAx4,
-//	kAntiAliasingMethod_MSAAx8,
-//	kAntiAliasingMethod_Count
-// } kAntiAliasingMethod;
-//
-// static const char *kAntiAliasingMethodStrings[] = {"None", "MSAAx2", "MSAAx4", "MSAAx8"};
-// static_assert(kArrayCount(kAntiAliasingMethodStrings) == kAntiAliasingMethod_Count, "");
-//
-// typedef enum kToneMappingMethod
-//{
-//	kToneMappingMethod_SDR,
-//	kToneMappingMethod_HDR_AES,
-//	kToneMappingMethod_Count
-// } kToneMappingMethod;
-//
-// static const char *kToneMappingMethodStrings[] = {"Standard Dynamic Range", "High Dynamic Range AES"};
-// static_assert(kArrayCount(kToneMappingMethodStrings) == kToneMappingMethod_Count, "");
-
 typedef enum kFormat
 {
 	kFormat_RGBA32_FLOAT,
