@@ -30,10 +30,24 @@ typedef enum kBlendMode : u8
 
 typedef enum kTextureFilter : u8
 {
-	kTextureFilter_Linear,
-	kTextureFilter_Point,
+	kTextureFilter_LinearWrap,
+	kTextureFilter_PointWrap,
 	kTextureFilter_Count
 } kTextureFilter;
+
+typedef enum kRenderPass
+{
+	kRenderPass_Quad2D,
+	kRenderPass_Threshold,
+	kRenderPass_Bloom,
+	kRenderPass_Tonemap,
+	kRenderPass_Blit,
+	kRenderPass_Count,
+} kRenderPass;
+
+//
+//
+//
 
 enum kRenderDirtyFlags2D
 {
@@ -83,6 +97,10 @@ typedef struct kRenderFrame2D
 	kSpan<kVertex2D>        vertices;
 	kSpan<kIndex2D>         indices;
 } kRenderFrame2D;
+
+//
+//
+//
 
 typedef struct kRenderFrame
 {

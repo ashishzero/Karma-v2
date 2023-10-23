@@ -1832,7 +1832,7 @@ void kCreateRenderContext(const kRenderSpec &spec, kTexture *textures[kTextureTy
 	for (u32 i = 0; i < kTextureType_Count; ++i)
 		render.context2d.stack.textures[i].Add(render.builtin.textures[i]);
 	render.context2d.stack.blends.Add(kBlendMode_Normal);
-	render.context2d.stack.filters.Add(kTextureFilter_Linear);
+	render.context2d.stack.filters.Add(kTextureFilter_LinearWrap);
 
 	kResetFrame();
 }

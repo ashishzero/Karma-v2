@@ -64,15 +64,40 @@ typedef enum kD3D11_PixelShader
 typedef enum kD3D11_ComputeShader
 {
 	kD3D11_ComputeShader_Threshold,
+	kD3D11_ComputeShader_Bloom,
 	kD3D11_ComputeShader_Tonemap,
 	kD3D11_ComputeShader_Count,
 } kD3D11_ComputeShader;
 
+typedef void (*kD3D11_RenderPassProc)(const struct kD3D11_RenderPass &, const kRenderFrame &);
+
+enum kD3D11_RenderPassFlags
+{
+	kD3D11_RenderPass_ClearColor = 0x1,
+	kD3D11_RenderPass_ClearDepth = 0x2,
+	kD3D11_RenderPass_Compute    = 0x10,
+	kD3D11_RenderPass_Disabled   = 0x20,
+};
+
+typedef struct kD3D11_RenderPass
+{
+	kD3D11_Texture       *rt;
+	kD3D11_Texture       *ds;
+	UINT                  flags;
+	kVec4                 color;
+	float                 depth;
+	DXGI_FORMAT           format;
+	kD3D11_Texture       *resolve;
+	kD3D11_Texture       *params[2];
+	kD3D11_RenderPassProc Execute;
+} kD3D11_RenderPass;
+
 typedef struct kD3D11_SwapChain
 {
-	IDXGISwapChain1 *native;
-	kD3D11_Texture   targets[kD3D11_RenderTarget_Count];
-	ID3D11Buffer    *csbuffers[kD3D11_ComputeShader_Count];
+	IDXGISwapChain1  *native;
+	kD3D11_Texture    targets[kD3D11_RenderTarget_Count];
+	kD3D11_RenderPass passes[kRenderPass_Count];
+	ID3D11Buffer     *csbuffers[kD3D11_ComputeShader_Count];
 } kD3D11_SwapChain;
 
 typedef struct kD3D11_Render2D
@@ -100,45 +125,12 @@ typedef struct kD3D11_Resource
 	ID3D11BlendState        *blends[kBlendMode_Count];
 } kD3D11_Resource;
 
-typedef void (*kD3D11_RenderPassProc)(const struct kD3D11_RenderPass &, const kRenderFrame &);
-
-enum kRenderPassFlags
-{
-	kRenderPass_ClearColor = 0x1,
-	kRenderPass_ClearDepth = 0x2,
-	kRenderPass_Compute    = 0x10,
-	kRenderPass_Disabled   = 0x20,
-};
-
-typedef struct kD3D11_RenderPass
-{
-	kD3D11_Texture       *rt;
-	kD3D11_Texture       *ds;
-	UINT                  flags;
-	kVec4                 color;
-	float                 depth;
-	DXGI_FORMAT           format;
-	kD3D11_Texture       *resolve;
-	kD3D11_Texture       *params[2];
-	kD3D11_RenderPassProc Execute;
-} kD3D11_RenderPass;
-
-typedef enum kRenderPass
-{
-	kRenderPass_Quad2D,
-	kRenderPass_Threshold,
-	kRenderPass_Tonemap,
-	kRenderPass_Blit,
-	kRenderPass_Count,
-} kRenderPass;
-
 typedef struct kD3D11_Backend
 {
 	ID3D11Device1        *device;
 	ID3D11DeviceContext1 *device_context;
 	IDXGIFactory2        *factory;
 	kD3D11_SwapChain      swapchain;
-	kD3D11_RenderPass     passes[kRenderPass_Count];
 	kD3D11_Resource       resource;
 } kD3D11_Backend;
 
@@ -177,6 +169,7 @@ static void kD3D11_RenderPassFallback(const kD3D11_RenderPass &, const kRenderFr
 #include "Shaders/Generated/kQuad.ps.hlsl.h"
 #include "Shaders/Generated/kToneMap.cs.hlsl.h"
 #include "Shaders/Generated/kThreshold.cs.hlsl.h"
+#include "Shaders/Generated/kBloomDownSample.cs.hlsl.h"
 
 // static constexpr UINT kD3D11_SampleCountMap[] = {1, 2, 4, 8};
 // static_assert(kArrayCount(kD3D11_SampleCountMap) == kAntiAliasingMethod_Count, "");
@@ -202,10 +195,10 @@ static_assert(kArrayCount(kD3D11_VertexShaders) == kD3D11_VertexShader_Count, ""
 static kString kD3D11_PixelShaders[] = {kString(kQuadPS), kString(kBlitPS)};
 static_assert(kArrayCount(kD3D11_PixelShaders) == kD3D11_PixelShader_Count, "");
 
-static kString kD3D11_ComputeShaders[] = {kString(kThresholdCS), kString(kToneMapCS)};
+static kString kD3D11_ComputeShaders[] = {kString(kThresholdCS), kString(kBloomDownSampleCS), kString(kToneMapCS)};
 static_assert(kArrayCount(kD3D11_ComputeShaders) == kD3D11_ComputeShader_Count, "");
 
-static UINT kD3D11_ComputeBufferSizes[] = {sizeof(kVec4), 0};
+static UINT kD3D11_ComputeBufferSizes[] = {sizeof(kVec4), sizeof(u32), 0};
 static_assert(kArrayCount(kD3D11_ComputeBufferSizes) == kD3D11_ComputeShader_Count, "");
 
 //
@@ -775,7 +768,7 @@ static void kD3D11_RenderPassBlit(const kD3D11_RenderPass &pass, const kRenderFr
 	ctx->VSSetShader(d3d11.resource.vs[kD3D11_VertexShader_Blit], nullptr, 0);
 	ctx->PSSetShader(d3d11.resource.ps[kD3D11_PixelShader_Blit], nullptr, 0);
 	ctx->PSSetShaderResources(0, kArrayCount(resources), resources);
-	ctx->PSSetSamplers(0, 1, &d3d11.resource.samplers[kTextureFilter_Linear]);
+	ctx->PSSetSamplers(0, 1, &d3d11.resource.samplers[kTextureFilter_LinearWrap]);
 	ctx->OMSetBlendState(d3d11.resource.blends[kBlendMode_Opaque], 0, 0xffffffff);
 	ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	ctx->Draw(6, 0);
@@ -807,7 +800,37 @@ static void kD3D11_RenderPassThreshold(const kD3D11_RenderPass &pass, const kRen
 	UINT x_thrd_group = (UINT)ceilf(tonemap->size.x / 32.0f);
 	UINT y_thrd_group = (UINT)ceilf(tonemap->size.y / 16.0f);
 	d3d11.device_context->Dispatch(x_thrd_group, y_thrd_group, 1);
-	d3d11.device_context->ClearState();
+}
+
+static void kD3D11_RenderPassBloom(const kD3D11_RenderPass &pass, const kRenderFrame &render)
+{
+	kD3D11_Texture            *src    = pass.params[0];
+	kD3D11_Texture            *dst    = pass.params[1];
+
+	ID3D11ShaderResourceView  *srvs[] = {src->srv};
+	ID3D11UnorderedAccessView *uavs[] = {dst->uav};
+
+	D3D11_MAPPED_SUBRESOURCE   mapped;
+	HRESULT                    hr = d3d11.device_context->Map(d3d11.swapchain.csbuffers[kD3D11_ComputeShader_Bloom], 0,
+	                                                          D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+	if (FAILED(hr)) return;
+
+	u32 value = 1;
+	memcpy(mapped.pData, &value, sizeof(value));
+
+	d3d11.device_context->Unmap(d3d11.swapchain.csbuffers[kD3D11_ComputeShader_Bloom], 0);
+
+	d3d11.device_context->CSSetShader(d3d11.resource.cs[kD3D11_ComputeShader_Bloom], 0, 0);
+	d3d11.device_context->CSSetConstantBuffers(0, 1, &d3d11.swapchain.csbuffers[kD3D11_ComputeShader_Bloom]);
+	d3d11.device_context->CSSetShaderResources(0, kArrayCount(srvs), srvs);
+	d3d11.device_context->CSSetUnorderedAccessViews(0, kArrayCount(uavs), uavs, 0);
+
+	// TODO:: USE CLAMP TO EDGE
+	d3d11.device_context->CSSetSamplers(0, 1, &d3d11.resource.samplers[kTextureFilter_LinearWrap]);
+
+	UINT x_thrd_group = (UINT)ceilf((dst->size.x >> 1) / 32.0f);
+	UINT y_thrd_group = (UINT)ceilf((dst->size.y >> 1) / 16.0f);
+	d3d11.device_context->Dispatch(x_thrd_group, y_thrd_group, 1);
 }
 
 static void kD3D11_RenderPassTonemap(const kD3D11_RenderPass &pass, const kRenderFrame &render)
@@ -835,7 +858,7 @@ static void kD3D11_RenderPassTonemap(const kD3D11_RenderPass &pass, const kRende
 static void kD3D11_DestroySwapChainBuffers(void)
 {
 	kDebugTraceEx("D3D11", "Destroying swap chain render targets.\n");
-	memset(d3d11.passes, 0, sizeof(d3d11.passes));
+	memset(d3d11.swapchain.passes, 0, sizeof(d3d11.swapchain.passes));
 
 	for (int target = 0; target < kD3D11_RenderTarget_Count; ++target)
 	{
@@ -845,7 +868,7 @@ static void kD3D11_DestroySwapChainBuffers(void)
 
 	for (int pass = 0; pass < kRenderPass_Count; ++pass)
 	{
-		d3d11.passes[pass].Execute = kD3D11_RenderPassFallback;
+		d3d11.swapchain.passes[pass].Execute = kD3D11_RenderPassFallback;
 	}
 }
 
@@ -945,22 +968,59 @@ static void kD3D11_CreateSwapChainBuffers(void)
 		D3D11_TEXTURE2D_DESC desc   = {};
 		desc.Width                  = rt.size.x;
 		desc.Height                 = rt.size.y;
-		desc.MipLevels              = 1;
+		desc.MipLevels              = 0;
 		desc.ArraySize              = 1;
 		desc.Format                 = DXGI_FORMAT_R11G11B10_FLOAT;
 		desc.SampleDesc.Count       = 1;
 		desc.SampleDesc.Quality     = 0;
 		desc.Usage                  = D3D11_USAGE_DEFAULT;
-		desc.BindFlags              = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
+		desc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
+		desc.MiscFlags = D3D11_RESOURCE_MISC_GENERATE_MIPS;
 
-		hr                          = d3d11.device->CreateTexture2D(&desc, 0, &target.texture2d);
+		hr             = d3d11.device->CreateTexture2D(&desc, 0, &target.texture2d);
 		if (FAILED(hr))
 		{
-			kLogHresultError(hr, "DirectX11", "Failed to create MSAA texture 2d");
+			kLogHresultError(hr, "DirectX11", "Failed to create bloom texture 2d");
 			return;
 		}
 
-		kD3D11_PrepareTexture(&target);
+		target.size = rt.size;
+
+		#if 0
+		D3D11_SHADER_RESOURCE_VIEW_DESC srv = {};
+		srv.Format                          = DXGI_FORMAT_R11G11B10_FLOAT;
+		srv.ViewDimension                   = D3D11_SRV_DIMENSION_TEXTURE2D;
+		srv.Texture2D.MipLevels             = 1;
+		srv.Texture2D.MostDetailedMip       = 0;
+
+		hr = d3d11.device->CreateShaderResourceView(target.texture2d, &srv, &target.srv);
+		if (FAILED(hr))
+		{
+			kLogHresultError(hr, "DirectX11", "Failed to create bloom shader resource view");
+			return;
+		}
+		#endif
+
+		#if 1
+		D3D11_UNORDERED_ACCESS_VIEW_DESC uav = {};
+		uav.Format                           = DXGI_FORMAT_R11G11B10_FLOAT;
+		uav.ViewDimension                    = D3D11_UAV_DIMENSION_TEXTURE2D;
+		uav.Texture2D.MipSlice               = 0;
+
+		hr = d3d11.device->CreateUnorderedAccessView(target.texture2d, &uav, &target.uav);
+		if (FAILED(hr))
+		{
+			kLogHresultError(hr, "DirectX11", "Failed to create bloom unordered access view");
+			return;
+		}
+		#endif
+
+		//kD3D11_PrepareTexture(&target);
+
+		if (target.srv)
+		{
+			d3d11.device_context->GenerateMips(target.srv);
+		}
 	}
 
 	{
@@ -1012,10 +1072,10 @@ static void kD3D11_CreateSwapChainBuffers(void)
 	}
 
 	{
-		kD3D11_RenderPass &pass = d3d11.passes[kRenderPass_Quad2D];
+		kD3D11_RenderPass &pass = d3d11.swapchain.passes[kRenderPass_Quad2D];
 		pass.rt                 = &d3d11.swapchain.targets[kD3D11_RenderTarget_MASS];
 		pass.ds                 = &d3d11.swapchain.targets[kD3D11_RenderTarget_Depth];
-		pass.flags              = kRenderPass_ClearColor | kRenderPass_ClearDepth;
+		pass.flags              = kD3D11_RenderPass_ClearColor | kD3D11_RenderPass_ClearDepth;
 		pass.color              = kVec4(0, 0, 0, 1);
 		pass.depth              = 1;
 		pass.resolve            = &d3d11.swapchain.targets[kD3D11_RenderTarget_ResolveMASS];
@@ -1024,23 +1084,31 @@ static void kD3D11_CreateSwapChainBuffers(void)
 	}
 
 	{
-		kD3D11_RenderPass &pass = d3d11.passes[kRenderPass_Threshold];
-		pass.flags              = kRenderPass_Compute;
+		kD3D11_RenderPass &pass = d3d11.swapchain.passes[kRenderPass_Threshold];
+		pass.flags              = kD3D11_RenderPass_Compute;
 		pass.params[0]          = &d3d11.swapchain.targets[kD3D11_RenderTarget_ResolveMASS];
 		pass.params[1]          = &d3d11.swapchain.targets[kD3D11_RenderTarget_BloomDown];
 		pass.Execute            = kD3D11_RenderPassThreshold;
 	}
 
 	{
-		kD3D11_RenderPass &pass = d3d11.passes[kRenderPass_Tonemap];
-		pass.flags              = kRenderPass_Compute;
+		kD3D11_RenderPass &pass = d3d11.swapchain.passes[kRenderPass_Bloom];
+		pass.flags              = kD3D11_RenderPass_Compute | kD3D11_RenderPass_Disabled;
+		pass.params[0]          = &d3d11.swapchain.targets[kD3D11_RenderTarget_BloomDown];
+		pass.params[1]          = &d3d11.swapchain.targets[kD3D11_RenderTarget_BloomDown];
+		pass.Execute            = kD3D11_RenderPassBloom;
+	}
+
+	{
+		kD3D11_RenderPass &pass = d3d11.swapchain.passes[kRenderPass_Tonemap];
+		pass.flags              = kD3D11_RenderPass_Compute;
 		pass.params[0]          = &d3d11.swapchain.targets[kD3D11_RenderTarget_ResolveMASS];
 		pass.params[1]          = &d3d11.swapchain.targets[kD3D11_RenderTarget_Tonemap];
 		pass.Execute            = kD3D11_RenderPassTonemap;
 	}
 
 	{
-		kD3D11_RenderPass &pass = d3d11.passes[kRenderPass_Blit];
+		kD3D11_RenderPass &pass = d3d11.swapchain.passes[kRenderPass_Blit];
 		pass.rt                 = &d3d11.swapchain.targets[kD3D11_RenderTarget_Final];
 		pass.flags              = 0;
 		pass.color              = kVec4(0, 0, 0, 1);
@@ -1120,7 +1188,7 @@ static void kD3D11_CreateSwapChain(void *_window)
 	{
 		if (!kD3D11_ComputeBufferSizes[i]) continue;
 		D3D11_BUFFER_DESC desc = {};
-		desc.ByteWidth         = kD3D11_ComputeBufferSizes[i];
+		desc.ByteWidth         = kAlignUp(kD3D11_ComputeBufferSizes[i], 16);
 		desc.Usage             = D3D11_USAGE_DYNAMIC;
 		desc.BindFlags         = D3D11_BIND_CONSTANT_BUFFER;
 		desc.CPUAccessFlags    = D3D11_CPU_ACCESS_WRITE;
@@ -1139,20 +1207,20 @@ static void kD3D11_Present(void) { d3d11.swapchain.native->Present(1, 0); }
 
 static void kD3D11_ExecuteRenderPass(const kD3D11_RenderPass &pass, const kRenderFrame &frame)
 {
-	if (pass.flags & kRenderPass_Disabled) return;
+	if (pass.flags & kD3D11_RenderPass_Disabled) return;
 
 	ID3D11DeviceContext1 *ctx     = d3d11.device_context;
 
-	b32                   compute = (pass.flags & kRenderPass_Compute);
+	b32                   compute = (pass.flags & kD3D11_RenderPass_Compute);
 
 	if (!compute)
 	{
-		if (pass.flags & kRenderPass_ClearColor)
+		if (pass.flags & kD3D11_RenderPass_ClearColor)
 		{
 			ctx->ClearRenderTargetView(pass.rt->rtv, pass.color.m);
 		}
 
-		if (pass.flags & kRenderPass_ClearDepth)
+		if (pass.flags & kD3D11_RenderPass_ClearDepth)
 		{
 			ctx->ClearDepthStencilView(pass.ds->dsv, D3D11_CLEAR_DEPTH, pass.depth, 0);
 		}
@@ -1178,7 +1246,7 @@ static void kD3D11_ExecuteFrame(const kRenderFrame &frame)
 {
 	for (int pass = 0; pass < kRenderPass_Count; ++pass)
 	{
-		kD3D11_ExecuteRenderPass(d3d11.passes[pass], frame);
+		kD3D11_ExecuteRenderPass(d3d11.swapchain.passes[pass], frame);
 	}
 }
 
@@ -1432,11 +1500,6 @@ static bool kD3D11_CreateGraphicsDevice(void)
 	if (!kD3D11_CreateVertexShaders()) return false;
 	if (!kD3D11_CreatePixelShaders()) return false;
 	if (!kD3D11_CreateComputeShaders()) return false;
-
-	for (int pass = 0; pass < kRenderPass_Count; ++pass)
-	{
-		d3d11.passes[pass].Execute = kD3D11_RenderPassFallback;
-	}
 
 	return true;
 }
