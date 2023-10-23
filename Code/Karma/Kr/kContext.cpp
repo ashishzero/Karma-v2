@@ -161,6 +161,8 @@ void kDefaultHandleAssertion(const char *file, int line, const char *proc, const
 
 void kDefaultFatalError(const char *message)
 {
+	kLogError("%s\n", message);
+#ifndef K_CONSOLE_APPLICATION
 	int      wlen = MultiByteToWideChar(CP_UTF8, 0, message, (int)strlen(message), NULL, 0);
 	wchar_t *msg  = (wchar_t *)HeapAlloc(GetProcessHeap(), 0, ((imem)wlen + 1) * sizeof(wchar_t));
 	if (msg)
@@ -170,6 +172,7 @@ void kDefaultFatalError(const char *message)
 		FatalAppExitW(0, msg);
 	}
 	FatalAppExitW(0, L"out of memory");
+#endif
 }
 
 static const WORD  kColorsMap[] = {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE,

@@ -1,14 +1,4 @@
-
-struct kVertexInput
-{
-	uint Id : SV_VertexID;
-};
-
-struct kVertexOutput
-{
-	float2 tex : TEXCOORD;
-	float4 pos : SV_Position;
-};
+#include "kBlit.fx"
 
 static const float2 Vertices[] =
 {
@@ -29,7 +19,7 @@ static const float2 TexCoords[] =
 	{ 1, 1 }
 };
 
-kVertexOutput kFullscreenQuadVS(kVertexInput input)
+kVertexOutput Main(kVertexInput input)
 {
 	kVertexOutput output;
 	output.pos = float4(Vertices[input.Id], 0, 1);

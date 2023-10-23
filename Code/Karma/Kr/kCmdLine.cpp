@@ -219,8 +219,9 @@ static void kHandleArg(kArg *arg, kString value)
 	}
 }
 
-void kCmdLineParse(int *argc, const char ***argv, bool ignore_invalids)
+bool kCmdLineParse(int *argc, const char ***argv, bool ignore_invalids)
 {
+	bool ok = true;
 	for (kArg &carg : cmd_args)
 	{
 		if (carg.type == kArgType_Flag)
@@ -274,6 +275,12 @@ void kCmdLineParse(int *argc, const char ***argv, bool ignore_invalids)
 					}
 				}
 			}
+			else
+			{
+				printf("  Value for the key \"%.*s\" is not given. Use -key:value syntax to specify value\n", kStrArg(arg));
+				handled = true;
+				ok      = false;
+			}
 		}
 		else
 		{
@@ -292,14 +299,16 @@ void kCmdLineParse(int *argc, const char ***argv, bool ignore_invalids)
 
 		if (!handled)
 		{
+			ok = false;
 			if (ignore_invalids)
 			{
 				printf("  Unknown argument: \"" kStrFmt "\". Ignoring.\n", kStrArg(arg));
 			}
 			else
 			{
-				return;
+				return false;
 			}
 		}
 	}
+	return ok;
 }

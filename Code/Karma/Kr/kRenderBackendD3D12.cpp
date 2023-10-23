@@ -531,7 +531,8 @@ static void kD3D12_Present(void)
 // Resources
 //
 
-#include "Shaders/Generated/kQuad.hlsl.h"
+#include "Shaders/Generated/kQuad.vs.hlsl.h"
+#include "Shaders/Generated/kQuad.ps.hlsl.h"
 
 static void kD3D12_DestroyRenderResources(void)
 {

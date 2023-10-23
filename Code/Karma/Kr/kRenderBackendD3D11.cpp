@@ -49,14 +49,14 @@ typedef enum kD3D11_RenderTargetKind
 
 typedef enum kD3D11_VertexShader
 {
-	kD3D11_VertexShader_Render2D,
-	kD3D11_VertexShader_FullscreenQuad,
+	kD3D11_VertexShader_Quad,
+	kD3D11_VertexShader_Blit,
 	kD3D11_VertexShader_Count,
 } kD3D11_VertexShader;
 
 typedef enum kD3D11_PixelShader
 {
-	kD3D11_PixelShader_Render2D,
+	kD3D11_PixelShader_Quad,
 	kD3D11_PixelShader_Blit,
 	kD3D11_PixelShader_Count,
 } kD3D11_PixelShader;
@@ -171,11 +171,12 @@ static void kD3D11_RenderPassFallback(const kD3D11_RenderPass &, const kRenderFr
 // Mappings
 //
 
-#include "Shaders/Generated/kQuad.hlsl.h"
-#include "Shaders/Generated/kFullscreenQuadVS.hlsl.h"
-#include "Shaders/Generated/kBlitPS.hlsl.h"
-#include "Shaders/Generated/kThresholdCS.hlsl.h"
-#include "Shaders/Generated/kToneMapCS.hlsl.h"
+#include "Shaders/Generated/kBlit.vs.hlsl.h"
+#include "Shaders/Generated/kBlit.ps.hlsl.h"
+#include "Shaders/Generated/kQuad.vs.hlsl.h"
+#include "Shaders/Generated/kQuad.ps.hlsl.h"
+#include "Shaders/Generated/kToneMap.cs.hlsl.h"
+#include "Shaders/Generated/kThreshold.cs.hlsl.h"
 
 // static constexpr UINT kD3D11_SampleCountMap[] = {1, 2, 4, 8};
 // static_assert(kArrayCount(kD3D11_SampleCountMap) == kAntiAliasingMethod_Count, "");
@@ -195,13 +196,13 @@ static_assert(kArrayCount(kD3D11_FormatMap) == kFormat_Count, "");
 static constexpr D3D11_FILTER kD3D11_FilterMap[] = {D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_FILTER_MIN_MAG_MIP_POINT};
 static_assert(kArrayCount(kD3D11_FilterMap) == kTextureFilter_Count, "");
 
-static kString kD3D11_VertexShaders[] = {kString(kQuadVS), kString(kFullscreenQuadVS)};
+static kString kD3D11_VertexShaders[] = {kString(kQuadVS), kString(kBlitVS)};
 static_assert(kArrayCount(kD3D11_VertexShaders) == kD3D11_VertexShader_Count, "");
 
 static kString kD3D11_PixelShaders[] = {kString(kQuadPS), kString(kBlitPS)};
 static_assert(kArrayCount(kD3D11_PixelShaders) == kD3D11_PixelShader_Count, "");
 
-static kString kD3D11_ComputeShaders[] = {kString(kThresholdCS), kString(kToneMapAcesCS)};
+static kString kD3D11_ComputeShaders[] = {kString(kThresholdCS), kString(kToneMapCS)};
 static_assert(kArrayCount(kD3D11_ComputeShaders) == kD3D11_ComputeShader_Count, "");
 
 static UINT kD3D11_ComputeBufferSizes[] = {sizeof(kVec4), 0};
@@ -667,8 +668,8 @@ static void kD3D11_RenderPassQuad2D(const kD3D11_RenderPass &pass, const kRender
 	ctx->IASetVertexBuffers(0, 1, &vtx, &stride, &offset);
 	ctx->IASetIndexBuffer(idx, format, 0);
 	ctx->VSSetConstantBuffers(0, 1, &xform);
-	ctx->VSSetShader(d3d11.resource.vs[kD3D11_VertexShader_Render2D], nullptr, 0);
-	ctx->PSSetShader(d3d11.resource.ps[kD3D11_PixelShader_Render2D], nullptr, 0);
+	ctx->VSSetShader(d3d11.resource.vs[kD3D11_VertexShader_Quad], nullptr, 0);
+	ctx->PSSetShader(d3d11.resource.ps[kD3D11_PixelShader_Quad], nullptr, 0);
 	ctx->IASetInputLayout(d3d11.resource.render2d.input);
 	ctx->RSSetState(d3d11.resource.rasterizer);
 	ctx->OMSetDepthStencilState(d3d11.resource.depths[1], 0);
@@ -771,7 +772,7 @@ static void kD3D11_RenderPassBlit(const kD3D11_RenderPass &pass, const kRenderFr
 	ID3D11ShaderResourceView *resources[] = {src->srv};
 
 	ctx->RSSetViewports(1, &viewport);
-	ctx->VSSetShader(d3d11.resource.vs[kD3D11_VertexShader_FullscreenQuad], nullptr, 0);
+	ctx->VSSetShader(d3d11.resource.vs[kD3D11_VertexShader_Blit], nullptr, 0);
 	ctx->PSSetShader(d3d11.resource.ps[kD3D11_PixelShader_Blit], nullptr, 0);
 	ctx->PSSetShaderResources(0, kArrayCount(resources), resources);
 	ctx->PSSetSamplers(0, 1, &d3d11.resource.samplers[kTextureFilter_Linear]);
@@ -1226,14 +1227,14 @@ static bool kD3D11_CreateRenderResources2D(void)
 		return false;
 	}
 
-	hr = d3d11.device->CreateVertexShader(vs.data, vs.count, 0, &d3d11.resource.vs[kD3D11_VertexShader_Render2D]);
+	hr = d3d11.device->CreateVertexShader(vs.data, vs.count, 0, &d3d11.resource.vs[kD3D11_VertexShader_Quad]);
 	if (FAILED(hr))
 	{
 		kLogHresultError(hr, "DirectX11", "Failed to create vertex shader");
 		return false;
 	}
 
-	hr = d3d11.device->CreatePixelShader(ps.data, ps.count, 0, &d3d11.resource.ps[kD3D11_PixelShader_Render2D]);
+	hr = d3d11.device->CreatePixelShader(ps.data, ps.count, 0, &d3d11.resource.ps[kD3D11_PixelShader_Quad]);
 	if (FAILED(hr))
 	{
 		kLogHresultError(hr, "DirectX11", "Failed to create pixel shader");
