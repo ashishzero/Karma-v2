@@ -19,6 +19,13 @@ typedef struct kVertex2D
 
 typedef u32 kIndex2D;
 
+typedef enum kDepthTest : u8
+{
+	kDepthTest_Disabled,
+	kDepthTest_LessEquals,
+	kDepthTest_Count
+} kDepthTest;
+
 typedef enum kBlendMode : u8
 {
 	kBlendMode_Opaque,
@@ -37,7 +44,7 @@ typedef enum kTextureFilter : u8
 
 typedef enum kRenderPass
 {
-	kRenderPass_Quad2D,
+	kRenderPass_Quad,
 	kRenderPass_Threshold,
 	kRenderPass_Bloom,
 	kRenderPass_Tonemap,

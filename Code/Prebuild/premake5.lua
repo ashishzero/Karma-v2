@@ -6,8 +6,14 @@ project "Prebuild"
    targetdir ("%{wks.location}/Build/%{prj.name}")
    objdir ("%{wks.location}/Build/Objects/%{prj.name}")
 
+   vpaths {
+        [""] = { "../Karma/Kr/kPrebuild.cpp" },
+        ["Misc"] = { "../Karma/.clang-format", "../Karma/Kr/**.natvis", "../Karma/Kr/**.natstepfilter" }
+   }
+
    files { "../Karma/.clang-format" }
-   files { "../Karma/Kr/KPrebuild.cpp", "premake5.lua" }
+   files { "../Karma/Kr/kPrebuild.cpp", "premake5.lua" }
+   files { "../Karma/Kr/**.natvis", "../Karma/Kr/**.natstepfilter" }
 
    defines { "K_CONSOLE_APPLICATION" }
    defines { "DEBUG", "K_BUILD_DEBUG" }
@@ -16,6 +22,5 @@ project "Prebuild"
 
    filter "system:windows"
       systemversion "latest"
-      files { "../Karma/Kr/**.natvis", "../Karma/Kr/**.natstepfilter" }
       defines { "_CRT_SECURE_NO_WARNINGS" }
       flags { "NoManifest" }

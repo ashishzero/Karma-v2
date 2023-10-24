@@ -33,7 +33,7 @@ typedef struct kRenderContext2D
 typedef struct kRenderContextBuiltin
 {
 	kTexture *textures[kTextureType_Count];
-	kFont    *font;
+	kFont *   font;
 } kRenderContextBuiltin;
 
 typedef struct kRenderContext
@@ -43,7 +43,7 @@ typedef struct kRenderContext
 	kRenderMemoryStatistics memory;
 } kRenderContext;
 
-static kRenderContext render;
+static kRenderContext g_RenderContext;
 
 static float          Sines[K_MAX_CIRCLE_SEGMENTS];
 static float          Cosines[K_MAX_CIRCLE_SEGMENTS];
@@ -52,7 +52,7 @@ static float          Cosines[K_MAX_CIRCLE_SEGMENTS];
 //
 //
 
-static kRenderContext2D *kGetRenderContext2D(void) { return &render.context2d; }
+static kRenderContext2D *kGetRenderContext2D(void) { return &g_RenderContext.context2d; }
 
 //
 //
@@ -190,7 +190,7 @@ static void kHandleTextureFilterChange(void)
 static void kHandleRectChange(void)
 {
 	kRenderContext2D *ctx  = kGetRenderContext2D();
-	kRect            &rect = ctx->stack.rects.Last();
+	kRect &           rect = ctx->stack.rects.Last();
 	kRenderCommand2D &cmd  = ctx->commands.Last();
 
 	if (memcmp(&ctx->rects[cmd.rect], &rect, sizeof(kRect)) != 0)
@@ -237,7 +237,7 @@ static void kHandleRectChange(void)
 static void kHandleTextureChange(kTextureType type)
 {
 	kRenderContext2D *ctx     = kGetRenderContext2D();
-	kTexture         *texture = ctx->stack.textures[type].Last();
+	kTexture *        texture = ctx->stack.textures[type].Last();
 	kRenderCommand2D &cmd     = ctx->commands.Last();
 	u32               bit     = type == kTextureType_Color ? kRenderDirty_TextureColor : kRenderDirty_TextureMaskSDF;
 
@@ -289,14 +289,14 @@ static void kHandleTextureChange(kTextureType type)
 void kBeginScene(const kCamera2D &camera, kRect region)
 {
 	kRenderContext2D *ctx   = kGetRenderContext2D();
-	kRenderScene2D   *scene = ctx->scenes.Add();
+	kRenderScene2D *  scene = ctx->scenes.Add();
 	scene->camera           = camera;
 	scene->region           = region;
 	scene->commands         = kRange<u32>((u32)ctx->commands.count);
 
 	for (int i = 0; i < kTextureType_Count; ++i)
-		render.context2d.textures[i].Add(render.context2d.stack.textures[i].Last());
-	render.context2d.rects.Add(render.context2d.stack.rects.Last());
+		g_RenderContext.context2d.textures[i].Add(g_RenderContext.context2d.stack.textures[i].Last());
+	g_RenderContext.context2d.rects.Add(g_RenderContext.context2d.stack.rects.Last());
 
 	kPushRenderCommand(kRenderDirty_Everything);
 	kPushRect(region);
@@ -392,7 +392,7 @@ void kSetTexture(kTexture *texture, kTextureType idx)
 void kPushTexture(kTexture *texture, kTextureType idx)
 {
 	kRenderContext2D *ctx  = kGetRenderContext2D();
-	kTexture         *last = ctx->stack.textures[idx].Last();
+	kTexture *        last = ctx->stack.textures[idx].Last();
 	ctx->stack.textures[idx].Add(last);
 	kSetTexture(texture, idx);
 }
@@ -502,7 +502,7 @@ static void kCommitPrimitive(u32 vertex, u32 index)
 
 void kDrawTriangle(kVec3 va, kVec3 vb, kVec3 vc, kVec2 ta, kVec2 tb, kVec2 tc, kVec4 ca, kVec4 cb, kVec4 cc)
 {
-	kVertex2D *vtx = render.context2d.vertices.Extend(3);
+	kVertex2D *vtx = g_RenderContext.context2d.vertices.Extend(3);
 	vtx[0].pos     = va;
 	vtx[0].tex     = ta;
 	vtx[0].col     = ca;
@@ -513,17 +513,17 @@ void kDrawTriangle(kVec3 va, kVec3 vb, kVec3 vc, kVec2 ta, kVec2 tb, kVec2 tc, k
 	vtx[2].tex     = tc;
 	vtx[2].col     = cc;
 
-	if (render.context2d.stack.transforms.count > 1)
+	if (g_RenderContext.context2d.stack.transforms.count > 1)
 	{
-		kMat3 &transform = render.context2d.stack.transforms.Last();
+		kMat3 &transform = g_RenderContext.context2d.stack.transforms.Last();
 		vtx[0].pos       = transform * vtx[0].pos;
 		vtx[1].pos       = transform * vtx[1].pos;
 		vtx[2].pos       = transform * vtx[2].pos;
 	}
 
-	u32       next = render.context2d.commands.Last().vertex;
+	u32       next = g_RenderContext.context2d.commands.Last().vertex;
 
-	kIndex2D *idx  = render.context2d.indices.Extend(3);
+	kIndex2D *idx  = g_RenderContext.context2d.indices.Extend(3);
 	idx[0]         = next + 0;
 	idx[1]         = next + 1;
 	idx[2]         = next + 2;
@@ -553,7 +553,7 @@ void kDrawTriangle(kVec2 a, kVec2 b, kVec2 c, kVec4 color)
 
 void kDrawQuad(kVec3 va, kVec3 vb, kVec3 vc, kVec3 vd, kVec2 ta, kVec2 tb, kVec2 tc, kVec2 td, kVec4 color)
 {
-	kVertex2D *vtx = render.context2d.vertices.Extend(4);
+	kVertex2D *vtx = g_RenderContext.context2d.vertices.Extend(4);
 	vtx[0].pos     = va;
 	vtx[0].tex     = ta;
 	vtx[0].col     = color;
@@ -567,18 +567,18 @@ void kDrawQuad(kVec3 va, kVec3 vb, kVec3 vc, kVec3 vd, kVec2 ta, kVec2 tb, kVec2
 	vtx[3].tex     = td;
 	vtx[3].col     = color;
 
-	if (render.context2d.stack.transforms.count > 1)
+	if (g_RenderContext.context2d.stack.transforms.count > 1)
 	{
-		kMat3 &transform = render.context2d.stack.transforms.Last();
+		kMat3 &transform = g_RenderContext.context2d.stack.transforms.Last();
 		vtx[0].pos       = transform * vtx[0].pos;
 		vtx[1].pos       = transform * vtx[1].pos;
 		vtx[2].pos       = transform * vtx[2].pos;
 		vtx[3].pos       = transform * vtx[3].pos;
 	}
 
-	u32       next = render.context2d.commands.Last().vertex;
+	u32       next = g_RenderContext.context2d.commands.Last().vertex;
 
-	kIndex2D *idx  = render.context2d.indices.Extend(6);
+	kIndex2D *idx  = g_RenderContext.context2d.indices.Extend(6);
 	idx[0]         = next + 0;
 	idx[1]         = next + 1;
 	idx[2]         = next + 2;
@@ -964,7 +964,7 @@ void kDrawLine(kVec3 a, kVec3 b, kVec4 color)
 {
 	if (kIsNull(b - a)) return;
 
-	float thickness = render.context2d.stack.thickness * 0.5f;
+	float thickness = g_RenderContext.context2d.stack.thickness * 0.5f;
 	float dx        = b.x - a.x;
 	float dy        = b.y - a.y;
 	float ilen      = 1.0f / kSquareRoot(dx * dx + dy * dy);
@@ -983,14 +983,14 @@ void kDrawLine(kVec2 a, kVec2 b, kVec4 color) { kDrawLine(kVec3(a, 0), kVec3(b, 
 
 void kPathTo(kVec2 a)
 {
-	if (render.context2d.stack.scratch.count)
+	if (g_RenderContext.context2d.stack.scratch.count)
 	{
-		if (kIsNull(render.context2d.stack.scratch.Last() - a))
+		if (kIsNull(g_RenderContext.context2d.stack.scratch.Last() - a))
 		{
 			return;
 		}
 	}
-	render.context2d.stack.scratch.Add(a);
+	g_RenderContext.context2d.stack.scratch.Add(a);
 }
 
 void kArcTo(kVec2 position, float radius_a, float radius_b, float theta_a, float theta_b)
@@ -1020,18 +1020,18 @@ void kArcTo(kVec2 position, float radius_a, float radius_b, float theta_a, float
 
 void kBezierQuadraticTo(kVec2 a, kVec2 b, kVec2 c)
 {
-	imem index    = render.context2d.stack.scratch.count;
+	imem index    = g_RenderContext.context2d.stack.scratch.count;
 	int  segments = (int)kCeil(kLength(a) + kLength(b) + kLength(c));
-	if (render.context2d.stack.scratch.Resize(render.context2d.stack.scratch.count + segments + 1))
-		kBuildBezierQuadratic(a, b, c, &render.context2d.stack.scratch[index], segments);
+	if (g_RenderContext.context2d.stack.scratch.Resize(g_RenderContext.context2d.stack.scratch.count + segments + 1))
+		kBuildBezierQuadratic(a, b, c, &g_RenderContext.context2d.stack.scratch[index], segments);
 }
 
 void kBezierCubicTo(kVec2 a, kVec2 b, kVec2 c, kVec2 d)
 {
-	imem index    = render.context2d.stack.scratch.count;
+	imem index    = g_RenderContext.context2d.stack.scratch.count;
 	int  segments = (int)kCeil(kLength(a) + kLength(b) + kLength(c));
-	if (render.context2d.stack.scratch.Resize(render.context2d.stack.scratch.count + segments + 1))
-		kBuildBezierCubic(a, b, c, d, &render.context2d.stack.scratch[index], segments);
+	if (g_RenderContext.context2d.stack.scratch.Resize(g_RenderContext.context2d.stack.scratch.count + segments + 1))
+		kBuildBezierCubic(a, b, c, d, &g_RenderContext.context2d.stack.scratch[index], segments);
 }
 
 static inline kVec2 kLineLineIntersect(kVec2 p1, kVec2 q1, kVec2 p2, kVec2 q2)
@@ -1053,7 +1053,7 @@ static inline kVec2 kLineLineIntersect(kVec2 p1, kVec2 q1, kVec2 p2, kVec2 q2)
 
 void kDrawPathStroked(kVec4 color, bool closed, float z)
 {
-	kArray<kVec2> &path = render.context2d.stack.scratch;
+	kArray<kVec2> &path = g_RenderContext.context2d.stack.scratch;
 
 	if (path.count < 2)
 	{
@@ -1080,7 +1080,7 @@ void kDrawPathStroked(kVec4 color, bool closed, float z)
 		normals[index] = v;
 	}
 
-	float thickness = 0.5f * render.context2d.stack.thickness;
+	float thickness = 0.5f * g_RenderContext.context2d.stack.thickness;
 
 	kVec2 p, q;
 	kVec2 start_p, start_q;
@@ -1178,7 +1178,7 @@ void kDrawPathStroked(kVec4 color, bool closed, float z)
 
 void kDrawPathFilled(kVec4 color, float z)
 {
-	kArray<kVec2> &path = render.context2d.stack.scratch;
+	kArray<kVec2> &path = g_RenderContext.context2d.stack.scratch;
 
 	if (path.count < 3)
 	{
@@ -1556,7 +1556,7 @@ bool kCalculateGlyphMetrics(const kFont *font, u32 codepoint, float scale, kVec2
 
 void kDrawTextQuad(u32 codepoint, const kFont *font, kVec3 pos, kVec4 color, float scale)
 {
-	kPushTexture(render.builtin.textures[kTextureType_Color], kTextureType_Color);
+	kPushTexture(g_RenderContext.builtin.textures[kTextureType_Color], kTextureType_Color);
 	kPushTexture(font->texture, kTextureType_MaskSDF);
 
 	kVec3 rpos = pos;
@@ -1583,7 +1583,7 @@ void kDrawTextQuad(u32 codepoint, const kFont *font, kVec2 pos, kVec4 color, flo
 
 void kDrawTextQuadRotated(u32 codepoint, const kFont *font, kVec3 pos, float angle, kVec4 color, float scale)
 {
-	kPushTexture(render.builtin.textures[kTextureType_Color], kTextureType_Color);
+	kPushTexture(g_RenderContext.builtin.textures[kTextureType_Color], kTextureType_Color);
 	kPushTexture(font->texture, kTextureType_MaskSDF);
 
 	kVec3 rpos = pos;
@@ -1610,7 +1610,7 @@ void kDrawTextQuadRotated(u32 codepoint, const kFont *font, kVec2 pos, float ang
 
 void kDrawTextQuadCentered(u32 codepoint, const kFont *font, kVec3 pos, kVec4 color, float scale)
 {
-	kPushTexture(render.builtin.textures[kTextureType_Color], kTextureType_Color);
+	kPushTexture(g_RenderContext.builtin.textures[kTextureType_Color], kTextureType_Color);
 	kPushTexture(font->texture, kTextureType_MaskSDF);
 
 	kVec3 rpos = pos;
@@ -1637,7 +1637,7 @@ void kDrawTextQuadCentered(u32 codepoint, const kFont *font, kVec2 pos, kVec4 co
 
 void kDrawTextQuadCenteredRotated(u32 codepoint, const kFont *font, kVec3 pos, float angle, kVec4 color, float scale)
 {
-	kPushTexture(render.builtin.textures[kTextureType_Color], kTextureType_Color);
+	kPushTexture(g_RenderContext.builtin.textures[kTextureType_Color], kTextureType_Color);
 	kPushTexture(font->texture, kTextureType_MaskSDF);
 
 	kVec3 rpos = pos;
@@ -1664,57 +1664,57 @@ void kDrawTextQuadCenteredRotated(u32 codepoint, const kFont *font, kVec2 pos, f
 
 void kDrawTextQuad(u32 codepoint, kVec3 pos, kVec4 color, float scale)
 {
-	kFont *font = render.builtin.font;
+	kFont *font = g_RenderContext.builtin.font;
 	kDrawTextQuad(codepoint, font, pos, color, scale);
 }
 
 void kDrawTextQuad(u32 codepoint, kVec2 pos, kVec4 color, float scale)
 {
-	kFont *font = render.builtin.font;
+	kFont *font = g_RenderContext.builtin.font;
 	kDrawTextQuad(codepoint, font, pos, color, scale);
 }
 
 void kDrawTextQuadRotated(u32 codepoint, kVec3 pos, float angle, kVec4 color, float scale)
 {
-	kFont *font = render.builtin.font;
+	kFont *font = g_RenderContext.builtin.font;
 	kDrawTextQuadRotated(codepoint, font, pos, angle, color, scale);
 }
 
 void kDrawTextQuadRotated(u32 codepoint, kVec2 pos, float angle, kVec4 color, float scale)
 {
-	kFont *font = render.builtin.font;
+	kFont *font = g_RenderContext.builtin.font;
 	kDrawTextQuadRotated(codepoint, font, pos, angle, color, scale);
 }
 
 void kDrawTextQuadCentered(u32 codepoint, kVec3 pos, kVec4 color, float scale)
 {
-	kFont *font = render.builtin.font;
+	kFont *font = g_RenderContext.builtin.font;
 	kDrawTextQuadCentered(codepoint, font, pos, color, scale);
 }
 
 void kDrawTextQuadCentered(u32 codepoint, kVec2 pos, kVec4 color, float scale)
 {
-	kFont *font = render.builtin.font;
+	kFont *font = g_RenderContext.builtin.font;
 	kDrawTextQuadCentered(codepoint, font, pos, color, scale);
 }
 
 void kDrawTextQuadCenteredRotated(u32 codepoint, kVec3 pos, float angle, kVec4 color, float scale)
 {
-	kFont *font = render.builtin.font;
+	kFont *font = g_RenderContext.builtin.font;
 	kDrawTextQuadCenteredRotated(codepoint, font, pos, angle, color, scale);
 }
 
 void kDrawTextQuadCenteredRotated(u32 codepoint, kVec2 pos, float angle, kVec4 color, float scale)
 {
-	kFont *font = render.builtin.font;
+	kFont *font = g_RenderContext.builtin.font;
 	kDrawTextQuadCenteredRotated(codepoint, font, pos, angle, color, scale);
 }
 
 kVec2 kCalculateText(kString text, const kFont *font, float scale)
 {
 	u32   codepoint;
-	u8   *ptr = text.begin();
-	u8   *end = text.end();
+	u8 *  ptr = text.begin();
+	u8 *  end = text.end();
 
 	kVec2 rpos;
 	kVec2 rsize;
@@ -1739,18 +1739,18 @@ kVec2 kCalculateText(kString text, const kFont *font, float scale)
 
 kVec2 kCalculateText(kString text, float scale)
 {
-	kFont *font = render.builtin.font;
+	kFont *font = g_RenderContext.builtin.font;
 	return kCalculateText(text, font, scale);
 }
 
 void kDrawText(kString text, kVec3 pos, const kFont *font, kVec4 color, float scale)
 {
-	kPushTexture(render.builtin.textures[kTextureType_Color], kTextureType_Color);
+	kPushTexture(g_RenderContext.builtin.textures[kTextureType_Color], kTextureType_Color);
 	kPushTexture(font->texture, kTextureType_MaskSDF);
 
 	u32   codepoint;
-	u8   *ptr  = text.begin();
-	u8   *end  = text.end();
+	u8 *  ptr  = text.begin();
+	u8 *  end  = text.end();
 
 	kVec3 rpos = pos;
 	kVec2 rsize;
@@ -1780,13 +1780,13 @@ void kDrawText(kString text, kVec2 pos, const kFont *font, kVec4 color, float sc
 
 void kDrawText(kString text, kVec3 pos, kVec4 color, float scale)
 {
-	kFont *font = render.builtin.font;
+	kFont *font = g_RenderContext.builtin.font;
 	kDrawText(text, pos, font, color, scale);
 }
 
 void kDrawText(kString text, kVec2 pos, kVec4 color, float scale)
 {
-	kFont *font = render.builtin.font;
+	kFont *font = g_RenderContext.builtin.font;
 	kDrawText(text, pos, font, color, scale);
 }
 
@@ -1807,74 +1807,74 @@ void kCreateRenderContext(const kRenderSpec &spec, kTexture *textures[kTextureTy
 	Sines[K_MAX_CIRCLE_SEGMENTS - 1]   = 0;
 
 	for (u32 i = 0; i < kTextureType_Count; ++i)
-		render.builtin.textures[i] = textures[i];
-	render.builtin.font              = font;
+		g_RenderContext.builtin.textures[i] = textures[i];
+	g_RenderContext.builtin.font              = font;
 
-	render.context2d.stack.thickness = spec.thickness;
+	g_RenderContext.context2d.stack.thickness = spec.thickness;
 
-	render.context2d.vertices.Reserve(spec.vertices);
-	render.context2d.indices.Reserve(spec.indices);
-	render.context2d.commands.Reserve(spec.commands);
-	render.context2d.scenes.Reserve(spec.passes);
-	render.context2d.rects.Reserve(spec.rects);
+	g_RenderContext.context2d.vertices.Reserve(spec.vertices);
+	g_RenderContext.context2d.indices.Reserve(spec.indices);
+	g_RenderContext.context2d.commands.Reserve(spec.commands);
+	g_RenderContext.context2d.scenes.Reserve(spec.passes);
+	g_RenderContext.context2d.rects.Reserve(spec.rects);
 	for (u32 i = 0; i < kTextureType_Count; ++i)
-		render.context2d.textures[i].Reserve(spec.textures);
+		g_RenderContext.context2d.textures[i].Reserve(spec.textures);
 
-	render.context2d.stack.rects.Reserve((imem)spec.rects << 1);
-	render.context2d.stack.transforms.Reserve((imem)spec.transforms << 1);
+	g_RenderContext.context2d.stack.rects.Reserve((imem)spec.rects << 1);
+	g_RenderContext.context2d.stack.transforms.Reserve((imem)spec.transforms << 1);
 	for (u32 i = 0; i < kTextureType_Count; ++i)
-		render.context2d.stack.textures[i].Reserve((imem)spec.textures << 1);
-	render.context2d.stack.scratch.Reserve(spec.scratch);
-	render.context2d.stack.blends.Reserve(32);
+		g_RenderContext.context2d.stack.textures[i].Reserve((imem)spec.textures << 1);
+	g_RenderContext.context2d.stack.scratch.Reserve(spec.scratch);
+	g_RenderContext.context2d.stack.blends.Reserve(32);
 
-	render.context2d.stack.rects.Add(kRect{});
-	render.context2d.stack.transforms.Add(kIdentity3x3());
+	g_RenderContext.context2d.stack.rects.Add(kRect{});
+	g_RenderContext.context2d.stack.transforms.Add(kIdentity3x3());
 	for (u32 i = 0; i < kTextureType_Count; ++i)
-		render.context2d.stack.textures[i].Add(render.builtin.textures[i]);
-	render.context2d.stack.blends.Add(kBlendMode_Normal);
-	render.context2d.stack.filters.Add(kTextureFilter_LinearWrap);
+		g_RenderContext.context2d.stack.textures[i].Add(g_RenderContext.builtin.textures[i]);
+	g_RenderContext.context2d.stack.blends.Add(kBlendMode_Normal);
+	g_RenderContext.context2d.stack.filters.Add(kTextureFilter_LinearWrap);
 
 	kResetFrame();
 }
 
 void kDestroyRenderContext(void)
 {
-	kFree(&render.context2d.vertices);
-	kFree(&render.context2d.indices);
-	kFree(&render.context2d.commands);
-	kFree(&render.context2d.scenes);
-	kFree(&render.context2d.rects);
+	kFree(&g_RenderContext.context2d.vertices);
+	kFree(&g_RenderContext.context2d.indices);
+	kFree(&g_RenderContext.context2d.commands);
+	kFree(&g_RenderContext.context2d.scenes);
+	kFree(&g_RenderContext.context2d.rects);
 	for (u32 i = 0; i < kTextureType_Count; ++i)
-		kFree(&render.context2d.textures[i]);
+		kFree(&g_RenderContext.context2d.textures[i]);
 
-	kFree(&render.context2d.stack.rects);
-	kFree(&render.context2d.stack.transforms);
+	kFree(&g_RenderContext.context2d.stack.rects);
+	kFree(&g_RenderContext.context2d.stack.transforms);
 	for (u32 i = 0; i < kTextureType_Count; ++i)
-		kFree(&render.context2d.stack.textures[i]);
-	kFree(&render.context2d.stack.scratch);
-	kFree(&render.context2d.stack.blends);
+		kFree(&g_RenderContext.context2d.stack.textures[i]);
+	kFree(&g_RenderContext.context2d.stack.scratch);
+	kFree(&g_RenderContext.context2d.stack.blends);
 
-	memset(&render, 0, sizeof(render));
+	memset(&g_RenderContext, 0, sizeof(g_RenderContext));
 }
 
 void kResetFrame(void)
 {
-	render.context2d.vertices.count   = 0;
-	render.context2d.indices.count    = 0;
-	render.context2d.commands.count   = 0;
-	render.context2d.scenes.count     = 0;
-	render.context2d.rects.count      = 0;
+	g_RenderContext.context2d.vertices.count = 0;
+	g_RenderContext.context2d.indices.count  = 0;
+	g_RenderContext.context2d.commands.count = 0;
+	g_RenderContext.context2d.scenes.count   = 0;
+	g_RenderContext.context2d.rects.count    = 0;
 	for (u32 i = 0; i < kTextureType_Count; ++i)
-		render.context2d.textures[i].count = 0;
+		g_RenderContext.context2d.textures[i].count = 0;
 
-	render.context2d.stack.rects.count      = 1;
-	render.context2d.stack.transforms.count = 1;
+	g_RenderContext.context2d.stack.rects.count      = 1;
+	g_RenderContext.context2d.stack.transforms.count = 1;
 	for (u32 i = 0; i < kTextureType_Count; ++i)
-		render.context2d.stack.textures[i].count = 1;
-	render.context2d.stack.blends.count  = 1;
-	render.context2d.stack.filters.count = 1;
-	render.context2d.stack.scratch.count = 0;
-	render.context2d.stack.thickness     = 1.0f;
+		g_RenderContext.context2d.stack.textures[i].count = 1;
+	g_RenderContext.context2d.stack.blends.count  = 1;
+	g_RenderContext.context2d.stack.filters.count = 1;
+	g_RenderContext.context2d.stack.scratch.count = 0;
+	g_RenderContext.context2d.stack.thickness     = 1.0f;
 }
 
 static void kCalculateTotalMegaBytes(kRenderMemoryUsage *usage)
@@ -1901,53 +1901,53 @@ static void kCalculateTotalMegaBytes(kRenderMemoryUsage *usage)
 
 static void kUpdateMemoryStatictics(void)
 {
-	kRenderMemoryUsage &allocated = render.memory.allocated;
+	kRenderMemoryUsage &allocated = g_RenderContext.memory.allocated;
 
-	allocated.vertices            = render.context2d.vertices.allocated;
-	allocated.indices             = render.context2d.indices.allocated;
+	allocated.vertices            = g_RenderContext.context2d.vertices.allocated;
+	allocated.indices             = g_RenderContext.context2d.indices.allocated;
 	for (int i = 0; i < kTextureType_Count; ++i)
-		allocated.textures[i] = render.context2d.textures[i].allocated;
-	allocated.rects      = render.context2d.rects.allocated;
-	allocated.passes     = render.context2d.scenes.allocated;
-	allocated.commands   = render.context2d.commands.allocated;
+		allocated.textures[i] = g_RenderContext.context2d.textures[i].allocated;
+	allocated.rects    = g_RenderContext.context2d.rects.allocated;
+	allocated.passes   = g_RenderContext.context2d.scenes.allocated;
+	allocated.commands = g_RenderContext.context2d.commands.allocated;
 
 	for (int i = 0; i < kTextureType_Count; ++i)
-		allocated.stack.textures[i] = render.context2d.stack.textures[i].allocated;
-	allocated.stack.transforms = render.context2d.stack.transforms.allocated;
-	allocated.stack.rects      = render.context2d.stack.rects.allocated;
-	allocated.stack.blends     = render.context2d.stack.blends.allocated;
-	allocated.stack.scratch    = render.context2d.stack.scratch.allocated;
+		allocated.stack.textures[i] = g_RenderContext.context2d.stack.textures[i].allocated;
+	allocated.stack.transforms = g_RenderContext.context2d.stack.transforms.allocated;
+	allocated.stack.rects      = g_RenderContext.context2d.stack.rects.allocated;
+	allocated.stack.blends     = g_RenderContext.context2d.stack.blends.allocated;
+	allocated.stack.scratch    = g_RenderContext.context2d.stack.scratch.allocated;
 
 	kCalculateTotalMegaBytes(&allocated);
 
-	kRenderMemoryUsage &last_frame = render.memory.last_frame;
+	kRenderMemoryUsage &last_frame = g_RenderContext.memory.last_frame;
 
-	last_frame.vertices            = render.context2d.vertices.count;
-	last_frame.indices             = render.context2d.indices.count;
+	last_frame.vertices            = g_RenderContext.context2d.vertices.count;
+	last_frame.indices             = g_RenderContext.context2d.indices.count;
 	for (int i = 0; i < kTextureType_Count; ++i)
-		last_frame.textures[i] = render.context2d.textures[i].count;
-	last_frame.rects      = render.context2d.rects.count;
-	last_frame.passes     = render.context2d.scenes.count;
-	last_frame.commands   = render.context2d.commands.count;
+		last_frame.textures[i] = g_RenderContext.context2d.textures[i].count;
+	last_frame.rects    = g_RenderContext.context2d.rects.count;
+	last_frame.passes   = g_RenderContext.context2d.scenes.count;
+	last_frame.commands = g_RenderContext.context2d.commands.count;
 
 	for (int i = 0; i < kTextureType_Count; ++i)
-		last_frame.stack.textures[i] = render.context2d.stack.textures[i].count;
-	last_frame.stack.transforms = render.context2d.stack.transforms.count;
-	last_frame.stack.rects      = render.context2d.stack.rects.count;
-	last_frame.stack.blends     = render.context2d.stack.blends.count;
-	last_frame.stack.scratch    = render.context2d.stack.scratch.count;
+		last_frame.stack.textures[i] = g_RenderContext.context2d.stack.textures[i].count;
+	last_frame.stack.transforms = g_RenderContext.context2d.stack.transforms.count;
+	last_frame.stack.rects      = g_RenderContext.context2d.stack.rects.count;
+	last_frame.stack.blends     = g_RenderContext.context2d.stack.blends.count;
+	last_frame.stack.scratch    = g_RenderContext.context2d.stack.scratch.count;
 
 	kCalculateTotalMegaBytes(&last_frame);
 
-	kRenderMemoryUsage &max_used = render.memory.max_used;
+	kRenderMemoryUsage &max_used = g_RenderContext.memory.max_used;
 
 	max_used.vertices            = kMax(max_used.vertices, last_frame.vertices);
 	max_used.indices             = kMax(max_used.indices, last_frame.indices);
 	for (int i = 0; i < kTextureType_Count; ++i)
 		max_used.textures[i] = kMax(max_used.textures[i], last_frame.textures[i]);
-	max_used.rects      = kMax(max_used.rects, last_frame.rects);
-	max_used.passes     = kMax(max_used.passes, last_frame.passes);
-	max_used.commands   = kMax(max_used.commands, last_frame.commands);
+	max_used.rects    = kMax(max_used.rects, last_frame.rects);
+	max_used.passes   = kMax(max_used.passes, last_frame.passes);
+	max_used.commands = kMax(max_used.commands, last_frame.commands);
 
 	for (int i = 0; i < kTextureType_Count; ++i)
 		max_used.stack.textures[i] = kMax(max_used.stack.textures[i], last_frame.stack.textures[i]);
@@ -1961,15 +1961,15 @@ static void kUpdateMemoryStatictics(void)
 
 void kGetFrameData(kRenderFrame2D *frame)
 {
-	frame->scenes   = render.context2d.scenes;
-	frame->commands = render.context2d.commands;
+	frame->scenes   = g_RenderContext.context2d.scenes;
+	frame->commands = g_RenderContext.context2d.commands;
 	for (int i = 0; i < kTextureType_Count; ++i)
-		frame->textures[i] = render.context2d.textures[i];
-	frame->rects      = render.context2d.rects;
-	frame->vertices   = render.context2d.vertices;
-	frame->indices    = render.context2d.indices;
+		frame->textures[i] = g_RenderContext.context2d.textures[i];
+	frame->rects    = g_RenderContext.context2d.rects;
+	frame->vertices = g_RenderContext.context2d.vertices;
+	frame->indices  = g_RenderContext.context2d.indices;
 
 	kUpdateMemoryStatictics();
 }
 
-const kRenderMemoryStatistics *kGetRenderMemoryStatistics(void) { return &render.memory; }
+const kRenderMemoryStatistics *kGetRenderMemoryStatistics(void) { return &g_RenderContext.memory; }
