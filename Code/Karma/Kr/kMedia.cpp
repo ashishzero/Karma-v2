@@ -346,10 +346,8 @@ static void kCreateBuiltinResources(void)
 		kTextureSpec spec     = {};
 		spec.width            = 1;
 		spec.height           = 1;
-		spec.num_samples      = 1;
 		spec.pitch            = 1 * sizeof(u32);
 		spec.format           = kFormat_RGBA8_UNORM;
-		spec.flags            = 0;
 		spec.pixels           = pixels;
 
 		g_Media.builtin.texture = g_Media.render.CreateTexture(spec);
@@ -359,9 +357,7 @@ static void kCreateBuiltinResources(void)
 		kFont       *font = &g_Media.builtin.font;
 
 		kTextureSpec spec = {};
-		spec.num_samples  = 1;
 		spec.format       = kFormat_R8_UNORM;
-		spec.flags        = 0;
 		spec.width        = kEmFontAtlasWidth;
 		spec.height       = kEmFontAtlasHeight;
 		spec.pitch        = kEmFontAtlasWidth;

@@ -41,14 +41,6 @@ typedef enum kFormat
 	kFormat_Count
 } kFormat;
 
-enum kResourceFlags
-{
-	kResource_DenyShaderResource   = 0x1,
-	kResource_AllowRenderTarget    = 0x2,
-	kResource_AllowDepthStencil    = 0x4,
-	kResource_AllowUnorderedAccess = 0x8,
-};
-
 typedef struct kTextureSpec
 {
 	kFormat format;
@@ -56,8 +48,6 @@ typedef struct kTextureSpec
 	u32     height;
 	u32     pitch;
 	u8     *pixels;
-	u32     flags;
-	u32     num_samples;
 } kTextureSpec;
 
 extern bool           kEnableDebugLayer;

@@ -200,27 +200,18 @@ static kTexture *kD3D12_CreateTexture(const kTextureSpec &spec)
 		return (kD3D12_Texture *)&kFallbackTexture;
 	}
 
-	r->state                 = kResourceState_Unready;
+	r->state                   = kResourceState_Unready;
 
-	D3D12_RESOURCE_DESC desc = {};
-	desc.Dimension           = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-	desc.Alignment           = 0;
-	desc.Width               = spec.width;
-	desc.Height              = spec.height;
-	desc.DepthOrArraySize    = 1;
-	desc.MipLevels           = 1;
-	desc.Format              = kDXGI_FormatMap[spec.format];
-	desc.SampleDesc.Count    = kMax(spec.num_samples, 1u);
-	desc.SampleDesc.Quality  = 0;
-
-	UINT flags               = 0;
-
-	if (spec.flags & kResource_AllowRenderTarget) flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
-	if (spec.flags & kResource_AllowDepthStencil) flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-	if (spec.flags & kResource_AllowUnorderedAccess) flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-	if (spec.flags & kResource_DenyShaderResource) flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
-
-	desc.Flags                 = (D3D12_RESOURCE_FLAGS)flags;
+	D3D12_RESOURCE_DESC desc   = {};
+	desc.Dimension             = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	desc.Alignment             = 0;
+	desc.Width                 = spec.width;
+	desc.Height                = spec.height;
+	desc.DepthOrArraySize      = 1;
+	desc.MipLevels             = 1;
+	desc.Format                = kDXGI_FormatMap[spec.format];
+	desc.SampleDesc.Count      = 1;
+	desc.SampleDesc.Quality    = 0;
 
 	D3D12_HEAP_PROPERTIES heap = {};
 	heap.Type                  = D3D12_HEAP_TYPE_DEFAULT;
