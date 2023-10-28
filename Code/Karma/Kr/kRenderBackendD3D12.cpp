@@ -320,9 +320,9 @@ static void kD3D12_DestroyTexture(kTexture *texture)
 	}
 }
 
-static kVec2i kD3D12_GetTextureSize(kTexture *texture)
+static kVec2u kD3D12_GetTextureSize(kTexture *texture)
 {
-	kVec2i          size(0);
+	kVec2u          size(0);
 	kD3D12_Texture *r = (kD3D12_Texture *)texture;
 	if (r->state == kResourceState_Ready)
 	{
@@ -762,12 +762,12 @@ static ID3D12Resource *kD3D12_IndexBuffer2D(uint sz)
 
 static void kD3D12_ExecuteFrame(const kRenderFrame &render)
 {
-	const kRenderFrame2D &frame = render.render2d;
+	const kRenderFrame2D &frame = render.Frame2D;
 
-	if (frame.vertices.count == 0 || frame.indices.count == 0) return;
+	if (frame.Vertices.Count == 0 || frame.Indices.Count == 0) return;
 
-	uint            vb_size = (uint)frame.vertices.Size();
-	uint            ib_size = (uint)frame.indices.Size();
+	uint            vb_size = (uint)frame.Vertices.Size();
+	uint            ib_size = (uint)frame.Indices.Size();
 
 	ID3D12Resource *vb      = kD3D12_VertexBuffer2D(vb_size);
 	ID3D12Resource *ib      = kD3D12_IndexBuffer2D(ib_size);
@@ -783,7 +783,7 @@ static void kD3D12_ExecuteFrame(const kRenderFrame &render)
 		kLogHresultError(hr, "D3D12", "Failed to map vertex buffer");
 		return;
 	}
-	memcpy(mapped, frame.vertices.data, vb_size);
+	memcpy(mapped, frame.Vertices.Items, vb_size);
 	vb->Unmap(0, 0);
 
 	hr = ib->Map(0, 0, &mapped);
@@ -792,7 +792,7 @@ static void kD3D12_ExecuteFrame(const kRenderFrame &render)
 		kLogHresultError(hr, "D3D12", "Failed to map index buffer");
 		return;
 	}
-	memcpy(mapped, frame.indices.data, ib_size);
+	memcpy(mapped, frame.Indices.Items, ib_size);
 	ib->Unmap(0, 0);
 
 	d3d12.frame.allocators[d3d12.frame.index]->Reset();
@@ -844,21 +844,21 @@ static void kD3D12_ExecuteFrame(const kRenderFrame &render)
 	i32 vertex_offset = 0;
 	u32 index_offset  = 0;
 
-	for (const kRenderScene2D &scene : frame.scenes)
+	for (const kRenderScene2D &scene : frame.Scenes)
 	{
 		D3D12_VIEWPORT viewport;
-		viewport.TopLeftX = scene.region.min.x;
-		viewport.TopLeftY = scene.region.min.y;
-		viewport.Width    = scene.region.max.x - scene.region.min.x;
-		viewport.Height   = scene.region.max.y - scene.region.min.y;
+		viewport.TopLeftX = scene.Region.min.x;
+		viewport.TopLeftY = scene.Region.min.y;
+		viewport.Width    = scene.Region.max.x - scene.Region.min.x;
+		viewport.Height   = scene.Region.max.y - scene.Region.min.y;
 		viewport.MinDepth = 0.0f;
 		viewport.MaxDepth = 1.0f;
 
 		gc->RSSetViewports(1, &viewport);
 
 		{
-			kMat4 proj = kOrthographicLH(scene.camera.left, scene.camera.right, scene.camera.top, scene.camera.bottom,
-			                             scene.camera.near, scene.camera.far);
+			kMat4 proj = kOrthographicLH(scene.Camera.Left, scene.Camera.Right, scene.Camera.Top, scene.Camera.Bottom,
+			                             scene.Camera.Near, scene.Camera.Far);
 			gc->SetGraphicsRoot32BitConstants(2, 16, proj.m, 0);
 		}
 
@@ -867,31 +867,31 @@ static void kD3D12_ExecuteFrame(const kRenderFrame &render)
 		kTextureFilter prev_filter    = kTextureFilter_Count;
 		u16            prev_rect      = UINT16_MAX;
 
-		for (u32 index = scene.commands.beg; index < scene.commands.end; ++index)
+		for (u32 index = scene.Commands.Beg; index < scene.Commands.End; ++index)
 		{
-			const kRenderCommand2D &cmd = frame.commands[index];
+			const kRenderCommand2D &cmd = frame.Commands[index];
 
-			if (cmd.blend != prev_blend)
+			if (cmd.BlendMode != prev_blend)
 			{
-				prev_blend              = cmd.blend;
-				ID3D12PipelineState *ps = kD3D12_PipelineState2D(cmd.blend);
+				prev_blend              = cmd.BlendMode;
+				ID3D12PipelineState *ps = kD3D12_PipelineState2D(cmd.BlendMode);
 				if (ps)
 				{
 					gc->SetPipelineState(ps);
 				}
 			}
 
-			if (cmd.filter != prev_filter)
+			if (cmd.TextureFilter != prev_filter)
 			{
-				prev_filter = cmd.filter;
-				gc->SetGraphicsRootDescriptorTable(3, d3d12.resource.samplers[cmd.filter]);
+				prev_filter = cmd.TextureFilter;
+				gc->SetGraphicsRootDescriptorTable(3, d3d12.resource.samplers[cmd.TextureFilter]);
 			}
 
-			if (cmd.rect != prev_rect)
+			if (cmd.Rect != prev_rect)
 			{
-				prev_rect        = cmd.rect;
+				prev_rect        = cmd.Rect;
 
-				kRect      prect = frame.rects[prev_rect];
+				kRect      prect = frame.Rects[prev_rect];
 
 				D3D12_RECT drect;
 				drect.left   = (LONG)(prect.min.x);
@@ -902,11 +902,11 @@ static void kD3D12_ExecuteFrame(const kRenderFrame &render)
 				gc->RSSetScissorRects(1, &drect);
 			}
 
-			u32                    idx1          = cmd.textures[kTextureType_Color];
-			kD3D12_Texture        *r1            = (kD3D12_Texture *)frame.textures[kTextureType_Color][idx1];
+			u32                    idx1          = cmd.Textures[kTextureType_Color];
+			kD3D12_Texture        *r1            = (kD3D12_Texture *)frame.Textures[kTextureType_Color][idx1];
 
-			u32                    idx2          = cmd.textures[kTextureType_MaskSDF];
-			kD3D12_Texture        *r2            = (kD3D12_Texture *)frame.textures[kTextureType_MaskSDF][idx2];
+			u32                    idx2          = cmd.Textures[kTextureType_MaskSDF];
+			kD3D12_Texture        *r2            = (kD3D12_Texture *)frame.Textures[kTextureType_MaskSDF][idx2];
 
 			D3D12_RESOURCE_BARRIER barriers[2]   = {};
 			uint                   barrier_count = 0;
@@ -938,7 +938,7 @@ static void kD3D12_ExecuteFrame(const kRenderFrame &render)
 				gc->ResourceBarrier(barrier_count, barriers);
 			}
 
-			if (cmd.flags & kRenderDirty_TextureColor)
+			if (cmd.Flags & kRenderDirty_TextureColor)
 			{
 				d3d12.device->CreateShaderResourceView(r1->resource, 0, cpu);
 				gc->SetGraphicsRootDescriptorTable(0, gpu);
@@ -946,7 +946,7 @@ static void kD3D12_ExecuteFrame(const kRenderFrame &render)
 				cpu.ptr += srv_stride;
 			}
 
-			if (cmd.flags & kRenderDirty_TextureMaskSDF)
+			if (cmd.Flags & kRenderDirty_TextureMaskSDF)
 			{
 				d3d12.device->CreateShaderResourceView(r2->resource, 0, cpu);
 				gc->SetGraphicsRootDescriptorTable(1, gpu);
@@ -954,9 +954,9 @@ static void kD3D12_ExecuteFrame(const kRenderFrame &render)
 				cpu.ptr += srv_stride;
 			}
 
-			gc->DrawIndexedInstanced(cmd.index, 1, index_offset, vertex_offset, 0);
-			vertex_offset += cmd.vertex;
-			index_offset += cmd.index;
+			gc->DrawIndexedInstanced(cmd.IndexOffset, 1, index_offset, vertex_offset, 0);
+			vertex_offset += cmd.VertexOffset;
+			index_offset += cmd.IndexOffset;
 		}
 	}
 

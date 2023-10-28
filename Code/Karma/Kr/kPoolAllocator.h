@@ -8,16 +8,16 @@ constexpr int K_RESOUCE_PER_BLOCK = 64;
 template <typename T>
 struct kResouceType
 {
-	T             resource;
-	kResouceType *next;
-	kResouceType *prev;
+	T             Resource;
+	kResouceType *Next;
+	kResouceType *Prev;
 };
 
 template <typename T>
 struct kMemoryBlock
 {
-	kMemoryBlock   *next;
-	kResouceType<T> data[K_RESOUCE_PER_BLOCK];
+	kMemoryBlock   *Next;
+	kResouceType<T> Data[K_RESOUCE_PER_BLOCK];
 };
 
 template <typename T>
@@ -26,39 +26,39 @@ using kMemoryPoolResourceFreeProc = void (*)(T *, void *);
 template <typename T>
 struct kMemoryPool
 {
-	kResouceType<T>  first;
-	kResouceType<T> *free;
-	kMemoryBlock<T> *blocks;
+	kResouceType<T>  First;
+	kResouceType<T> *FirstFree;
+	kMemoryBlock<T> *Blocks;
 
 	kMemoryPool()
 	{
-		kDListInit(&first);
-		free   = nullptr;
-		blocks = nullptr;
+		kDListInit(&First);
+		FirstFree   = nullptr;
+		Blocks = nullptr;
 	}
 
 	void ResetPool(kMemoryPoolResourceFreeProc<T> dtor = nullptr, void *data = nullptr)
 	{
 		if (dtor)
 		{
-			while (!kDListIsEmpty(&first))
+			while (!kDListIsEmpty(&First))
 			{
-				kResouceType *r = kDListPopFront(&first);
+				kResouceType *r = kDListPopFront(&First);
 				dtor(&r->resource, data);
 
 				memset(r, 0, sizeof(*r));
-				r->next = free;
-				free    = r;
+				r->next = FirstFree;
+				FirstFree    = r;
 			}
 		}
 		else
 		{
-			while (!kDListIsEmpty(&first))
+			while (!kDListIsEmpty(&First))
 			{
-				kResouceType *r = kDListPopFront(&first);
+				kResouceType *r = kDListPopFront(&First);
 				memset(r, 0, sizeof(*r));
-				r->next = free;
-				free    = r;
+				r->next = FirstFree;
+				FirstFree    = r;
 			}
 		}
 	}
@@ -67,20 +67,20 @@ struct kMemoryPool
 	{
 		if (dtor)
 		{
-			while (!kDListIsEmpty(&first))
+			while (!kDListIsEmpty(&First))
 			{
-				kResouceType<T> *r = kDListPopFront(&first);
-				dtor(&r->resource, data);
+				kResouceType<T> *r = kDListPopFront(&First);
+				dtor(&r->Resource, data);
 			}
 		}
 
 		kMemoryBlock<T> *prev  = nullptr;
-		kMemoryBlock<T> *block = blocks;
+		kMemoryBlock<T> *block = Blocks;
 
 		while (block)
 		{
 			prev  = block;
-			block = prev->next;
+			block = prev->Next;
 			kFree(prev, sizeof(*prev));
 		}
 
@@ -89,7 +89,7 @@ struct kMemoryPool
 
 	T *Alloc(void)
 	{
-		if (!free)
+		if (!FirstFree)
 		{
 			kMemoryBlock<T> *block = (kMemoryBlock<T> *)kAlloc(sizeof(kMemoryBlock<T>));
 
@@ -99,20 +99,20 @@ struct kMemoryPool
 
 			for (int i = 0; i < K_RESOUCE_PER_BLOCK - 1; ++i)
 			{
-				block->data[i].next = &block->data[i + 1];
+				block->Data[i].Next = &block->Data[i + 1];
 			}
 
-			free        = block->data;
-			block->next = blocks;
-			blocks      = block;
+			FirstFree        = block->Data;
+			block->Next = Blocks;
+			Blocks      = block;
 		}
 
-		kResouceType<T> *r = free;
-		free               = r->next;
+		kResouceType<T> *r = FirstFree;
+		FirstFree               = r->Next;
 
-		kDListPushBack(&first, r);
+		kDListPushBack(&First, r);
 
-		return &r->resource;
+		return &r->Resource;
 	}
 
 	void Free(T *resource)
@@ -120,7 +120,7 @@ struct kMemoryPool
 		kResouceType<T> *r = (kResouceType<T> *)resource;
 		kDListRemove(r);
 		memset(r, 0, sizeof(*r));
-		r->next = free;
-		free    = r;
+		r->Next = FirstFree;
+		FirstFree    = r;
 	}
 };

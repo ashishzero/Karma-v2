@@ -10,7 +10,7 @@ static void kWriteBuffer(kStringBuilder<> *builder, kString buffer, kString name
 	builder->Write(postfix);
 	builder->Write("[] = {");
 
-	for (imem j = 0; j < buffer.count; ++j)
+	for (imem j = 0; j < buffer.Count; ++j)
 	{
 		if ((j) % 15 == 0) builder->Write('\n');
 		builder->Write(buffer[j], "0x%02x");
@@ -31,7 +31,7 @@ static kString kPostfixFromPath(kString name)
 static bool kWriteShaderFile(kStringBuilder<> *builder, kString path)
 {
 	kString source = kReadEntireFile(path);
-	if (!source.count)
+	if (!source.Count)
 	{
 		return false;
 	}
@@ -44,13 +44,13 @@ static bool kWriteShaderFile(kStringBuilder<> *builder, kString path)
 	if (kCompileShader(source, path, &compiled))
 	{
 		kString extension = ".xx.hlsl";
-		kString shader    = kRemoveSuffix(kGetFileName(path), extension.count);
+		kString shader    = kRemoveSuffix(kGetFileName(path), extension.Count);
 		kWriteBuffer(builder, compiled, shader, "", kPostfixFromPath(path));
-		kFree(compiled.data, compiled.count);
+		kFree(compiled.Items, compiled.Count);
 		ok = true;
 	}
 
-	kFree(source.data, source.count + 1);
+	kFree(source.Items, source.Count + 1);
 
 	return ok;
 }
@@ -61,8 +61,8 @@ static bool kFlushBuilderToFile(kString path, kStringBuilder<> *builder)
 	kCreateDirectories(dir);
 
 	kString buffer = builder->ToString();
-	bool    rc     = kWriteEntireFile(path, buffer.data, buffer.count);
-	kFree(buffer.data, buffer.count + 1);
+	bool    rc     = kWriteEntireFile(path, buffer.Items, buffer.Count);
+	kFree(buffer.Items, buffer.Count + 1);
 	builder->Reset();
 	return rc;
 }
@@ -79,7 +79,7 @@ static bool kBuildShader(kString shader)
 	kString path   = kGetDirectoryPath(shader);
 	kString output = kFormatString(kStrFmt "/Generated/" kStrFmt ".h", kStrArg(path), kStrArg(name));
 
-	kDefer { kFree(output.data, output.count + 1); };
+	kDefer { kFree(output.Items, output.Count + 1); };
 
 	if (kWriteShaderFile(&builder, shader))
 	{

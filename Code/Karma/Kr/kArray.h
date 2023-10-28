@@ -6,106 +6,106 @@
 template <typename T>
 struct kArray
 {
-	imem count;
-	imem allocated;
-	T   *data;
+	imem Count;
+	imem Allocated;
+	T   *Items;
 
-	kArray() : count(0), allocated(0), data(nullptr) {}
+	kArray() : Count(0), Allocated(0), Items(nullptr) {}
 
-	operator kSpan<T>() { return kSpan<T>(data, count); }
+	operator kSpan<T>() { return kSpan<T>(Items, Count); }
 
-	operator const kSpan<T>() const { return kSpan<T>(data, count); }
+	operator const kSpan<T>() const { return kSpan<T>(Items, Count); }
 
 	T &operator[](ptrdiff_t i)
 	{
-		kAssert(i >= 0 && i < count);
-		return data[i];
+		kAssert(i >= 0 && i < Count);
+		return Items[i];
 	}
 
 	const T &operator[](ptrdiff_t i) const
 	{
-		kAssert(i >= 0 && i < count);
-		return data[i];
+		kAssert(i >= 0 && i < Count);
+		return Items[i];
 	}
 
-	T       *begin() { return data; }
+	T       *begin() { return Items; }
 
-	T       *end() { return data + count; }
+	T       *end() { return Items + Count; }
 
-	const T *begin() const { return data; }
+	const T *begin() const { return Items; }
 
-	const T *end() const { return data + count; }
+	const T *end() const { return Items + Count; }
 
 	imem     NextCapacity(imem count)
 	{
-		imem new_cap = allocated ? (allocated << 1) : 8;
+		imem new_cap = Allocated ? (Allocated << 1) : 8;
 		return new_cap > count ? new_cap : count;
 	}
 
 	T *TryGet(imem index)
 	{
-		if (index < count)
+		if (index < Count)
 		{
-			return &data[index];
+			return &Items[index];
 		}
 		return 0;
 	}
 
 	T &First(void)
 	{
-		kAssert(count != 0);
-		return data[0];
+		kAssert(Count != 0);
+		return Items[0];
 	}
 
 	T &Last(void)
 	{
-		kAssert(count != 0);
-		return data[count - 1];
+		kAssert(Count != 0);
+		return Items[Count - 1];
 	}
 
 	const T &First(void) const
 	{
-		kAssert(count != 0);
-		return data[0];
+		kAssert(Count != 0);
+		return Items[0];
 	}
 
 	const T &Last(void) const
 	{
-		kAssert(count != 0);
-		return data[count - 1];
+		kAssert(Count != 0);
+		return Items[Count - 1];
 	}
 
 	void Pop(void)
 	{
-		kAssert(count > 0);
-		count -= 1;
+		kAssert(Count > 0);
+		Count -= 1;
 	}
 
-	void Reset(void) { count = 0; }
+	void Reset(void) { Count = 0; }
 
 	void Remove(imem index)
 	{
-		kAssert(index < count);
-		memmove(data + index, data + (index + 1), (count - index - 1) * sizeof(T));
-		count -= 1;
+		kAssert(index < Count);
+		memmove(Items + index, Items + (index + 1), (Count - index - 1) * sizeof(T));
+		Count -= 1;
 	}
 
 	void RemoveUnordered(imem index)
 	{
-		kAssert(index < count);
-		data[index] = data[count - 1];
-		count -= 1;
+		kAssert(index < Count);
+		Items[index] = Items[Count - 1];
+		Count -= 1;
 	}
 
 	bool Reserve(imem req_cap)
 	{
-		if (req_cap <= allocated) return true;
+		if (req_cap <= Allocated) return true;
 
-		void *mem = kRealloc(data, allocated * sizeof(T), req_cap * sizeof(T));
+		void *mem = kRealloc(Items, Allocated * sizeof(T), req_cap * sizeof(T));
 		if (mem)
 		{
-			data      = (T *)mem;
-			allocated = req_cap;
+			Items      = (T *)mem;
+			Allocated = req_cap;
 			return true;
 		}
 
@@ -116,7 +116,7 @@ struct kArray
 	{
 		if (Reserve(n))
 		{
-			count = n;
+			Count = n;
 			return true;
 		}
 		return false;
@@ -126,11 +126,11 @@ struct kArray
 	{
 		if (Reserve(n))
 		{
-			for (imem idx = count; idx < n; ++idx)
+			for (imem idx = Count; idx < n; ++idx)
 			{
-				data[idx] = src;
+				Items[idx] = src;
 			}
-			count = n;
+			Count = n;
 			return true;
 		}
 		return false;
@@ -138,21 +138,21 @@ struct kArray
 
 	T *Extend(imem n)
 	{
-		imem req_count = count + n;
-		imem cur_count = count;
+		imem req_count = Count + n;
+		imem cur_count = Count;
 
-		if (req_count < allocated)
+		if (req_count < Allocated)
 		{
-			count = req_count;
-			return &data[cur_count];
+			Count = req_count;
+			return &Items[cur_count];
 		}
 
 		imem new_cap = NextCapacity(req_count);
 
 		if (Reserve(new_cap))
 		{
-			count = req_count;
-			return &data[cur_count];
+			Count = req_count;
+			return &Items[cur_count];
 		}
 
 		return 0;
@@ -168,35 +168,35 @@ struct kArray
 
 	bool CopyBuffer(T *src, imem src_count)
 	{
-		if (count + src_count > allocated)
+		if (Count + src_count > Allocated)
 		{
-			imem new_cap = NextCapacity(allocated + src_count);
+			imem new_cap = NextCapacity(Allocated + src_count);
 			if (!Reserve(new_cap)) return false;
 		}
 
-		memcpy(data + count, src, src_count * sizeof(T));
-		count += src_count;
+		memcpy(Items + Count, src, src_count * sizeof(T));
+		Count += src_count;
 
 		return true;
 	}
 
 	bool CopyArray(kSpan<T> src)
 	{
-		if (src.count)
+		if (src.Count)
 		{
-			return CopyBuffer(src.data, src.count);
+			return CopyBuffer(src.Items, src.Count);
 		}
 		return false;
 	}
 
 	bool Insert(imem index, const T &src)
 	{
-		kAssert(index < count);
+		kAssert(index < Count);
 
 		if (Add())
 		{
-			memmove(data + (index + 1), data + index, (count - index));
-			data[index] = src;
+			memmove(Items + (index + 1), Items + index, (Count - index));
+			Items[index] = src;
 			return true;
 		}
 
@@ -205,13 +205,13 @@ struct kArray
 
 	void Pack(void)
 	{
-		if (count != allocated)
+		if (Count != Allocated)
 		{
-			void *mem = kRealloc(data, allocated * sizeof(T), count * sizeof(T));
+			void *mem = kRealloc(Items, Allocated * sizeof(T), Count * sizeof(T));
 			if (mem)
 			{
-				data      = (T *)mem;
-				allocated = count;
+				Items      = (T *)mem;
+				Allocated = Count;
 			}
 		}
 	}
@@ -219,7 +219,7 @@ struct kArray
 	kArray<T> Clone(void)
 	{
 		kArray<T> dst = {};
-		dst.CopyBuffer(data, count);
+		dst.CopyBuffer(Items, Count);
 		return dst;
 	}
 };
@@ -227,13 +227,13 @@ struct kArray
 template <typename T>
 void kFree(kArray<T> *arr)
 {
-	kFree(arr->data, arr->allocated * sizeof(T));
+	kFree(arr->Items, arr->Allocated * sizeof(T));
 }
 
 template <typename T>
 void kFree(kSpan<T> *arr)
 {
-	kFree(arr->data, arr->count * sizeof(T));
+	kFree(arr->Items, arr->Count * sizeof(T));
 }
 
 //
@@ -243,7 +243,7 @@ void kFree(kSpan<T> *arr)
 template <typename T, typename SearchFunc, typename... Args>
 imem Find(kSpan<T> arr, SearchFunc func, const Args &...args)
 {
-	for (imem index = 0; index < arr.count; ++index)
+	for (imem index = 0; index < arr.Count; ++index)
 	{
 		if (func(arr[index], args...))
 		{
@@ -256,9 +256,9 @@ imem Find(kSpan<T> arr, SearchFunc func, const Args &...args)
 template <typename T>
 imem Find(kSpan<T> arr, const T &v)
 {
-	for (imem index = 0; index < arr.count; ++index)
+	for (imem index = 0; index < arr.Count; ++index)
 	{
-		auto elem = arr.data + index;
+		auto elem = arr.Items + index;
 		if (*elem == v)
 		{
 			return index;

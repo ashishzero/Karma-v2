@@ -5,25 +5,25 @@
 
 typedef struct kGlyph
 {
-	kRect  rect;
-	kVec2i bearing;
-	kVec2i size;
-	kVec2i advance;
+	kRect  Rect;
+	kVec2i Bearing;
+	kVec2i Size;
+	kVec2i Advance;
 } kGlyph;
 
 typedef struct kFont
 {
-	kTexture *texture;
-	u16      *map;
-	kGlyph   *glyphs;
-	kGlyph   *fallback;
-	u32       mincp;
-	u32       maxcp;
-	u32       count;
-	i16       size;
-	i16       ascent;
-	i16       descent;
-	i16       linegap;
+	kTexture *Atlas;
+	u16      *CodepointMap;
+	kGlyph   *Glyphs;
+	kGlyph   *Fallback;
+	u32       MinCodepoint;
+	u32       MaxCodepoint;
+	u32       GlyphsCount;
+	i16       Height;
+	i16       Ascent;
+	i16       Descent;
+	i16       Linegap;
 } kFont;
 
 //
@@ -32,30 +32,30 @@ typedef struct kFont
 
 typedef struct kRenderStackMemoryUsage
 {
-	imem textures[kTextureType_Count];
-	imem transforms;
-	imem rects;
-	imem blends;
-	imem scratch;
+	imem Textures[kTextureType_Count];
+	imem Transforms;
+	imem Rects;
+	imem Blends;
+	imem Scratch;
 } kRenderStackMemoryUsage;
 
 typedef struct kRenderMemoryUsage
 {
-	imem                    vertices;
-	imem                    indices;
-	imem                    textures[kTextureType_Count];
-	imem                    rects;
-	imem                    passes;
-	imem                    commands;
-	kRenderStackMemoryUsage stack;
-	float                   megabytes;
+	imem                    Vertices;
+	imem                    Indices;
+	imem                    Textures[kTextureType_Count];
+	imem                    Rects;
+	imem                    Passes;
+	imem                    Commands;
+	kRenderStackMemoryUsage Stack;
+	float                   TotalMegaBytes;
 } kRenderMemoryUsage;
 
 typedef struct kRenderMemoryStatistics
 {
-	kRenderMemoryUsage allocated;
-	kRenderMemoryUsage last_frame;
-	kRenderMemoryUsage max_used;
+	kRenderMemoryUsage Allocated;
+	kRenderMemoryUsage UsedLastFrame;
+	kRenderMemoryUsage MaxUsed;
 } kRenderMemoryStatistics;
 
 //
@@ -64,28 +64,28 @@ typedef struct kRenderMemoryStatistics
 
 typedef struct kRenderSpec
 {
-	float thickness;
-	u32   vertices;
-	u32   indices;
-	u32   params;
-	u32   commands;
-	u32   passes;
-	u32   rects;
-	u32   transforms;
-	u32   textures;
-	u32   scratch;
+	float Thickness;
+	u32   Vertices;
+	u32   Indices;
+	u32   Params;
+	u32   Commands;
+	u32   Scenes;
+	u32   Rects;
+	u32   Transforms;
+	u32   Textures;
+	u32   Scratch;
 } kRenderSpec;
 
-static constexpr kRenderSpec kDefaultRenderSpec = {.thickness  = 1,
-                                                   .vertices   = 1048576,
-                                                   .indices    = 1048576 * 6,
-                                                   .params     = 1024,
-                                                   .commands   = 512,
-                                                   .passes     = 64,
-                                                   .rects      = 256,
-                                                   .transforms = 256,
-                                                   .textures   = 256,
-                                                   .scratch    = 16384};
+static constexpr kRenderSpec kDefaultRenderSpec = {.Thickness  = 1,
+                                                   .Vertices   = 1048576,
+                                                   .Indices    = 1048576 * 6,
+                                                   .Params     = 1024,
+                                                   .Commands   = 512,
+                                                   .Scenes     = 64,
+                                                   .Rects      = 256,
+                                                   .Transforms = 256,
+                                                   .Textures   = 256,
+                                                   .Scratch    = 16384};
 
 //
 //

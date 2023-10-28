@@ -50,16 +50,16 @@
 
 typedef struct kWin32Window
 {
-	HWND            wnd;
-	u32             hsurrogate;
-	bool            raw;
-	bool            resized;
-	bool            captions;
-	bool            dpi_changed;
-	bool            fullscreen;
-	RECT            border;
-	DWORD           style;
-	WINDOWPLACEMENT placement;
+	HWND            Wnd;
+	u32             HighSurrogate;
+	bool            RawInput;
+	bool            Resized;
+	bool            Captions;
+	bool            DpiChanged;
+	bool            Fullscreen;
+	RECT            Border;
+	DWORD           Style;
+	WINDOWPLACEMENT Placement;
 } kWin32Window;
 
 //
@@ -83,43 +83,43 @@ static DWORD kGetWindowStyleFromFlags(u32 flags)
 static void kWin32_ResizeWindow(kWin32Window *window, u32 w, u32 h)
 {
 	kDebugTraceEx("Windows", "Resizing window to size %ux%u.\n", w, h);
-	DWORD style = (DWORD)GetWindowLongPtrW(window->wnd, GWL_STYLE);
+	DWORD style = (DWORD)GetWindowLongPtrW(window->Wnd, GWL_STYLE);
 	RECT  rect  = {.left = 0, .top = 0, .right = (LONG)w, .bottom = (LONG)h};
-	UINT  dpi   = GetDpiForWindow(window->wnd);
+	UINT  dpi   = GetDpiForWindow(window->Wnd);
 	AdjustWindowRectExForDpi(&rect, style, FALSE, 0, dpi);
-	SetWindowPos(window->wnd, NULL, 0, 0, rect.right - rect.left, rect.bottom - rect.top,
+	SetWindowPos(window->Wnd, NULL, 0, 0, rect.right - rect.left, rect.bottom - rect.top,
 	             SWP_NOMOVE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
 }
 
 static void kWin32_ToggleWindowFullscreen(kWin32Window *window)
 {
-	if (!window->fullscreen)
+	if (!window->Fullscreen)
 	{
 		kLogInfoEx("Windows", "Switching to fullscreen mode.\n");
 
-		DWORD       style = (DWORD)GetWindowLongPtrW(window->wnd, GWL_STYLE);
+		DWORD       style = (DWORD)GetWindowLongPtrW(window->Wnd, GWL_STYLE);
 		MONITORINFO mi    = {.cbSize = sizeof(mi)};
-		if (GetWindowPlacement(window->wnd, &window->placement) &&
-		    GetMonitorInfoW(MonitorFromWindow(window->wnd, MONITOR_DEFAULTTOPRIMARY), &mi))
+		if (GetWindowPlacement(window->Wnd, &window->Placement) &&
+		    GetMonitorInfoW(MonitorFromWindow(window->Wnd, MONITOR_DEFAULTTOPRIMARY), &mi))
 		{
-			SetWindowLongPtrW(window->wnd, GWL_STYLE, style & ~WS_OVERLAPPEDWINDOW);
-			SetWindowPos(window->wnd, HWND_TOP, mi.rcMonitor.left, mi.rcMonitor.top,
+			SetWindowLongPtrW(window->Wnd, GWL_STYLE, style & ~WS_OVERLAPPEDWINDOW);
+			SetWindowPos(window->Wnd, HWND_TOP, mi.rcMonitor.left, mi.rcMonitor.top,
 			             mi.rcMonitor.right - mi.rcMonitor.left, mi.rcMonitor.bottom - mi.rcMonitor.top,
 			             SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
 		}
-		window->resized    = true;
-		window->fullscreen = true;
+		window->Resized    = true;
+		window->Fullscreen = true;
 	}
 	else
 	{
 		kLogInfoEx("Windows", "Restoring window from fullscreen mode.\n");
 
-		SetWindowLongPtrW(window->wnd, GWL_STYLE, window->style);
-		SetWindowPlacement(window->wnd, &window->placement);
-		SetWindowPos(window->wnd, NULL, 0, 0, 0, 0,
+		SetWindowLongPtrW(window->Wnd, GWL_STYLE, window->Style);
+		SetWindowPlacement(window->Wnd, &window->Placement);
+		SetWindowPos(window->Wnd, NULL, 0, 0, 0, 0,
 		             SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
-		window->resized    = true;
-		window->fullscreen = false;
+		window->Resized    = true;
+		window->Fullscreen = false;
 	}
 }
 
@@ -128,18 +128,18 @@ static void kWin32_ClipCursorToWindow(kWin32Window *window)
 	kDebugTraceEx("Windows", "Clipping cursor to window.\n");
 
 	RECT rect;
-	GetClientRect(window->wnd, &rect);
+	GetClientRect(window->Wnd, &rect);
 
 	POINT pt  = {rect.left, rect.top};
 	POINT pt2 = {rect.right, rect.bottom};
-	ClientToScreen(window->wnd, &pt);
-	ClientToScreen(window->wnd, &pt2);
+	ClientToScreen(window->Wnd, &pt);
+	ClientToScreen(window->Wnd, &pt2);
 
 	SetRect(&rect, pt.x, pt.y, pt2.x, pt2.y);
 	ClipCursor(&rect);
 
 	POINT center_pt = {.x = (rect.right - rect.left) / 2, .y = (rect.bottom - rect.top) / 2};
-	ClientToScreen(window->wnd, &center_pt);
+	ClientToScreen(window->Wnd, &center_pt);
 	SetCursorPos(center_pt.x, center_pt.y);
 }
 
@@ -150,8 +150,8 @@ static void kWin32_ForceReleaseCursor(kWin32Window *window)
 	ShowCursor(TRUE);
 	ClipCursor(NULL);
 
-	RAWINPUTDEVICE rid = {.usUsagePage = 0x1, .usUsage = 0x2, .dwFlags = 0, .hwndTarget = window->wnd};
-	window->raw        = RegisterRawInputDevices(&rid, 1, sizeof(rid));
+	RAWINPUTDEVICE rid = {.usUsagePage = 0x1, .usUsage = 0x2, .dwFlags = 0, .hwndTarget = window->Wnd};
+	window->RawInput   = RegisterRawInputDevices(&rid, 1, sizeof(rid));
 
 	kAddWindowCursorReleaseEvent();
 }
@@ -160,17 +160,17 @@ static void kWin32_ForceCaptureCursor(kWin32Window *window)
 {
 	kDebugTraceEx("Windows", "Capturing cursor in window.\n");
 
-	if (GetActiveWindow() == window->wnd)
+	if (GetActiveWindow() == window->Wnd)
 	{
 		ShowCursor(FALSE);
 		kWin32_ClipCursorToWindow(window);
 	}
 
-	RAWINPUTDEVICE rid = {.usUsagePage = 0x1, .usUsage = 0x2, .dwFlags = RIDEV_REMOVE, .hwndTarget = window->wnd};
+	RAWINPUTDEVICE rid = {.usUsagePage = 0x1, .usUsage = 0x2, .dwFlags = RIDEV_REMOVE, .hwndTarget = window->Wnd};
 	RegisterRawInputDevices(&rid, 1, sizeof(rid));
 
 	kAddWindowCursorCaptureEvent();
-	window->raw = false;
+	window->RawInput = false;
 }
 
 static void kWin32_ReleaseCursor(kWin32Window *window)
@@ -185,30 +185,30 @@ static void kWin32_CaptureCursor(kWin32Window *window)
 	kWin32_ForceCaptureCursor(window);
 }
 
-static int  kWin32_GetWindowCaptionSize(kWin32Window *window) { return window->border.top; }
+static int  kWin32_GetWindowCaptionSize(kWin32Window *window) { return window->Border.top; }
 
 static void kWin32_MaximizeWindow(kWin32Window *window)
 {
 	kDebugTraceEx("Windows", "Maximizing window.\n");
-	ShowWindow(window->wnd, SW_MAXIMIZE);
+	ShowWindow(window->Wnd, SW_MAXIMIZE);
 }
 
 static void kWin32_RestoreWindow(kWin32Window *window)
 {
 	kDebugTraceEx("Windows", "Restoring window.\n");
-	ShowWindow(window->wnd, SW_RESTORE);
+	ShowWindow(window->Wnd, SW_RESTORE);
 }
 
 static void kWin32_MinimizeWindow(kWin32Window *window)
 {
 	kDebugTraceEx("Windows", "Minimizing window.\n");
-	ShowWindow(window->wnd, SW_MINIMIZE);
+	ShowWindow(window->Wnd, SW_MINIMIZE);
 }
 
 static void kWin32_CloseWindow(kWin32Window *window)
 {
 	kDebugTraceEx("Windows", "Closing window.\n");
-	PostMessageW(window->wnd, WM_CLOSE, 0, 0);
+	PostMessageW(window->Wnd, WM_CLOSE, 0, 0);
 }
 
 //
@@ -263,10 +263,10 @@ static LRESULT kWin32_HitTestNonClientArea(kWin32Window *window, WPARAM wparam, 
 {
 	POINT cursor = {.x = GET_X_LPARAM(lparam), .y = GET_Y_LPARAM(lparam)};
 
-	UINT  dpi    = GetDpiForWindow(window->wnd);
+	UINT  dpi    = GetDpiForWindow(window->Wnd);
 
 	RECT  rc;
-	GetWindowRect(window->wnd, &rc);
+	GetWindowRect(window->Wnd, &rc);
 
 	RECT frame = {0};
 	AdjustWindowRectExForDpi(&frame, WS_OVERLAPPEDWINDOW & ~WS_CAPTION, FALSE, 0, dpi);
@@ -275,21 +275,21 @@ static LRESULT kWin32_HitTestNonClientArea(kWin32Window *window, WPARAM wparam, 
 	USHORT col           = 1;
 	bool   border_resize = false;
 
-	if (cursor.y >= rc.top && cursor.y < rc.top + window->border.top)
+	if (cursor.y >= rc.top && cursor.y < rc.top + window->Border.top)
 	{
 		border_resize = (cursor.y < (rc.top - frame.top));
 		row           = 0;
 	}
-	else if (cursor.y < rc.bottom && cursor.y >= rc.bottom - window->border.bottom)
+	else if (cursor.y < rc.bottom && cursor.y >= rc.bottom - window->Border.bottom)
 	{
 		row = 2;
 	}
 
-	if (cursor.x >= rc.left && cursor.x < rc.left + window->border.left)
+	if (cursor.x >= rc.left && cursor.x < rc.left + window->Border.left)
 	{
 		col = 0;
 	}
-	else if (cursor.x < rc.right && cursor.x >= rc.right - window->border.right)
+	else if (cursor.x < rc.right && cursor.x >= rc.right - window->Border.right)
 	{
 		col = 2;
 	}
@@ -306,12 +306,12 @@ static LRESULT kWin32_HitTestNonClientArea(kWin32Window *window, WPARAM wparam, 
 static bool kWin32_CustomCaptionsWndProc(kWin32Window *window, UINT msg, WPARAM wparam, LPARAM lparam, LRESULT *result)
 {
 	*result      = 0;
-	bool handled = DwmDefWindowProc(window->wnd, msg, wparam, lparam, result);
+	bool handled = DwmDefWindowProc(window->Wnd, msg, wparam, lparam, result);
 
 	if (msg == WM_ACTIVATE)
 	{
 		MARGINS margins = {0};
-		DwmExtendFrameIntoClientArea(window->wnd, &margins);
+		DwmExtendFrameIntoClientArea(window->Wnd, &margins);
 		return false;
 	}
 
@@ -339,7 +339,7 @@ static LRESULT CALLBACK kWin32_ServerWndProc(HWND wnd, UINT msg, WPARAM wparam, 
 
 	kWin32Window *window = (kWin32Window *)GetWindowLongPtrW(wnd, GWLP_USERDATA);
 
-	if (window && window->captions)
+	if (window && window->Captions)
 	{
 		if (kWin32_CustomCaptionsWndProc(window, msg, wparam, lparam, &res)) return res;
 	}
@@ -392,7 +392,7 @@ static LRESULT CALLBACK kWin32_ServerWndProc(HWND wnd, UINT msg, WPARAM wparam, 
 			LONG  width   = scissor->right - scissor->left;
 			LONG  height  = scissor->bottom - scissor->top;
 			SetWindowPos(wnd, 0, left, top, width, height, SWP_NOZORDER | SWP_NOACTIVATE);
-			if (window) window->dpi_changed = true;
+			if (window) window->DpiChanged = true;
 		}
 		break;
 
@@ -741,7 +741,7 @@ static LRESULT kWin32_ClientWndProc(HWND wnd, UINT msg, WPARAM wparam, LPARAM lp
 				kAddWindowRestoreEvent();
 			}
 
-			window->resized = true;
+			window->Resized = true;
 			return 0;
 		}
 
@@ -760,7 +760,7 @@ static LRESULT kWin32_ClientWndProc(HWND wnd, UINT msg, WPARAM wparam, LPARAM lp
 				kAddCursorEnterEvent();
 			}
 
-			if (!kIsCursorCaptured() || !window->raw)
+			if (!kIsCursorCaptured() || !window->RawInput)
 			{
 				int    x      = GET_X_LPARAM(lparam);
 				int    y      = GET_Y_LPARAM(lparam);
@@ -893,16 +893,16 @@ static LRESULT kWin32_ClientWndProc(HWND wnd, UINT msg, WPARAM wparam, LPARAM lp
 		{
 			if (IS_HIGH_SURROGATE(wparam))
 			{
-				window->hsurrogate = (u32)(wparam & 0xFFFF);
+				window->HighSurrogate = (u32)(wparam & 0xFFFF);
 			}
 			else
 			{
 				if (IS_LOW_SURROGATE(wparam))
 				{
-					if (window->hsurrogate)
+					if (window->HighSurrogate)
 					{
 						u32 codepoint = 0;
-						codepoint += (window->hsurrogate - 0xD800) << 10;
+						codepoint += (window->HighSurrogate - 0xD800) << 10;
 						codepoint += (u16)wparam - 0xDC00;
 						codepoint += 0x10000;
 						u32 mods = kWin32_GetKeyModFlags();
@@ -914,7 +914,7 @@ static LRESULT kWin32_ClientWndProc(HWND wnd, UINT msg, WPARAM wparam, LPARAM lp
 					u32 mods = kWin32_GetKeyModFlags();
 					kAddTextInputEvent((u32)wparam, mods);
 				}
-				window->hsurrogate = 0;
+				window->HighSurrogate = 0;
 			}
 			return 0;
 		}
@@ -942,7 +942,7 @@ static kWin32Backend g_Win32;
 static void kWin32_DestroyWindow(void)
 {
 	kLogInfoEx("Windows", "Destroying window.\n");
-	kWin32_RequestDestroyWindow(g_Win32.window.wnd);
+	kWin32_RequestDestroyWindow(g_Win32.window.Wnd);
 	memset(&g_Win32.window, 0, sizeof(g_Win32.window));
 }
 
@@ -952,10 +952,10 @@ static void *kWin32_CreateWindow(kWindowState *ws, const kWindowSpec &spec)
 
 	wchar_t title[2048] = L"kWindow | Windows";
 
-	if (spec.title.count)
+	if (spec.Title.Count)
 	{
-		int len    = MultiByteToWideChar(CP_UTF8, 0, (char *)spec.title.data, (int)spec.title.count, title,
-                                      kArrayCount(title) - 1);
+		int len    = MultiByteToWideChar(CP_UTF8, 0, (char *)spec.Title.Items, (int)spec.Title.Count, title,
+		                                 kArrayCount(title) - 1);
 		title[len] = 0;
 	}
 
@@ -966,9 +966,9 @@ static void *kWin32_CreateWindow(kWindowState *ws, const kWindowSpec &spec)
 
 	memset(ws, 0, sizeof(*ws));
 
-	DWORD style = kGetWindowStyleFromFlags(spec.flags);
+	DWORD style = kGetWindowStyleFromFlags(spec.Flags);
 
-	if (spec.width > 0 && spec.height > 0)
+	if (spec.Width > 0 && spec.Height > 0)
 	{
 		POINT    origin   = {.x = 0, .y = 0};
 		HMONITOR mprimary = MonitorFromPoint(origin, MONITOR_DEFAULTTOPRIMARY);
@@ -980,49 +980,49 @@ static void *kWin32_CreateWindow(kWindowState *ws, const kWindowSpec &spec)
 		RECT rect;
 		rect.left   = 0;
 		rect.top    = 0;
-		rect.right  = spec.width;
-		rect.bottom = spec.height;
+		rect.right  = spec.Width;
+		rect.bottom = spec.Height;
 
 		AdjustWindowRectExForDpi(&rect, style, FALSE, 0, ydpi);
 		width  = rect.right - rect.left;
 		height = rect.bottom - rect.top;
 	}
 
-	g_Win32.window.style    = style;
-	g_Win32.window.captions = (spec.flags & kWindowStyle_DisableCaptions);
+	g_Win32.window.Style    = style;
+	g_Win32.window.Captions = (spec.Flags & kWindowStyle_DisableCaptions);
 
-	g_Win32.window.wnd = kWin32_RequestCreateWindow(WS_EX_APPWINDOW, title, style, CW_USEDEFAULT, CW_USEDEFAULT, width,
-	                                              height, 0, 0, instance, 0);
+	g_Win32.window.Wnd = kWin32_RequestCreateWindow(WS_EX_APPWINDOW, title, style, CW_USEDEFAULT, CW_USEDEFAULT, width,
+	                                                height, 0, 0, instance, 0);
 
-	if (!g_Win32.window.wnd)
+	if (!g_Win32.window.Wnd)
 	{
 		kLogHresultError(GetLastError(), "Windows", "Failed to create window");
 		return 0;
 	}
 
 	BOOL dark = TRUE;
-	DwmSetWindowAttribute(g_Win32.window.wnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &dark, sizeof(dark));
+	DwmSetWindowAttribute(g_Win32.window.Wnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &dark, sizeof(dark));
 
-	if (spec.flags & kWindowStyle_ForceSharpCorners)
+	if (spec.Flags & kWindowStyle_ForceSharpCorners)
 	{
 		LONG corner = DWMWCP_DONOTROUND;
-		DwmSetWindowAttribute(g_Win32.window.wnd, DWMWA_WINDOW_CORNER_PREFERENCE, &corner, sizeof(corner));
+		DwmSetWindowAttribute(g_Win32.window.Wnd, DWMWA_WINDOW_CORNER_PREFERENCE, &corner, sizeof(corner));
 	}
 
-	UINT dpi = GetDpiForWindow(g_Win32.window.wnd);
-	SetRectEmpty(&g_Win32.window.border);
-	AdjustWindowRectExForDpi(&g_Win32.window.border, g_Win32.window.style, FALSE, WS_EX_APPWINDOW, dpi);
-	g_Win32.window.border.left *= -1;
-	g_Win32.window.border.top *= -1;
+	UINT dpi = GetDpiForWindow(g_Win32.window.Wnd);
+	SetRectEmpty(&g_Win32.window.Border);
+	AdjustWindowRectExForDpi(&g_Win32.window.Border, g_Win32.window.Style, FALSE, WS_EX_APPWINDOW, dpi);
+	g_Win32.window.Border.left *= -1;
+	g_Win32.window.Border.top *= -1;
 
-	SetWindowLongPtrW(g_Win32.window.wnd, GWLP_USERDATA, (LONG_PTR)&g_Win32.window);
-	SetWindowPos(g_Win32.window.wnd, NULL, 0, 0, 0, 0,
+	SetWindowLongPtrW(g_Win32.window.Wnd, GWLP_USERDATA, (LONG_PTR)&g_Win32.window);
+	SetWindowPos(g_Win32.window.Wnd, NULL, 0, 0, 0, 0,
 	             SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
 
-	ShowWindow(g_Win32.window.wnd, SW_SHOWNORMAL);
-	UpdateWindow(g_Win32.window.wnd);
+	ShowWindow(g_Win32.window.Wnd, SW_SHOWNORMAL);
+	UpdateWindow(g_Win32.window.Wnd);
 
-	if (spec.flags & kWindowStyle_Fullscreen)
+	if (spec.Flags & kWindowStyle_Fullscreen)
 	{
 		kWin32_ToggleWindowFullscreen(&g_Win32.window);
 	}
@@ -1032,32 +1032,32 @@ static void *kWin32_CreateWindow(kWindowState *ws, const kWindowSpec &spec)
 	//
 
 	RECT rc = {0};
-	GetClientRect(g_Win32.window.wnd, &rc);
+	GetClientRect(g_Win32.window.Wnd, &rc);
 
-	ws->width  = rc.right - rc.left;
-	ws->height = rc.bottom - rc.top;
+	ws->Width  = rc.right - rc.left;
+	ws->Height = rc.bottom - rc.top;
 
-	if (GetActiveWindow() == g_Win32.window.wnd)
+	if (GetActiveWindow() == g_Win32.window.Wnd)
 	{
-		ws->flags[kWindow_Active] = true;
+		ws->Flags[kWindow_Active] = true;
 	}
 
 	POINT pt = {};
 	GetCursorPos(&pt);
-	ScreenToClient(g_Win32.window.wnd, &pt);
+	ScreenToClient(g_Win32.window.Wnd, &pt);
 
 	if (PtInRect(&rc, pt))
 	{
-		ws->flags[kWindow_Hovered] = true;
+		ws->Flags[kWindow_Hovered] = true;
 	}
 
-	TRACKMOUSEEVENT tme = {.cbSize = sizeof(tme), .dwFlags = TME_LEAVE, .hwndTrack = g_Win32.window.wnd};
+	TRACKMOUSEEVENT tme = {.cbSize = sizeof(tme), .dwFlags = TME_LEAVE, .hwndTrack = g_Win32.window.Wnd};
 	TrackMouseEvent(&tme);
 
-	ws->flags[kWindow_Fullscreen] = g_Win32.window.fullscreen;
-	ws->yfactor                   = (float)dpi / USER_DEFAULT_SCREEN_DPI;
+	ws->Flags[kWindow_Fullscreen] = g_Win32.window.Fullscreen;
+	ws->DpiFactor                   = (float)dpi / USER_DEFAULT_SCREEN_DPI;
 
-	return (void *)g_Win32.window.wnd;
+	return (void *)g_Win32.window.Wnd;
 }
 
 static u64 kWin32_GetPerformanceFrequency(void)
@@ -1093,33 +1093,33 @@ static int kWin32_EventLoop(void)
 				status = (int)msg.wParam;
 				return status;
 			}
-			kWin32_ClientWndProc(g_Win32.window.wnd, msg.message, msg.wParam, msg.lParam);
+			kWin32_ClientWndProc(g_Win32.window.Wnd, msg.message, msg.wParam, msg.lParam);
 		}
 
-		if (g_Win32.window.dpi_changed)
+		if (g_Win32.window.DpiChanged)
 		{
-			UINT dpi = GetDpiForWindow(g_Win32.window.wnd);
-			SetRectEmpty(&g_Win32.window.border);
-			AdjustWindowRectExForDpi(&g_Win32.window.border, g_Win32.window.style, FALSE, WS_EX_APPWINDOW, dpi);
-			g_Win32.window.border.left *= -1;
-			g_Win32.window.border.top *= -1;
+			UINT dpi = GetDpiForWindow(g_Win32.window.Wnd);
+			SetRectEmpty(&g_Win32.window.Border);
+			AdjustWindowRectExForDpi(&g_Win32.window.Border, g_Win32.window.Style, FALSE, WS_EX_APPWINDOW, dpi);
+			g_Win32.window.Border.left *= -1;
+			g_Win32.window.Border.top *= -1;
 
 			float yfactor = (float)dpi / USER_DEFAULT_SCREEN_DPI;
 			kAddWindowDpiChangedEvent(yfactor);
-			g_Win32.window.dpi_changed = false;
+			g_Win32.window.DpiChanged = false;
 		}
 
-		if (g_Win32.window.resized)
+		if (g_Win32.window.Resized)
 		{
 			RECT rc;
-			GetClientRect(g_Win32.window.wnd, &rc);
+			GetClientRect(g_Win32.window.Wnd, &rc);
 
 			u32 width  = (u32)(rc.right - rc.left);
 			u32 height = (u32)(rc.bottom - rc.top);
 
-			kAddWindowResizeEvent(width, height, g_Win32.window.fullscreen);
+			kAddWindowResizeEvent(width, height, g_Win32.window.Fullscreen);
 
-			g_Win32.window.resized = false;
+			g_Win32.window.Resized = false;
 		}
 
 		u32 mods = kWin32_GetKeyModFlags();
@@ -1158,7 +1158,7 @@ static void kWin32_LoadKeyboardState(kKeyboardState *keyboard)
 {
 	for (uint key = 0; key < kKey_Count; ++key)
 	{
-		keyboard->keys[key].down = GetAsyncKeyState(InvVirtualKeyMap[key]) & 0x8000;
+		keyboard->Keys[key].Down = GetAsyncKeyState(InvVirtualKeyMap[key]) & 0x8000;
 	}
 
 	u32 mods = 0;
@@ -1169,19 +1169,19 @@ static void kWin32_LoadKeyboardState(kKeyboardState *keyboard)
 	if (GetAsyncKeyState(VK_LMENU) & 0x8000) mods |= kKeyMod_LeftAlt;
 	if (GetAsyncKeyState(VK_RMENU) & 0x8000) mods |= kKeyMod_RightAlt;
 
-	keyboard->mods = mods;
+	keyboard->Mods = mods;
 }
 
 static void kWin32_LoadMouseState(kMouseState *mouse)
 {
 	POINT pt = {0};
 	GetCursorPos(&pt);
-	ScreenToClient(g_Win32.window.wnd, &pt);
-	mouse->cursor.x                     = pt.x;
-	mouse->cursor.y                     = pt.y;
-	mouse->buttons[kButton_Left].down   = GetAsyncKeyState(VK_LBUTTON) & 0x8000;
-	mouse->buttons[kButton_Right].down  = GetAsyncKeyState(VK_RBUTTON) & 0x8000;
-	mouse->buttons[kButton_Middle].down = GetAsyncKeyState(VK_RBUTTON) & 0x8000;
+	ScreenToClient(g_Win32.window.Wnd, &pt);
+	mouse->Cursor.x                     = pt.x;
+	mouse->Cursor.y                     = pt.y;
+	mouse->Buttons[kButton_Left].Down   = GetAsyncKeyState(VK_LBUTTON) & 0x8000;
+	mouse->Buttons[kButton_Right].Down  = GetAsyncKeyState(VK_RBUTTON) & 0x8000;
+	mouse->Buttons[kButton_Middle].Down = GetAsyncKeyState(VK_RBUTTON) & 0x8000;
 }
 
 //
@@ -1199,7 +1199,7 @@ void        kWin32_DestroyBackend(void)
 
 void kWin32_CreateBackend(kMediaBackend *backend)
 {
-	DWORD task_index  = 0;
+	DWORD task_index    = 0;
 	g_Win32.avrt_handle = AvSetMmThreadCharacteristicsW(L"Games", &task_index);
 
 	kWin32_MapVirutalKeys();

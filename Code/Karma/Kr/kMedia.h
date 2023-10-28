@@ -121,55 +121,55 @@ typedef enum kEventKind
 
 typedef struct kResizedEvent
 {
-	u32 width;
-	u32 height;
+	u32 Width;
+	u32 Height;
 } kResizedEvent;
 
 typedef struct kDpiChangedEvent
 {
-	float scale;
+	float Factor;
 } kDpiChangedEvent;
 
 typedef struct kCursorEvent
 {
-	kVec2i position;
+	kVec2i Position;
 } kCursorEvent;
 
 typedef struct kButtonEvent
 {
-	kButton symbol;
+	kButton Symbol;
 } kButtonEvent;
 
 typedef struct kKeyEvent
 {
-	kKey symbol;
-	int  repeat;
+	kKey Symbol;
+	int  Repeat;
 } kKeyEvent;
 
 typedef struct kWheelEvent
 {
-	float horizontal;
-	float vertical;
+	float Horz;
+	float Vert;
 } kWheelEvent;
 
 typedef struct kTextEvent
 {
-	u32 codepoint;
-	u32 mods;
+	u32 Codepoint;
+	u32 Mods;
 } kTextEvent;
 
 typedef struct kEvent
 {
-	kEventKind kind;
+	kEventKind Kind;
 	union
 	{
-		kResizedEvent    resized;
-		kDpiChangedEvent dpi;
-		kCursorEvent     cursor;
-		kButtonEvent     button;
-		kKeyEvent        key;
-		kWheelEvent      wheel;
-		kTextEvent       text;
+		kResizedEvent    Resized;
+		kDpiChangedEvent Dpi;
+		kCursorEvent     Cursor;
+		kButtonEvent     Button;
+		kKeyEvent        Key;
+		kWheelEvent      Wheel;
+		kTextEvent       Text;
 	};
 } kEvent;
 
@@ -182,23 +182,23 @@ enum kStateFlags
 
 typedef struct kKeyState
 {
-	u8 down;
-	u8 flags;
-	u8 hits;
+	u8 Down;
+	u8 Flags;
+	u8 Hits;
 } kKeyState;
 
 typedef struct kKeyboardState
 {
-	uint      mods;
-	kKeyState keys[kKey_Count];
+	uint      Mods;
+	kKeyState Keys[kKey_Count];
 } kKeyboardState;
 
 typedef struct kMouseState
 {
-	kVec2i    cursor;
-	kVec2i    delta;
-	kVec2     wheel;
-	kKeyState buttons[kKey_Count];
+	kVec2i    Cursor;
+	kVec2i    Delta;
+	kVec2     Wheel;
+	kKeyState Buttons[kKey_Count];
 } kMouseState;
 
 typedef enum kWindowFlag
@@ -215,18 +215,18 @@ typedef enum kWindowFlag
 
 typedef struct kWindowState
 {
-	u32   width;
-	u32   height;
-	float yfactor;
-	u32   flags[kWindow_FlagCount];
+	u32   Width;
+	u32   Height;
+	float DpiFactor;
+	u32   Flags[kWindow_FlagCount];
 } kWindowState;
 
 typedef struct kMediaUserEvents
 {
-	void *data;
-	void (*update)(float);
-	void (*load)(void);
-	void (*release)(void);
+	void *Data;
+	void (*Update)(float);
+	void (*Load)(void);
+	void (*Release)(void);
 } kMediaUserEvents;
 
 //
@@ -352,19 +352,19 @@ enum kWindowStyleFlags
 
 typedef struct kWindowSpec
 {
-	kString title;
-	u32     width;
-	u32     height;
-	uint    flags;
+	kString Title;
+	u32     Width;
+	u32     Height;
+	uint    Flags;
 } kWindowSpec;
 
 typedef struct kMediaSpec
 {
-	kWindowSpec window;
-	kArenaSpec  arena;
+	kWindowSpec Window;
+	kArenaSpec  Arena;
 } kMediaSpec;
 
-static const kMediaSpec kDefaultSpec = {.arena = {.alignment = sizeof(8), .capacity = kMegaByte * 64}};
+static const kMediaSpec kDefaultSpec = {.Arena = {.Alignment = sizeof(8), .Capacity = kMegaByte * 64}};
 
 int                     kEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user);
 void                    kBreakLoop(int status);

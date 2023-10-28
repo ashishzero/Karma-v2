@@ -60,7 +60,7 @@ typedef void (*kSwapChainPresentProc)(void);
 
 typedef kTexture *(*kRenderBackendTextureCreateProc)(const kTextureSpec &);
 typedef void (*kkRenderBackendTextureDestroyProc)(kTexture *);
-typedef kVec2i (*kRenderBackendTextureSizeProc)(kTexture *);
+typedef kVec2u (*kRenderBackendTextureSizeProc)(kTexture *);
 typedef void (*kkRenderBackendTextureResizeProc)(kTexture *, u32, u32);
 
 typedef void (*kRenderBackendExecuteFrameProc)(const kRenderFrame &);
@@ -95,7 +95,7 @@ void        kPresentFallback(void);
 
 kTexture   *kCreateTextureFallback(const kTextureSpec &);
 void        kDestroyTextureFallback(kTexture *);
-kVec2i      kGetTextureSizeFallback(kTexture *);
+kVec2u      kGetTextureSizeFallback(kTexture *);
 void        kResizeTextureFallback(kTexture *, u32, u32);
 void        kExecuteFrameFallback(const kRenderFrame &);
 void        kNextFrameFallback(void);

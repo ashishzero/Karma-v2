@@ -5,6 +5,7 @@
 
 #define kVec2Arg(v) (v).x, (v).y
 #define kVec3Arg(v) (v).x, (v).y, (v).z
+#define kBivec3Arg(v) (v).xy, (v).xz, (v).yz
 #define kVec4Arg(v) (v).x, (v).y, (v).z, (v).w
 #define kQuatArg(q) (q).x, (q).y, (q).z, (q).w
 
@@ -45,11 +46,13 @@ bool  kAlmostEqual(float a, float b, float delta = REAL_EPSILON);
 bool  kAlmostEqual(kVec2 a, kVec2 b, float delta = REAL_EPSILON);
 bool  kAlmostEqual(kVec3 a, kVec3 b, float delta = REAL_EPSILON);
 bool  kAlmostEqual(kVec4 a, kVec4 b, float delta = REAL_EPSILON);
+bool  kAlmostEqual(kBivec3 a, kBivec3 b, float delta = REAL_EPSILON);
 
 bool  kIsNull(float a);
 bool  kIsNull(kVec2 a);
 bool  kIsNull(kVec3 a);
 bool  kIsNull(kVec4 a);
+bool  kIsNull(kBivec3 a);
 bool  kIsNull(int32_t a);
 bool  kIsNull(kVec2i a);
 bool  kIsNull(kVec3i a);
@@ -86,9 +89,10 @@ bool operator!=(kVec4T<Item> a, kVec4T<Item> b)
 	return a.x != b.x || a.y != b.y && a.z != b.z || a.w != b.w;
 }
 
-inproc kVec2 kRound(kVec2 v) { return kVec2(kRound(v.x), kRound(v.y)); }
-inproc kVec3 kRound(kVec3 v) { return kVec3(kRound(v.x), kRound(v.y), kRound(v.z)); }
-inproc kVec4 kRound(kVec4 v) { return kVec4(kRound(v.x), kRound(v.y), kRound(v.z), kRound(v.w)); }
+inproc kVec2   kRound(kVec2 v) { return kVec2(kRound(v.x), kRound(v.y)); }
+inproc kVec3   kRound(kVec3 v) { return kVec3(kRound(v.x), kRound(v.y), kRound(v.z)); }
+inproc kVec4   kRound(kVec4 v) { return kVec4(kRound(v.x), kRound(v.y), kRound(v.z), kRound(v.w)); }
+inproc kBivec3 kRound(kBivec3 v) { return kBivec3(kRound(v.yz), kRound(v.zx), kRound(v.xy)); }
 
 template <typename Item>
 kVec2T<Item> kMin(kVec2T<Item> a, kVec2T<Item> b)
@@ -119,6 +123,16 @@ template <typename Item>
 kVec4T<Item> kMax(kVec4T<Item> a, kVec4T<Item> b)
 {
 	return kVec4T<Item>{kMax(a.x, b.x), kMax(a.y, b.y), kMax(a.z, b.z), kMax(a.w, b.w)};
+}
+template <typename Item>
+kBivec3T<Item> kMin(kBivec3T<Item> a, kBivec3T<Item> b)
+{
+	return kBivec3T<Item>{kMin(a.yz, b.yz), kMin(a.zx, b.zx), kMin(a.xy, b.xy)};
+}
+template <typename Item>
+kBivec3T<Item> kMax(kBivec3T<Item> a, kBivec3T<Item> b)
+{
+	return kBivec3T<Item>{kMax(a.yz, b.yz), kMax(a.zx, b.zx), kMax(a.xy, b.xy)};
 }
 
 template <typename Item>
@@ -154,6 +168,11 @@ kVec4T<Item> operator+(kVec4T<Item> a, kVec4T<Item> b)
 	return kVec4T<Item>(a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w);
 }
 template <typename Item>
+kBivec3T<Item> operator+(kBivec3T<Item> a, kBivec3T<Item> b)
+{
+	return kBivec3T<Item>(a.yz + b.yz, a.zx + b.zx, a.xy + b.xy);
+}
+template <typename Item>
 kVec2T<Item> operator-(kVec2T<Item> a, kVec2T<Item> b)
 {
 	return kVec2T<Item>(a.x - b.x, a.y - b.y);
@@ -167,6 +186,11 @@ template <typename Item>
 kVec4T<Item> operator-(kVec4T<Item> a, kVec4T<Item> b)
 {
 	return kVec4T<Item>(a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w);
+}
+template <typename Item>
+kBivec3T<Item> operator-(kBivec3T<Item> a, kBivec3T<Item> b)
+{
+	return kBivec3T<Item>(a.yz - b.yz, a.zx - b.zx, a.xy - b.xy);
 }
 template <typename Item>
 kVec2T<Item> operator*(Item s, kVec2T<Item> v)
@@ -199,6 +223,16 @@ kVec4T<Item> operator*(kVec4T<Item> v, Item s)
 	return s * v;
 }
 template <typename Item>
+kBivec3T<Item> operator*(Item s, kBivec3T<Item> v)
+{
+	return kBivec3T<Item>(s * v.yz, s * v.zx, s * v.xy);
+}
+template <typename Item>
+kBivec3T<Item> operator*(kBivec3T<Item> v, Item s)
+{
+	return s * v;
+}
+template <typename Item>
 kVec2T<Item> operator/(kVec2T<Item> v, Item s)
 {
 	return kVec2T<Item>(v.x / s, v.y / s);
@@ -214,6 +248,11 @@ kVec4T<Item> operator/(kVec4T<Item> v, Item s)
 	return kVec4T<Item>(v.x / s, v.y / s, v.z / s, v.w / s);
 }
 template <typename Item>
+kBivec3T<Item> operator/(kBivec3T<Item> v, Item s)
+{
+	return kBivec3T<Item>(v.yz / s, v.zx / s, v.xy / s);
+}
+template <typename Item>
 kVec2T<Item> operator*(kVec2T<Item> l, kVec2T<Item> r)
 {
 	return kVec2T<Item>(l.x * r.x, l.y * r.y);
@@ -227,6 +266,11 @@ template <typename Item>
 kVec4T<Item> operator*(kVec4T<Item> l, kVec4T<Item> r)
 {
 	return kVec4T<Item>(l.x * r.x, l.y * r.y, l.z * r.z, l.w * r.w);
+}
+template <typename Item>
+kBivec3T<Item> operator*(kBivec3T<Item> l, kBivec3T<Item> r)
+{
+	return kVec3T<Item>(l.yz * r.yz, l.zx * r.zx, l.xy * r.xy);
 }
 template <typename Item>
 kVec2T<Item> operator/(kVec2T<Item> l, kVec2T<Item> r)
@@ -258,6 +302,11 @@ kVec4T<Item> operator-(const kVec4T<Item> &v)
 {
 	return kVec4T<Item>(-v.x, -v.y, -v.z, -v.w);
 }
+template <typename Item>
+kBivec3T<Item> operator-(const kBivec3T<Item> &v)
+{
+	return kBivec3T<Item>(-v.yz, -v.zx, -v.xy);
+}
 
 template <typename Item>
 kVec2T<Item> &operator+=(kVec2T<Item> &a, kVec2T<Item> b)
@@ -273,6 +322,12 @@ kVec3T<Item> &operator+=(kVec3T<Item> &a, kVec3T<Item> b)
 }
 template <typename Item>
 kVec4T<Item> &operator+=(kVec4T<Item> &a, kVec4T<Item> b)
+{
+	a = a + b;
+	return a;
+}
+template <typename Item>
+kBivec3T<Item> &operator+=(kBivec3T<Item> &a, kBivec3T<Item> b)
 {
 	a = a + b;
 	return a;
@@ -296,6 +351,12 @@ kVec4T<Item> &operator-=(kVec4T<Item> &a, kVec4T<Item> b)
 	return a;
 }
 template <typename Item>
+kBivec3T<Item> &operator-=(kBivec3T<Item> &a, kBivec3T<Item> b)
+{
+	a = a - b;
+	return a;
+}
+template <typename Item>
 kVec2T<Item> &operator*=(kVec2T<Item> &t, Item s)
 {
 	t = t * s;
@@ -309,6 +370,12 @@ kVec3T<Item> &operator*=(kVec3T<Item> &t, Item s)
 }
 template <typename Item>
 kVec4T<Item> &operator*=(kVec4T<Item> &t, Item s)
+{
+	t = t * s;
+	return t;
+}
+template <typename Item>
+kBivec3T<Item> &operator*=(kBivec3T<Item> &t, Item s)
 {
 	t = t * s;
 	return t;
@@ -332,6 +399,12 @@ kVec4T<Item> &operator/=(kVec4T<Item> &t, Item s)
 	return t;
 }
 template <typename Item>
+kBivec3T<Item> &operator/=(kBivec3T<Item> &t, Item s)
+{
+	t = t / s;
+	return t;
+}
+template <typename Item>
 kVec2T<Item> &operator*=(kVec2T<Item> &t, kVec2T<Item> s)
 {
 	t = t * s;
@@ -345,6 +418,12 @@ kVec3T<Item> &operator*=(kVec3T<Item> &t, kVec3T<Item> s)
 }
 template <typename Item>
 kVec4T<Item> &operator*=(kVec4T<Item> &t, kVec4T<Item> s)
+{
+	t = t * s;
+	return t;
+}
+template <typename Item>
+kBivec3T<Item> &operator*=(kBivec3T<Item> &t, kBivec3T<Item> s)
 {
 	t = t * s;
 	return t;
@@ -395,6 +474,11 @@ Item kDotProduct(kVec4T<Item> a, kVec4T<Item> b)
 	return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
 }
 template <typename Item>
+Item kDotProduct(kBivec3T<Item> a, kBivec3T<Item> b)
+{
+	return a.yz * b.yz + a.zx * b.zx + a.xy * b.xy;
+}
+template <typename Item>
 Item kDeterminant(kVec2T<Item> a, kVec2T<Item> b)
 {
 	return (a.x * b.y) - (a.y * b.x);
@@ -408,12 +492,29 @@ float kCrossProduct(kVec2T<Item> a, kVec2T<Item> b)
 }
 
 template <typename Item>
+float kWedgeProduct(kVec2T<Item> a, kVec2T<Item> b)
+{
+	Item z = (a.x * b.y) - (a.y * b.x);
+	return z;
+}
+
+template <typename Item>
 kVec3T<Item> kCrossProduct(kVec3T<Item> a, kVec3T<Item> b)
 {
 	kVec3T<Item> res;
 	res.x = (a.y * b.z) - (a.z * b.y);
 	res.y = (a.z * b.x) - (a.x * b.z);
 	res.z = (a.x * b.y) - (a.y * b.x);
+	return res;
+}
+
+template <typename Item>
+kBivec3T<Item> kWedgeProduct(kVec3T<Item> a, kVec3T<Item> b)
+{
+	kBivec3T<Item> res;
+	res.yz = (a.y * b.z) - (a.z * b.y);
+	res.zx = (a.z * b.x) - (a.x * b.z);
+	res.xy = (a.x * b.y) - (a.y * b.x);
 	return res;
 }
 
@@ -486,6 +587,11 @@ Item kLength(kVec4T<Item> v)
 	return kSquareRoot(kDotProduct(v, v));
 }
 template <typename Item>
+Item kLength(kBivec3T<Item> v)
+{
+	return kSquareRoot(kDotProduct(v, v));
+}
+template <typename Item>
 Item kDistance(Item a, Item b)
 {
 	return b - a;
@@ -506,78 +612,79 @@ Item kDistance(kVec4T<Item> a, kVec4T<Item> b)
 	return kLength(b - a);
 }
 
-kVec2  kNormalizeZ(kVec2 v);
-kVec3  kNormalizeZ(kVec3 v);
-kVec4  kNormalizeZ(kVec4 v);
-kVec2  kNormalize(kVec2 v);
-kVec3  kNormalize(kVec3 v);
-kVec4  kNormalize(kVec4 v);
-kVec2  kPerpendicularVector(kVec2 a, kVec2 b);
+kVec2    kNormalizeZ(kVec2 v);
+kVec3    kNormalizeZ(kVec3 v);
+kVec4    kNormalizeZ(kVec4 v);
+kVec2    kNormalize(kVec2 v);
+kVec3    kNormalize(kVec3 v);
+kVec4    kNormalize(kVec4 v);
+kBivec3  kNormalize(kBivec3 v);
+kVec2    kPerpendicularVector(kVec2 a, kVec2 b);
 
-float  kAngleBetween(kVec2 a, kVec2 b);
-float  kAngleBetween(kVec3 a, kVec3 b);
-float  kAngleBetweenNormalized(kVec2 a, kVec2 b);
-float  kAngleBetweenNormalized(kVec3 a, kVec3 b);
+float    kAngleBetween(kVec2 a, kVec2 b);
+float    kAngleBetween(kVec3 a, kVec3 b);
+float    kAngleBetweenNormalized(kVec2 a, kVec2 b);
+float    kAngleBetweenNormalized(kVec3 a, kVec3 b);
 
-float  kSignedAngleBetween(kVec2 a, kVec2 b);
-float  kSignedAngleBetween(kVec3 a, kVec3 b, kVec3 n);
-float  kSignedAngleBetweenNormalized(kVec2 a, kVec2 b);
-float  kSignedAngleBetweenNormalized(kVec3 a, kVec3 b, kVec3 n);
+float    kSignedAngleBetween(kVec2 a, kVec2 b);
+float    kSignedAngleBetween(kVec3 a, kVec3 b, kVec3 n);
+float    kSignedAngleBetweenNormalized(kVec2 a, kVec2 b);
+float    kSignedAngleBetweenNormalized(kVec3 a, kVec3 b, kVec3 n);
 
-float  kDeterminant(const kMat2 &mat);
-kMat2  kInverse(const kMat2 &mat);
-kMat2  kTranspose(const kMat2 &m);
-float  kDeterminant(const kMat3 &mat);
-kMat3  kInverse(const kMat3 &mat);
-kMat3  kTranspose(const kMat3 &m);
-float  kDeterminant(const kMat4 &mat);
-kMat4  kInverse(const kMat4 &mat);
-kMat4  kTranspose(const kMat4 &m);
+float    kDeterminant(const kMat2 &mat);
+kMat2    kInverse(const kMat2 &mat);
+kMat2    kTranspose(const kMat2 &m);
+float    kDeterminant(const kMat3 &mat);
+kMat3    kInverse(const kMat3 &mat);
+kMat3    kTranspose(const kMat3 &m);
+float    kDeterminant(const kMat4 &mat);
+kMat4    kInverse(const kMat4 &mat);
+kMat4    kTranspose(const kMat4 &m);
 
-kMat2  operator-(const kMat2 &mat);
-kMat3  operator-(const kMat3 &mat);
-kMat4  operator-(const kMat4 &mat);
-kMat2  operator+(const kMat2 &Left, const kMat2 &Right);
-kMat2  operator-(const kMat2 &Left, const kMat2 &Right);
-kMat3  operator+(const kMat3 &Left, const kMat3 &Right);
-kMat3  operator-(const kMat3 &Left, const kMat3 &Right);
-kMat4  operator+(const kMat4 &Left, const kMat4 &Right);
-kMat4  operator-(const kMat4 &Left, const kMat4 &Right);
+kMat2    operator-(const kMat2 &mat);
+kMat3    operator-(const kMat3 &mat);
+kMat4    operator-(const kMat4 &mat);
+kMat2    operator+(const kMat2 &Left, const kMat2 &Right);
+kMat2    operator-(const kMat2 &Left, const kMat2 &Right);
+kMat3    operator+(const kMat3 &Left, const kMat3 &Right);
+kMat3    operator-(const kMat3 &Left, const kMat3 &Right);
+kMat4    operator+(const kMat4 &Left, const kMat4 &Right);
+kMat4    operator-(const kMat4 &Left, const kMat4 &Right);
 
-kMat2 &operator-=(kMat2 &mat, const kMat2 &other);
-kMat3 &operator-=(kMat3 &mat, const kMat3 &other);
-kMat4 &operator-=(kMat4 &mat, const kMat4 &other);
-kMat2 &operator+=(kMat2 &mat, const kMat2 &other);
-kMat3 &operator+=(kMat3 &mat, const kMat3 &other);
-kMat4 &operator+=(kMat4 &mat, const kMat4 &other);
+kMat2   &operator-=(kMat2 &mat, const kMat2 &other);
+kMat3   &operator-=(kMat3 &mat, const kMat3 &other);
+kMat4   &operator-=(kMat4 &mat, const kMat4 &other);
+kMat2   &operator+=(kMat2 &mat, const kMat2 &other);
+kMat3   &operator+=(kMat3 &mat, const kMat3 &other);
+kMat4   &operator+=(kMat4 &mat, const kMat4 &other);
 
-kMat2  operator*(const kMat2 &Left, const kMat2 &Right);
-kVec2  operator*(const kMat2 &mat, kVec2 vec);
-kVec2  operator*(kVec2 vec, const kMat2 &mat);
-kMat3  operator*(const kMat3 &Left, const kMat3 &Right);
-kVec3  operator*(const kMat3 &mat, kVec3 vec);
-kMat4  operator*(const kMat4 &Left, const kMat4 &Right);
-kVec4  operator*(const kMat4 &mat, kVec4 vec);
-kMat2 &operator*=(kMat2 &t, kMat2 &o);
-kMat3 &operator*=(kMat3 &t, kMat3 &o);
-kMat4 &operator*=(kMat4 &t, kMat4 &o);
+kMat2    operator*(const kMat2 &Left, const kMat2 &Right);
+kVec2    operator*(const kMat2 &mat, kVec2 vec);
+kVec2    operator*(kVec2 vec, const kMat2 &mat);
+kMat3    operator*(const kMat3 &Left, const kMat3 &Right);
+kVec3    operator*(const kMat3 &mat, kVec3 vec);
+kMat4    operator*(const kMat4 &Left, const kMat4 &Right);
+kVec4    operator*(const kMat4 &mat, kVec4 vec);
+kMat2   &operator*=(kMat2 &t, kMat2 &o);
+kMat3   &operator*=(kMat3 &t, kMat3 &o);
+kMat4   &operator*=(kMat4 &t, kMat4 &o);
 
-kQuat  operator-(kQuat q);
-kQuat  operator-(kQuat r1, kQuat r2);
-kQuat  operator+(kQuat r1, kQuat r2);
-kQuat  operator*(kQuat q, float s);
-kQuat  operator*(float s, kQuat q);
+kRotor3  operator-(kRotor3 q);
+kRotor3  operator-(kRotor3 r1, kRotor3 r2);
+kRotor3  operator+(kRotor3 r1, kRotor3 r2);
+kRotor3  operator*(kRotor3 q, float s);
+kRotor3  operator*(float s, kRotor3 q);
 
-kQuat &operator-=(kQuat &q, kQuat other);
-kQuat &operator+=(kQuat &q, kQuat other);
+kRotor3 &operator-=(kRotor3 &q, kRotor3 other);
+kRotor3 &operator+=(kRotor3 &q, kRotor3 other);
 
-float  kDotProduct(kQuat q1, kQuat q2);
-float  kLength(kQuat q);
-kQuat  kNormalize(kQuat q);
-kQuat  kConjugate(kQuat q);
-kQuat  operator*(kQuat q1, kQuat q2);
-kVec3  operator*(kQuat q, kVec3 v);
-kVec3  kRotate(kQuat q, kVec3 v);
+float    kDotProduct(kRotor3 q1, kRotor3 q2);
+float    kLength(kRotor3 q);
+kRotor3  kNormalize(kRotor3 q);
+kRotor3  kReverse(kRotor3 q);
+kRotor3  operator*(kRotor3 q1, kRotor3 q2);
+kVec3    operator*(kRotor3 q, kVec3 v);
+kVec3    kRotate(kRotor3 q, kVec3 v);
 
 //
 //
@@ -586,79 +693,83 @@ kVec3  kRotate(kQuat q, kVec3 v);
 kVec3 kRightDirection(const kMat4 &m);
 kVec3 kUpDirection(const kMat4 &m);
 kVec3 kForwardDirection(const kMat4 &m);
-kVec3 kRightDirection(kQuat q);
-kVec3 kUpDirection(kQuat q);
-kVec3 kForwardDirection(kQuat q);
+
+kVec3 kRightDirection(kRotor3 q);
+kVec3 kUpDirection(kRotor3 q);
+kVec3 kForwardDirection(kRotor3 q);
 
 //
 //
 //
 
-kMat2 kMat3ToMat2(const kMat3 &mat);
-kMat3 kMat4ToMat3(const kMat2 &mat);
-kMat3 kMat4ToMat3(const kMat4 &mat);
-kMat4 kMat3ToMat4(const kMat3 &mat);
+kMat2   kMat3ToMat2(const kMat3 &mat);
+kMat3   kMat4ToMat3(const kMat2 &mat);
+kMat3   kMat4ToMat3(const kMat4 &mat);
+kMat4   kMat3ToMat4(const kMat3 &mat);
 
-void  kQuatToAngleAxis(kQuat q, float *angle, kVec3 *axis);
-kMat4 kQuatToMat4(kQuat q);
-kVec3 kQuatToEulerAngles(kQuat q);
+void    kRotor3ToAngleAxis(kRotor3 q, float *angle, kVec3 *axis);
+kMat4   kRotor3ToMat4(kRotor3 q);
+kVec3   kRotor3ToEulerAngles(kRotor3 q);
 
-kQuat kAngleAxisToQuat(kVec3 axis, float angle);
-kQuat kAngleAxisNormalizedToQuat(kVec3 axis, float angle);
-kQuat kMat4ToQuat(const kMat4 &m);
-kQuat kMat4NomalizedToQuat(const kMat4 &m);
-kQuat kEulerAnglesToQuat(float pitch, float yaw, float roll);
-kQuat kEulerAnglesToQuat(kVec3 euler);
+kRotor3 kQuaternionToRotor3(float x, float y, float z, float w);
+kRotor3 kQuaternionToRotor3(kVec4 vec);
+kRotor3 kPlaneToRotor3(kBivec3 plane, float angle);
+kRotor3 kAngleAxisToRotor3(kVec3 axis, float angle);
+kRotor3 kPlaneNormalizedToRotor3(kBivec3 plane, float angle);
+kRotor3 kAngleAxisNormalizedToRotor3(kVec3 axis, float angle);
+kRotor3 kMat4ToRotor3(const kMat4 &m);
+kRotor3 kMat4NomalizedToRotor3(const kMat4 &m);
+kRotor3 kEulerAnglesToRotor3(float pitch, float yaw, float roll);
+kRotor3 kEulerAnglesToRotor3(kVec3 euler);
 
 //
 //
 //
 
-kMat2 kIdentity2x2();
-kMat2 kDiagonal2x2(float x, float y);
-kMat2 kDiagonal2x2(kVec2 s);
-kMat2 kRotation2x2(kVec2 arm);
-kMat2 kRotation2x2(float angle);
+kMat2   kIdentity2x2();
+kMat2   kDiagonal2x2(float x, float y);
+kMat2   kDiagonal2x2(kVec2 s);
+kMat2   kRotation2x2(kVec2 arm);
+kMat2   kRotation2x2(float angle);
 
-kMat3 kIdentity3x3();
-kMat3 kDiagonal3x3(float S_1, float S_2, float S_3);
-kMat3 kDiagonal3x3(kVec3 s);
-kMat3 kScale3x3(float x, float y);
-kMat3 kScale3x3(kVec2 s);
-kMat3 kTranslation3x3(float T_x, float T_y);
-kMat3 kTranslation3x3(kVec2 t);
-kMat3 kRotation3x3(kVec2 arm);
-kMat3 kRotation3x3(float angle);
-kMat3 kLookAt3x3(kVec2 from, kVec2 to, kVec2 forward);
+kMat3   kIdentity3x3();
+kMat3   kDiagonal3x3(float S_1, float S_2, float S_3);
+kMat3   kDiagonal3x3(kVec3 s);
+kMat3   kScale3x3(float x, float y);
+kMat3   kScale3x3(kVec2 s);
+kMat3   kTranslation3x3(float T_x, float T_y);
+kMat3   kTranslation3x3(kVec2 t);
+kMat3   kRotation3x3(kVec2 arm);
+kMat3   kRotation3x3(float angle);
+kMat3   kLookAt3x3(kVec2 from, kVec2 to, kVec2 forward);
 
-kMat4 kIdentity();
-kMat4 kDiagonal(float x, float y, float z, float w);
+kMat4   kIdentity();
+kMat4   kDiagonal(float x, float y, float z, float w);
 
-kMat4 kScale(float S_1, float S_2, float S_3);
-kMat4 kScale(kVec3 s);
-kMat4 kTranslation(float T_x, float T_y, float T_z);
-kMat4 kTranslation(kVec3 t);
-kMat4 kRotationX(float c, float s);
-kMat4 kRotationX(float angle);
-kMat4 kRotationY(float c, float s);
-kMat4 kRotationY(float angle);
-kMat4 kRotationZ(float c, float s);
-kMat4 kRotationZ(float angle);
-kMat4 kRotation(float x, float y, float z, kVec2 arm);
-kMat4 kRotation(float x, float y, float z, float angle);
-kMat4 kRotation(kVec3 axis, kVec2 arm);
-kMat4 kRotation(kVec3 axis, float angle);
-kMat4 kLookAt(kVec3 from, kVec3 to, kVec3 world_up);
-kMat4 kLookAtDirection(kVec3 dir, kVec3 world_up);
-kMat4 kOrthographicRH(float l, float r, float t, float b, float n, float f);
-kMat4 kOrthographicLH(float l, float r, float t, float b, float n, float f);
-kMat4 kPerspectiveRH(float fov, float aspect_ratio, float n, float f);
-kMat4 kPerspectiveLH(float fov, float aspect_ratio, float n, float f);
+kMat4   kScale(float S_1, float S_2, float S_3);
+kMat4   kScale(kVec3 s);
+kMat4   kTranslation(float T_x, float T_y, float T_z);
+kMat4   kTranslation(kVec3 t);
+kMat4   kRotationX(float c, float s);
+kMat4   kRotationX(float angle);
+kMat4   kRotationY(float c, float s);
+kMat4   kRotationY(float angle);
+kMat4   kRotationZ(float c, float s);
+kMat4   kRotationZ(float angle);
+kMat4   kRotation(float x, float y, float z, kVec2 arm);
+kMat4   kRotation(float x, float y, float z, float angle);
+kMat4   kRotation(kVec3 axis, kVec2 arm);
+kMat4   kRotation(kVec3 axis, float angle);
+kMat4   kLookAt(kVec3 from, kVec3 to, kVec3 world_up);
+kMat4   kLookAtDirection(kVec3 dir, kVec3 world_up);
+kMat4   kOrthographicRH(float l, float r, float t, float b, float n, float f);
+kMat4   kOrthographicLH(float l, float r, float t, float b, float n, float f);
+kMat4   kPerspectiveRH(float fov, float aspect_ratio, float n, float f);
+kMat4   kPerspectiveLH(float fov, float aspect_ratio, float n, float f);
 
-kQuat kQuatIdentity();
-kQuat kQuatBetween(kVec3 from, kVec3 to);
-kQuat kQuatBetween(kQuat a, kQuat b);
-kQuat kQuatLookAt(kVec3 from, kVec3 to, kVec3 world_forward);
+kRotor3 kRotor3Between(kVec3 from, kVec3 to);
+kRotor3 kRotor3Between(kRotor3 a, kRotor3 b);
+kRotor3 kRotor3LookAt(kVec3 from, kVec3 to, kVec3 world_forward);
 
 //
 //
@@ -757,14 +868,14 @@ type kSlerp(type from, type to, float angle, float t)
 	return (mts * from + ts * to) * (1.0f / s);
 }
 
-kVec2 kSlerp(kVec2 from, kVec2 to, float t);
-kVec3 kSlerp(kVec3 from, kVec3 to, float t);
-kQuat kSlerp(kQuat from, kQuat to, float t);
-float kStep(float edge, float val);
-kVec2 kStep(kVec2 edge, kVec2 val);
-kVec3 kStep(kVec3 edge, kVec3 val);
-kVec4 kStep(kVec4 edge, kVec4 val);
-kQuat kStep(kQuat edge, kQuat val);
+kVec2   kSlerp(kVec2 from, kVec2 to, float t);
+kVec3   kSlerp(kVec3 from, kVec3 to, float t);
+kRotor3 kSlerp(kRotor3 from, kRotor3 to, float t);
+float   kStep(float edge, float val);
+kVec2   kStep(kVec2 edge, kVec2 val);
+kVec3   kStep(kVec3 edge, kVec3 val);
+kVec4   kStep(kVec4 edge, kVec4 val);
+kRotor3 kStep(kRotor3 edge, kRotor3 val);
 
 template <typename Item>
 float kSmoothStepZ(Item a, Item b, Item v)
@@ -798,13 +909,13 @@ Item kMap01(Item in_a, Item in_b, Item v)
 	return MapRange(in_a, in_b, Item(0), Item(1), v);
 }
 
-float kMoveTowards(float from, float to, float factor);
-kVec2 kMoveTowards(kVec2 from, kVec2 to, float factor);
-kVec3 kMoveTowards(kVec3 from, kVec3 to, float factor);
-kVec4 kMoveTowards(kVec4 from, kVec4 to, float factor);
-kVec2 kRotateAround(kVec2 point, kVec2 center, float angle);
-kQuat kRotateTowards(kQuat from, kQuat to, float max_angle);
-kVec2 kReflect(kVec2 d, kVec2 n);
+float   kMoveTowards(float from, float to, float factor);
+kVec2   kMoveTowards(kVec2 from, kVec2 to, float factor);
+kVec3   kMoveTowards(kVec3 from, kVec3 to, float factor);
+kVec4   kMoveTowards(kVec4 from, kVec4 to, float factor);
+kVec2   kRotateAround(kVec2 point, kVec2 center, float angle);
+kRotor3 kRotateTowards(kRotor3 from, kRotor3 to, float max_angle);
+kVec2   kReflect(kVec2 d, kVec2 n);
 
 //
 //

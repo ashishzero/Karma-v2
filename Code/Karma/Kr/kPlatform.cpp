@@ -34,7 +34,7 @@ kFile kOpenFile(kString mb_path, kFileAccess paccess, kFileShareMode pshare, kFi
 {
 	wchar_t path[K_MAX_PATH];
 
-	int len   = MultiByteToWideChar(CP_UTF8, 0, (char *)mb_path.data, (int)mb_path.count, path, kArrayCount(path) - 1);
+	int len   = MultiByteToWideChar(CP_UTF8, 0, (char *)mb_path.Items, (int)mb_path.Count, path, kArrayCount(path) - 1);
 	path[len] = 0;
 
 	DWORD access = 0;
@@ -67,13 +67,13 @@ kFile kOpenFile(kString mb_path, kFileAccess paccess, kFileShareMode pshare, kFi
 	if (file == INVALID_HANDLE_VALUE)
 	{
 		kLogHresultError(GetLastError(), "Windows", "Failed to open file: \"" kStrFmt "\"", kStrArg(mb_path));
-		return nullptr;
+		return kFile{nullptr};
 	}
 
-	return file;
+	return kFile{.Resource = file};
 }
 
-void kCloseFile(kFile handle) { CloseHandle((HANDLE)handle.resource); }
+void kCloseFile(kFile handle) { CloseHandle((HANDLE)handle.Resource); }
 
 umem kReadFile(kFile handle, u8 *buffer, umem size)
 {
@@ -90,7 +90,7 @@ umem kReadFile(kFile handle, u8 *buffer, umem size)
 	while (remaining_bytes_to_read)
 	{
 		DWORD read_bytes = 0;
-		if (!ReadFile((HANDLE)handle.resource, buffer + total_bytes_read, read_size, &read_bytes, NULL))
+		if (!ReadFile((HANDLE)handle.Resource, buffer + total_bytes_read, read_size, &read_bytes, NULL))
 		{
 			kLogHresultError(GetLastError(), "Windows", "Failed while reading file");
 			break;
@@ -120,7 +120,7 @@ umem kWriteFile(kFile handle, u8 *buff, umem size)
 	while (remaining_bytes_to_write)
 	{
 		DWORD written = 0;
-		if (!WriteFile((HANDLE)handle.resource, buff + total_bytes_written, write_size, &written, NULL))
+		if (!WriteFile((HANDLE)handle.Resource, buff + total_bytes_written, write_size, &written, NULL))
 		{
 			kLogHresultError(GetLastError(), "Windows", "Failed while writing file");
 			break;
@@ -138,14 +138,14 @@ umem kWriteFile(kFile handle, u8 *buff, umem size)
 umem kGetFileSize(kFile handle)
 {
 	LARGE_INTEGER size = {};
-	GetFileSizeEx((HANDLE)handle.resource, &size);
+	GetFileSizeEx((HANDLE)handle.Resource, &size);
 	return size.QuadPart;
 }
 
 kString kReadEntireFile(kString path)
 {
 	kFile handle = kOpenFile(path, kFileAccess_Read, kFileShareMode_Read, kFileMethod_OpenExisting);
-	if (handle.resource)
+	if (handle.Resource)
 	{
 		umem size = kGetFileSize(handle);
 		u8  *buff = (u8 *)kAlloc(size);
@@ -159,7 +159,7 @@ kString kReadEntireFile(kString path)
 bool kWriteEntireFile(kString path, u8 *buffer, umem size)
 {
 	kFile handle = kOpenFile(path, kFileAccess_Write, kFileShareMode_Read, kFileMethod_CreateAlways);
-	if (handle.resource)
+	if (handle.Resource)
 	{
 		umem written = kWriteFile(handle, buffer, size);
 		kCloseFile(handle);
@@ -189,10 +189,10 @@ static uint kTranslateAttributes(DWORD attrs)
 
 kString kGetFileName(kString path)
 {
-	while (path[path.count - 1] == '/' || path[path.count - 1] == '\\')
+	while (path[path.Count - 1] == '/' || path[path.Count - 1] == '\\')
 		path = kRemoveSuffix(path, 1);
 
-	imem pos = path.count - 1;
+	imem pos = path.Count - 1;
 	for (; pos >= 0; --pos)
 	{
 		if (path[pos] == '/' || path[pos] == '\\')
@@ -206,7 +206,7 @@ kString kGetFileName(kString path)
 
 kString kGetDirectoryPath(kString path)
 {
-	imem pos = path.count - 1;
+	imem pos = path.Count - 1;
 	for (; pos >= 0; --pos)
 	{
 		if (path[pos] == '/' || path[pos] == '\\')
@@ -220,7 +220,7 @@ kString kGetDirectoryPath(kString path)
 uint kGetFileAttributes(kString mb_path)
 {
 	wchar_t path[K_MAX_PATH];
-	int len   = MultiByteToWideChar(CP_UTF8, 0, (char *)mb_path.data, (int)mb_path.count, path, kArrayCount(path) - 1);
+	int len   = MultiByteToWideChar(CP_UTF8, 0, (char *)mb_path.Items, (int)mb_path.Count, path, kArrayCount(path) - 1);
 	path[len] = 0;
 	DWORD attrs = GetFileAttributesW(path);
 	return kTranslateAttributes(attrs);
@@ -229,9 +229,9 @@ uint kGetFileAttributes(kString mb_path)
 u64 kGetFileLastModifiedTime(kString mb_filepath)
 {
 	kFile file = kOpenFile(mb_filepath, kFileAccess_Read, kFileShareMode_ReadWrite, kFileMethod_OpenExisting);
-	if (file)
+	if (file.Resource)
 	{
-		HANDLE   handle = file.resource;
+		HANDLE   handle = file.Resource;
 		FILETIME tm;
 		if (GetFileTime(handle, 0, 0, &tm))
 		{
@@ -249,7 +249,7 @@ u64 kGetFileLastModifiedTime(kString mb_filepath)
 bool kSetWorkingDirectory(kString mb_path)
 {
 	wchar_t path[K_MAX_PATH];
-	int len   = MultiByteToWideChar(CP_UTF8, 0, (char *)mb_path.data, (int)mb_path.count, path, kArrayCount(path) - 1);
+	int len   = MultiByteToWideChar(CP_UTF8, 0, (char *)mb_path.Items, (int)mb_path.Count, path, kArrayCount(path) - 1);
 	path[len] = 0;
 	return SetCurrentDirectoryW(path);
 }
@@ -267,7 +267,7 @@ int kGetWorkingDirectory(u8 *mb_path, int len)
 bool kSearchPath(kString exe)
 {
 	wchar_t path[K_MAX_PATH];
-	int     len = MultiByteToWideChar(CP_UTF8, 0, (char *)exe.data, (int)exe.count, path, kArrayCount(path) - 1);
+	int     len = MultiByteToWideChar(CP_UTF8, 0, (char *)exe.Items, (int)exe.Count, path, kArrayCount(path) - 1);
 	path[len]   = 0;
 	return SearchPathW(0, path, L".exe", 0, 0, 0);
 }
@@ -275,7 +275,7 @@ bool kSearchPath(kString exe)
 bool kCreateDirectories(kString mb_path)
 {
 	wchar_t path[K_MAX_PATH];
-	int len   = MultiByteToWideChar(CP_UTF8, 0, (char *)mb_path.data, (int)mb_path.count, path, kArrayCount(path) - 1);
+	int len   = MultiByteToWideChar(CP_UTF8, 0, (char *)mb_path.Items, (int)mb_path.Count, path, kArrayCount(path) - 1);
 	path[len] = 0;
 	int count = 0;
 
@@ -403,7 +403,7 @@ bool kVisitDirectories(kString mb_path, kDirectoryVisitorProc visitor, void *dat
 	if (!visitor) return false;
 
 	wchar_t path[K_MAX_PATH];
-	int len   = MultiByteToWideChar(CP_UTF8, 0, (char *)mb_path.data, (int)mb_path.count, path, kArrayCount(path) - 1);
+	int len   = MultiByteToWideChar(CP_UTF8, 0, (char *)mb_path.Items, (int)mb_path.Count, path, kArrayCount(path) - 1);
 	path[len] = 0;
 
 	wchar_t append[] = L"\\*";
@@ -453,7 +453,7 @@ static DWORD WINAPI kThreadStartRoutine(LPVOID thread_param)
 
 int kExecuteProcess(kString cmdline)
 {
-	int                 len      = MultiByteToWideChar(CP_UTF8, 0, (char *)cmdline.data, (int)cmdline.count, 0, 0) + 1;
+	int                 len      = MultiByteToWideChar(CP_UTF8, 0, (char *)cmdline.Items, (int)cmdline.Count, 0, 0) + 1;
 	wchar_t            *cmd      = (wchar_t *)kAlloc(sizeof(wchar_t) * len);
 	STARTUPINFOW        start_up = {sizeof(start_up)};
 	PROCESS_INFORMATION process  = {};
@@ -464,7 +464,7 @@ int kExecuteProcess(kString cmdline)
 		return 1;
 	}
 
-	int wlen  = MultiByteToWideChar(CP_UTF8, 0, (char *)cmdline.data, (int)cmdline.count, cmd, len - 1);
+	int wlen  = MultiByteToWideChar(CP_UTF8, 0, (char *)cmdline.Items, (int)cmdline.Count, cmd, len - 1);
 	cmd[wlen] = 0;
 
 	DWORD rc  = 1;
@@ -497,27 +497,27 @@ kThread kLaunchThread(kThreadProc proc, void *arg, kThreadAttribute attr)
 	HANDLE handle = CreateThread(NULL, 0, kThreadStartRoutine, &data, 0, NULL);
 	if (handle) WaitForSingleObject(data.event, INFINITE);
 	CloseHandle(data.event);
-	return handle;
+	return kThread{handle};
 }
 
 kThread kGetCurrentThread(void)
 {
 	HANDLE handle = GetCurrentThread();
-	return handle;
+	return kThread{handle};
 }
 
-void kDetachThread(kThread thread) { CloseHandle((HANDLE)thread.resource); }
+void kDetachThread(kThread thread) { CloseHandle((HANDLE)thread.Resource); }
 
 void kWaitThread(kThread thread)
 {
-	WaitForSingleObject((HANDLE)thread.resource, INFINITE);
-	CloseHandle((HANDLE)thread.resource);
+	WaitForSingleObject((HANDLE)thread.Resource, INFINITE);
+	CloseHandle((HANDLE)thread.Resource);
 }
 
 void kTerminateThread(kThread thread, uint code)
 {
-	TerminateThread((HANDLE)thread.resource, code);
-	CloseHandle((HANDLE)thread.resource);
+	TerminateThread((HANDLE)thread.Resource, code);
+	CloseHandle((HANDLE)thread.Resource);
 }
 
 void kSleep(u32 millisecs) { Sleep(millisecs); }
@@ -606,18 +606,18 @@ int kWaitCondVarTimed(kCondVar *cond, kMutex *mutex, u32 millisecs)
 kModule kLoadModule(kString mb_path)
 {
 	wchar_t path[K_MAX_PATH];
-	int len   = MultiByteToWideChar(CP_UTF8, 0, (char *)mb_path.data, (int)mb_path.count, path, kArrayCount(path) - 1);
+	int len   = MultiByteToWideChar(CP_UTF8, 0, (char *)mb_path.Items, (int)mb_path.Count, path, kArrayCount(path) - 1);
 	path[len] = 0;
 	HMODULE mod = LoadLibraryW(path);
-	kModule res = {(kPlatformModule *)mod};
+	kModule res = {(void *)mod};
 	return res;
 }
 
-void       kFreeModule(kModule module) { FreeLibrary((HMODULE)module.resource); }
+void       kFreeModule(kModule module) { FreeLibrary((HMODULE)module.Resource); }
 
 kProcedure kGetProcAddress(kModule module, const char *name)
 {
-	HMODULE    mod  = (HMODULE)module.resource;
+	HMODULE    mod  = (HMODULE)module.Resource;
 	kProcedure proc = (kProcedure)GetProcAddress(mod, name);
 	return proc;
 }

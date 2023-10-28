@@ -55,7 +55,7 @@ void                 Update(float dt)
 
 	if (kIsKeyDown(kKey_Minus) || kKeyPressed(kKey_Down))
 	{
-		if (Rects.count)
+		if (Rects.Count)
 		{
 			Dissappear.Add(Rects.Last());
 			DissappearColors.Add(Colors.Last());
@@ -106,12 +106,12 @@ void                 Update(float dt)
 	int                            fps = (int)(1.0f / stabilized_dt);
 	kString                        pf  = kFormatString(
         arena, "FPS: %d (%.2fms)\nRender Memory: %.3f / %.3f MB\nLast Frame Render Memory: %.3f MB", fps,
-        1000 * stabilized_dt, mem->max_used.megabytes, mem->allocated.megabytes, mem->last_frame.megabytes);
+        1000 * stabilized_dt, mem->MaxUsed.TotalMegaBytes, mem->Allocated.TotalMegaBytes, mem->UsedLastFrame.TotalMegaBytes);
 
 
 	kRect rect = kRect(0.0f, 0.0f, (float)size.x, (float)size.y);
 
-	while (DissappearTFactors.count && DissappearTFactors.Last() < 0.001f)
+	while (DissappearTFactors.Count && DissappearTFactors.Last() < 0.001f)
 	{
 		Dissappear.Pop();
 		DissappearColors.Pop();
@@ -132,7 +132,7 @@ void                 Update(float dt)
 
 	float dim = 15.0f;
 	float tdim = 0.5f;
-	for (imem i = 0; i < Rects.count; ++i)
+	for (imem i = 0; i < Rects.Count; ++i)
 	{
 		float t     = kEaseInOutBounce(TFactors[i]);
 		Colors[i].w = kEaseInCirc(TFactors[i]);
@@ -144,7 +144,7 @@ void                 Update(float dt)
 		TFactors[i] = kLerp(TFactors[i], 1.0f, 0.09f);
 	}
 
-	for (imem i = 0; i < Dissappear.count; ++i)
+	for (imem i = 0; i < Dissappear.Count; ++i)
 	{
 		float t     = kEaseOutExpo(DissappearTFactors[i]);
 		DissappearColors[i].w = kEaseOutCirc(DissappearTFactors[i]);
@@ -158,7 +158,7 @@ void                 Update(float dt)
 
 	kLineThickness(2.0f);
 
-	kDrawLine(kVec2(0), kVec2(20), kVec4(50, 50, 0, 1));
+	kDrawLine(kVec2(0), kVec2(20, 50), kVec4(50, 50, 0, 1));
 
 	kEndScene();
 
@@ -176,6 +176,6 @@ void                 Update(float dt)
 void Main(int argc, const char **argv)
 {
 	kSetLogLevel(kLogLevel_Info);
-	kMediaUserEvents user = {.update = Update};
+	kMediaUserEvents user = {.Update = Update};
 	kEventLoop(kDefaultSpec, user);
 }

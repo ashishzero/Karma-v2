@@ -3,8 +3,10 @@
 
 constexpr int K_MAX_PATH = 512;
 
-struct kPlatformFile;
-using kFile = kHandle<kPlatformFile>;
+struct kFile
+{
+	void *Resource;
+};
 
 typedef enum kFileAccess
 {
@@ -96,12 +98,17 @@ typedef struct kCondVar
 #endif
 } kCondVar;
 
-struct kPlatformThread;
-using kThread = kHandle<kPlatformThread>;
+struct kThread
+{
+	void *Resource;
+};
+
 typedef int (*kThreadProc)(void *arg);
 
-struct kPlatformModule;
-using kModule = kHandle<kPlatformModule>;
+struct kModule
+{
+	void *Resource;
+};
 
 typedef void (*kProcedure)(void);
 

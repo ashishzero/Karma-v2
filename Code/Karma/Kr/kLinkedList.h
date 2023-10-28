@@ -4,46 +4,46 @@
 template <typename LinkedNode>
 void kDListInit(LinkedNode *first)
 {
-	first->prev = first;
-	first->next = first;
+	first->Prev = first;
+	first->Next = first;
 }
 
 template <typename LinkedNode>
 bool kDListIsEmpty(LinkedNode *first)
 {
-	return first->next == first;
+	return first->Next == first;
 }
 
 template <typename LinkedNode>
 void kDListPushFront(LinkedNode *first, LinkedNode *node)
 {
-	LinkedNode *next = first->next;
+	LinkedNode *next = first->Next;
 	LinkedNode *prev = first;
 
-	node->next       = next;
-	node->prev       = prev;
+	node->Next       = next;
+	node->Prev       = prev;
 
-	prev->next       = node;
-	next->prev       = node;
+	prev->Next       = node;
+	next->Prev       = node;
 }
 
 template <typename LinkedNode>
 void kDListPushBack(LinkedNode *first, LinkedNode *node)
 {
-	kDListPushFront(first->prev, node);
+	kDListPushFront(first->Prev, node);
 }
 
 template <typename LinkedNode>
 LinkedNode *kDListPopFront(LinkedNode *first)
 {
-	LinkedNode *node = first->next;
-	LinkedNode *next = node->next;
-	LinkedNode *prev = node->prev;
+	LinkedNode *node = first->Next;
+	LinkedNode *next = node->Next;
+	LinkedNode *prev = node->Prev;
 
 	kAssert(node != next && node != prev);
 
-	prev->next = next;
-	next->prev = prev;
+	prev->Next = next;
+	next->Prev = prev;
 
 	return node;
 }
@@ -51,14 +51,14 @@ LinkedNode *kDListPopFront(LinkedNode *first)
 template <typename LinkedNode>
 LinkedNode *kDListPopBack(LinkedNode *first)
 {
-	return kDListPopFront(first->prev->prev);
+	return kDListPopFront(first->Prev->Prev);
 }
 
 template <typename LinkedNode>
 void kDListRemove(LinkedNode *r)
 {
-	LinkedNode *prev = r->prev;
-	LinkedNode *next = r->next;
-	prev->next       = next;
-	next->prev       = prev;
+	LinkedNode *prev = r->Prev;
+	LinkedNode *next = r->Next;
+	prev->Next       = next;
+	next->Prev       = prev;
 }

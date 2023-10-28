@@ -12,9 +12,9 @@ typedef enum kTextureType
 
 typedef struct kVertex2D
 {
-	kVec3 pos;
-	kVec2 tex;
-	kVec4 col;
+	kVec3 Position;
+	kVec2 TexCoord;
+	kVec4 Color;
 } kVertex2D;
 
 typedef u32 kIndex2D;
@@ -38,19 +38,41 @@ typedef enum kBlendMode : u8
 typedef enum kTextureFilter : u8
 {
 	kTextureFilter_LinearWrap,
+	kTextureFilter_LinearClamp,
 	kTextureFilter_PointWrap,
+	kTextureFilter_PointClamp,
 	kTextureFilter_Count
 } kTextureFilter;
 
-typedef enum kRenderPass
+enum kMultiSamplingAntiAliasing
 {
-	kRenderPass_Quad,
-	kRenderPass_Threshold,
-	kRenderPass_Bloom,
-	kRenderPass_Tonemap,
-	kRenderPass_Blit,
-	kRenderPass_Count,
-} kRenderPass;
+	kMultiSamplingAntiAliasing_Disabled = 1,
+	kMultiSamplingAntiAliasing_2        = 2,
+	kMultiSamplingAntiAliasing_4        = 4,
+	kMultiSamplingAntiAliasing_8        = 8,
+};
+
+enum kBloom
+{
+	kBloom_Disabled,
+	kBloom_Enabled,
+};
+
+enum kHighDynamicRange
+{
+	kHighDynamicRange_Disabled,
+	kHighDynamicRange_AES,
+};
+
+struct kRenderPipelineConfig
+{
+	kMultiSamplingAntiAliasing Msaa;
+	kBloom                     Bloom;
+	kHighDynamicRange          Hdr;
+	kVec4                      Clear;
+	float                      Threshold;
+	kVec3                      Intensity;
+};
 
 //
 //
@@ -69,40 +91,40 @@ enum kRenderDirtyFlags2D
 
 typedef struct kRenderCommand2D
 {
-	u32            flags;
-	u32            textures[kTextureType_Count];
-	kBlendMode     blend;
-	kTextureFilter filter;
-	u16            rect;
-	u32            vertex;
-	u32            index;
+	u32            Flags;
+	u32            Textures[kTextureType_Count];
+	kBlendMode     BlendMode;
+	kTextureFilter TextureFilter;
+	u16            Rect;
+	u32            VertexOffset;
+	u32            IndexOffset;
 } kRenderCommand2D;
 
 typedef struct kCamera2D
 {
-	float left;
-	float right;
-	float top;
-	float bottom;
-	float near;
-	float far;
+	float Left;
+	float Right;
+	float Top;
+	float Bottom;
+	float Near;
+	float Far;
 } kCamera2D;
 
 typedef struct kRenderScene2D
 {
-	kCamera2D   camera;
-	kRect       region;
-	kRange<u32> commands;
+	kCamera2D   Camera;
+	kRect       Region;
+	kRange<u32> Commands;
 } kRenderScene2D;
 
 typedef struct kRenderFrame2D
 {
-	kSpan<kRenderScene2D>   scenes;
-	kSpan<kRenderCommand2D> commands;
-	kSpan<kTexture *>       textures[kTextureType_Count];
-	kSpan<kRect>            rects;
-	kSpan<kVertex2D>        vertices;
-	kSpan<kIndex2D>         indices;
+	kSpan<kRenderScene2D>   Scenes;
+	kSpan<kRenderCommand2D> Commands;
+	kSpan<kTexture *>       Textures[kTextureType_Count];
+	kSpan<kRect>            Rects;
+	kSpan<kVertex2D>        Vertices;
+	kSpan<kIndex2D>         Indices;
 } kRenderFrame2D;
 
 //
@@ -111,5 +133,5 @@ typedef struct kRenderFrame2D
 
 typedef struct kRenderFrame
 {
-	kRenderFrame2D render2d;
+	kRenderFrame2D Frame2D;
 } kRenderFrame;

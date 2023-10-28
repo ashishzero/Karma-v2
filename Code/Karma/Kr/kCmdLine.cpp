@@ -16,21 +16,21 @@ enum kArgType
 
 struct kArgDefault
 {
-	kString str;
-	int     num;
+	kString Str;
+	int     Num;
 };
 
 struct kArg
 {
-	kString        key;
-	kString        desc;
-	kArgType       type;
-	void          *dst;
-	kArgDefault    def;
-	kSpan<kString> opts;
+	kString        Key;
+	kString        Desc;
+	kArgType       Type;
+	void          *Dest;
+	kArgDefault    Default;
+	kSpan<kString> Options;
 };
 
-static kArray<kArg> cmd_args;
+static kArray<kArg> g_CommandLineArguments;
 
 //
 //
@@ -38,39 +38,39 @@ static kArray<kArg> cmd_args;
 
 static void kCmdLineArg(kString key, kString desc, kSpan<kString> opts, kArgType type, void *dst, kArgDefault def)
 {
-	kArg *arg = cmd_args.Add();
-	arg->key  = key;
-	arg->desc = desc;
-	arg->opts = opts;
-	arg->type = type;
-	arg->dst  = dst;
-	arg->def  = def;
+	kArg *arg = g_CommandLineArguments.Add();
+	arg->Key  = key;
+	arg->Desc = desc;
+	arg->Options = opts;
+	arg->Type = type;
+	arg->Dest  = dst;
+	arg->Default  = def;
 }
 
 void kCmdLineFlag(kString key, bool *val, kString desc) { kCmdLineArg(key, desc, {}, kArgType_Flag, val, {}); }
 
 void kCmdLineBoolean(kString key, bool def, bool *val, kString desc)
 {
-	kArgDefault arg = {.num = def};
+	kArgDefault arg = {.Num = def};
 	kCmdLineArg(key, desc, {}, kArgType_Boolean, val, arg);
 }
 
 void kCmdLineNumber(kString key, int def, int *val, kString desc)
 {
-	kArgDefault arg = {.num = def};
+	kArgDefault arg = {.Num = def};
 	kCmdLineArg(key, desc, {}, kArgType_Number, val, arg);
 }
 
 void kCmdLineString(kString key, kString def, kString *val, kString desc)
 {
-	kArgDefault arg = {.str = def};
+	kArgDefault arg = {.Str = def};
 	kCmdLineArg(key, desc, {}, kArgType_String, val, arg);
 }
 
 void kCmdLineOptions(kString key, int def, kSpan<kString> opts, int *val, kString desc)
 {
-	kAssert(def < opts.count);
-	kArgDefault arg = {.num = def};
+	kAssert(def < opts.Count);
+	kArgDefault arg = {.Num = def};
 	kCmdLineArg(key, desc, opts, kArgType_Options, val, arg);
 }
 
@@ -78,36 +78,36 @@ void kCmdLinePrintUsage(void)
 {
 	printf("\n Usage: \n\n");
 
-	for (kArg &arg : cmd_args)
+	for (kArg &arg : g_CommandLineArguments)
 	{
-		printf("  -%-8s: " kStrFmt "\n", arg.key.data, kStrArg(arg.desc));
+		printf("  -%-8s: " kStrFmt "\n", arg.Key.Items, kStrArg(arg.Desc));
 
-		if (arg.type != kArgType_Flag && arg.type != kArgType_Options) printf("    Default: ");
+		if (arg.Type != kArgType_Flag && arg.Type != kArgType_Options) printf("    Default: ");
 
-		if (arg.type == kArgType_Boolean)
+		if (arg.Type == kArgType_Boolean)
 		{
-			printf("%s", arg.def.num ? "true" : "false");
+			printf("%s", arg.Default.Num ? "true" : "false");
 		}
-		else if (arg.type == kArgType_Number)
+		else if (arg.Type == kArgType_Number)
 		{
-			printf("%lld", (long long)arg.def.num);
+			printf("%lld", (long long)arg.Default.Num);
 		}
-		else if (arg.type == kArgType_String)
+		else if (arg.Type == kArgType_String)
 		{
-			printf(kStrFmt, kStrArg(arg.def.str));
+			printf(kStrFmt, kStrArg(arg.Default.Str));
 		}
 
-		if (arg.type != kArgType_Flag && arg.type != kArgType_Options) printf("\n");
+		if (arg.Type != kArgType_Flag && arg.Type != kArgType_Options) printf("\n");
 
-		if (arg.type == kArgType_Options && arg.opts.count)
+		if (arg.Type == kArgType_Options && arg.Options.Count)
 		{
-			printf("    Values : " kStrFmt, kStrArg(arg.opts[0]));
-			if (arg.def.num == 0) printf(" (default)");
+			printf("    Values : " kStrFmt, kStrArg(arg.Options[0]));
+			if (arg.Default.Num == 0) printf(" (default)");
 
-			for (imem i = 1; i < arg.opts.count; ++i)
+			for (imem i = 1; i < arg.Options.Count; ++i)
 			{
-				printf(", " kStrFmt, kStrArg(arg.opts[i]));
-				if (arg.def.num == i) printf(" (default)");
+				printf(", " kStrFmt, kStrArg(arg.Options[i]));
+				if (arg.Default.Num == i) printf(" (default)");
 			}
 			printf("\n");
 		}
@@ -134,7 +134,7 @@ static kString kNextCmdLineArg(int *argc, const char ***argv)
 
 static void kHandleBoolean(kArg *arg, kString value)
 {
-	bool *dst = (bool *)arg->dst;
+	bool *dst = (bool *)arg->Dest;
 	if (value == "1" || value == "true")
 	{
 		*dst = true;
@@ -146,41 +146,41 @@ static void kHandleBoolean(kArg *arg, kString value)
 	else
 	{
 		printf("  Error: Expected boolean but got \"" kStrFmt "\" for " kStrFmt ".\n", kStrArg(value),
-		       kStrArg(arg->key));
+		       kStrArg(arg->Key));
 	}
 }
 
 static void kHandleNumber(kArg *arg, kString value)
 {
 	char *endptr = 0;
-	int   number = strtol((char *)value.data, &endptr, 10);
+	int   number = strtol((char *)value.Items, &endptr, 10);
 
-	if (endptr == (char *)value.data + value.count)
+	if (endptr == (char *)value.Items + value.Count)
 	{
-		int *dst = (int *)arg->dst;
+		int *dst = (int *)arg->Dest;
 		*dst     = number;
 	}
 	else
 	{
 		printf("  Error: Expected number but got \"" kStrFmt "\" for " kStrFmt ".\n", kStrArg(value),
-		       kStrArg(arg->key));
+		       kStrArg(arg->Key));
 	}
 }
 
 static void kHandleString(kArg *arg, kString value)
 {
-	kString *dst = (kString *)arg->dst;
+	kString *dst = (kString *)arg->Dest;
 	*dst         = value;
 }
 
 static void kHandleOptions(kArg *arg, kString value)
 {
 	bool valid = false;
-	for (int i = 0; i < arg->opts.count; ++i)
+	for (int i = 0; i < arg->Options.Count; ++i)
 	{
-		if (arg->opts[i] == value)
+		if (arg->Options[i] == value)
 		{
-			int *dst = (int *)arg->dst;
+			int *dst = (int *)arg->Dest;
 			*dst     = i;
 			valid    = true;
 			break;
@@ -188,12 +188,12 @@ static void kHandleOptions(kArg *arg, kString value)
 	}
 	if (!valid)
 	{
-		printf("  Invalid value \"" kStrFmt "\" for option " kStrFmt ".\n", kStrArg(value), kStrArg(arg->key));
+		printf("  Invalid value \"" kStrFmt "\" for option " kStrFmt ".\n", kStrArg(value), kStrArg(arg->Key));
 		printf("  Possible values: \n");
-		printf(kStrFmt, kStrArg(arg->opts[0]));
-		for (imem i = 1; i < arg->opts.count; ++i)
+		printf(kStrFmt, kStrArg(arg->Options[0]));
+		for (imem i = 1; i < arg->Options.Count; ++i)
 		{
-			printf(", " kStrFmt, kStrArg(arg->opts[i]));
+			printf(", " kStrFmt, kStrArg(arg->Options[i]));
 		}
 		printf("\n");
 	}
@@ -201,19 +201,19 @@ static void kHandleOptions(kArg *arg, kString value)
 
 static void kHandleArg(kArg *arg, kString value)
 {
-	if (arg->type == kArgType_Boolean)
+	if (arg->Type == kArgType_Boolean)
 	{
 		kHandleBoolean(arg, value);
 	}
-	else if (arg->type == kArgType_Number)
+	else if (arg->Type == kArgType_Number)
 	{
 		kHandleNumber(arg, value);
 	}
-	else if (arg->type == kArgType_String)
+	else if (arg->Type == kArgType_String)
 	{
 		kHandleString(arg, value);
 	}
-	else if (arg->type == kArgType_Options)
+	else if (arg->Type == kArgType_Options)
 	{
 		kHandleOptions(arg, value);
 	}
@@ -222,32 +222,32 @@ static void kHandleArg(kArg *arg, kString value)
 bool kCmdLineParse(int *argc, const char ***argv, bool ignore_invalids)
 {
 	bool ok = true;
-	for (kArg &carg : cmd_args)
+	for (kArg &carg : g_CommandLineArguments)
 	{
-		if (carg.type == kArgType_Flag)
+		if (carg.Type == kArgType_Flag)
 		{
-			bool *dst = (bool *)carg.dst;
+			bool *dst = (bool *)carg.Dest;
 			*dst      = false;
 		}
-		else if (carg.type == kArgType_Boolean)
+		else if (carg.Type == kArgType_Boolean)
 		{
-			bool *dst = (bool *)carg.dst;
-			*dst      = carg.def.num;
+			bool *dst = (bool *)carg.Dest;
+			*dst      = carg.Default.Num;
 		}
-		else if (carg.type == kArgType_Number)
+		else if (carg.Type == kArgType_Number)
 		{
-			int *dst = (int *)carg.dst;
-			*dst     = carg.def.num;
+			int *dst = (int *)carg.Dest;
+			*dst     = carg.Default.Num;
 		}
-		else if (carg.type == kArgType_String)
+		else if (carg.Type == kArgType_String)
 		{
-			kString *dst = (kString *)carg.dst;
-			*dst         = carg.def.str;
+			kString *dst = (kString *)carg.Dest;
+			*dst         = carg.Default.Str;
 		}
-		else if (carg.type == kArgType_Options)
+		else if (carg.Type == kArgType_Options)
 		{
-			int *dst = (int *)carg.dst;
-			*dst     = carg.def.num;
+			int *dst = (int *)carg.Dest;
+			*dst     = carg.Default.Num;
 		}
 	}
 
@@ -264,10 +264,10 @@ bool kCmdLineParse(int *argc, const char ***argv, bool ignore_invalids)
 			kString key, value;
 			if (kSplitString(arg, ":", &key, &value))
 			{
-				for (kArg &carg : cmd_args)
+				for (kArg &carg : g_CommandLineArguments)
 				{
-					if (carg.type == kArgType_Flag) continue;
-					if (carg.key == key)
+					if (carg.Type == kArgType_Flag) continue;
+					if (carg.Key == key)
 					{
 						kHandleArg(&carg, value);
 						handled = true;
@@ -284,12 +284,12 @@ bool kCmdLineParse(int *argc, const char ***argv, bool ignore_invalids)
 		}
 		else
 		{
-			for (kArg &carg : cmd_args)
+			for (kArg &carg : g_CommandLineArguments)
 			{
-				if (carg.type != kArgType_Flag) continue;
-				if (carg.key == arg)
+				if (carg.Type != kArgType_Flag) continue;
+				if (carg.Key == arg)
 				{
-					bool *dst = (bool *)carg.dst;
+					bool *dst = (bool *)carg.Dest;
 					*dst      = true;
 					handled   = true;
 					break;

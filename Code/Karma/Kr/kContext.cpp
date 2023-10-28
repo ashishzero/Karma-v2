@@ -7,24 +7,24 @@
 #include <math.h>
 
 #if defined(K_EXPORT_SYMBOLS)
-K_EXPORT kContext context = {.allocator = {.proc = kDefaultHeapAllocator},
-                             .random    = {.state = 0x853c49e6748fea9bULL, .inc = 0xda3e39cb94b95bdbULL},
-                             .assertion = kDefaultHandleAssertion,
-                             .logger    = {.proc = kDefaultHandleLog},
-                             .fatal     = kDefaultFatalError};
+K_EXPORT kContext Context = {.Allocator = {.proc = kDefaultHeapAllocator},
+                             .Random    = {.state = 0x853c49e6748fea9bULL, .inc = 0xda3e39cb94b95bdbULL},
+                             .Assertion = kDefaultHandleAssertion,
+                             .Logger    = {.proc = kDefaultHandleLog},
+                             .Fatal     = kDefaultFatalError};
 #elif defined(K_IMPORT_SYMBOLS)
-K_IMPORT kContext context;
+K_IMPORT kContext Context;
 #else
-static kContext context = {.allocator = {.proc = kDefaultHeapAllocator},
-                           .random    = {.state = 0x853c49e6748fea9bULL, .inc = 0xda3e39cb94b95bdbULL},
-                           .assertion = kDefaultHandleAssertion,
-                           .logger    = {.proc = kDefaultHandleLog},
-                           .fatal     = kDefaultFatalError};
+static kContext Context = {.Allocator = {.Proc = kDefaultHeapAllocator},
+                           .Random    = {.State = 0x853c49e6748fea9bULL, .Inc = 0xda3e39cb94b95bdbULL},
+                           .Assertion = kDefaultHandleAssertion,
+                           .Logger    = {.Proc = kDefaultHandleLog},
+                           .Fatal     = kDefaultFatalError};
 #endif
 
 void kHandleAssertion(const char *file, int line, const char *proc, const char *desc)
 {
-	context.assertion(file, line, proc, desc);
+	Context.Assertion(file, line, proc, desc);
 	kTriggerBreakpoint();
 }
 
@@ -32,30 +32,30 @@ void kHandleAssertion(const char *file, int line, const char *proc, const char *
 //
 //
 
-kContext *  kGetContext(void) { return &context; }
-kAllocator *kGetContextAllocator(void) { return &context.allocator; }
-void *      kAlloc(umem size) { return kAlloc(&context.allocator, size); }
-void *      kRealloc(void *ptr, umem prev, umem size) { return kRealloc(&context.allocator, ptr, prev, size); }
-void        kFree(void *ptr, umem size) { kFree(&context.allocator, ptr, size); }
+kContext   *kGetContext(void) { return &Context; }
+kAllocator *kGetContextAllocator(void) { return &Context.Allocator; }
+void       *kAlloc(umem size) { return kAlloc(&Context.Allocator, size); }
+void       *kRealloc(void *ptr, umem prev, umem size) { return kRealloc(&Context.Allocator, ptr, prev, size); }
+void        kFree(void *ptr, umem size) { kFree(&Context.Allocator, ptr, size); }
 
-u32         kRandom(void) { return kRandom(&context.random); }
-u32         kRandomBound(u32 bound) { return kRandomBound(&context.random, bound); }
-u32         kRandomRange(u32 min, u32 max) { return kRandomRange(&context.random, min, max); }
-float       kRandomFloat01(void) { return kRandomFloat01(&context.random); }
-float       kRandomFloatBound(float bound) { return kRandomFloatBound(&context.random, bound); }
-float       kRandomFloatRange(float min, float max) { return kRandomFloatRange(&context.random, min, max); }
-float       kRandomFloat(void) { return kRandomFloat(&context.random); }
-void        kRandomSourceSeed(u64 state, u64 seq) { kRandomSourceSeed(&context.random, state, seq); }
+u32         kRandom(void) { return kRandom(&Context.Random); }
+u32         kRandomBound(u32 bound) { return kRandomBound(&Context.Random, bound); }
+u32         kRandomRange(u32 min, u32 max) { return kRandomRange(&Context.Random, min, max); }
+float       kRandomFloat01(void) { return kRandomFloat01(&Context.Random); }
+float       kRandomFloatBound(float bound) { return kRandomFloatBound(&Context.Random, bound); }
+float       kRandomFloatRange(float min, float max) { return kRandomFloatRange(&Context.Random, min, max); }
+float       kRandomFloat(void) { return kRandomFloat(&Context.Random); }
+void        kRandomSourceSeed(u64 state, u64 seq) { kRandomSourceSeed(&Context.Random, state, seq); }
 
-void        kSetLogLevel(kLogLevel level) { context.logger.level = level; }
+void        kSetLogLevel(kLogLevel level) { Context.Logger.Level = level; }
 
 void        kLogPrintV(kLogLevel level, const char *src, const char *fmt, va_list list)
 {
-	if (level >= context.logger.level)
+	if (level >= Context.Logger.Level)
 	{
 		char buff[4096];
 		int  len = vsnprintf(buff, kArrayCount(buff), fmt, list);
-		context.logger.proc(context.logger.data, level, src, (u8 *)buff, len);
+		Context.Logger.Proc(Context.Logger.Data, level, src, (u8 *)buff, len);
 	}
 }
 
@@ -141,7 +141,7 @@ void kLogError(const char *fmt, ...)
 	va_end(args);
 }
 
-void kFatalError(const char *msg) { context.fatal(msg); }
+void kFatalError(const char *msg) { Context.Fatal(msg); }
 
 //
 //
@@ -176,8 +176,8 @@ void kDefaultFatalError(const char *message)
 }
 
 static const WORD  kColorsMap[] = {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE,
-                                  FOREGROUND_GREEN | FOREGROUND_BLUE,
-                                  FOREGROUND_RED | FOREGROUND_GREEN, FOREGROUND_RED};
+                                   FOREGROUND_GREEN | FOREGROUND_BLUE, FOREGROUND_RED | FOREGROUND_GREEN,
+                                   FOREGROUND_RED};
 static const char *kHeaderMap[] = {"Trace", "Info", "Warning", "Error"};
 static_assert(kArrayCount(kHeaderMap) == kLogLevel_Error + 1, "");
 static_assert(kArrayCount(kColorsMap) == kLogLevel_Error + 1, "");

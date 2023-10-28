@@ -9,18 +9,18 @@ constexpr int K_STRING_BUILDER_DEFAULT_BUCKET_SIZE = 4 * 1024;
 template <int N>
 struct kStringsBucket
 {
-	kStringsBucket *next    = nullptr;
-	imem            written = 0;
-	u8              buffer[N];
+	kStringsBucket *Next    = nullptr;
+	imem            Written = 0;
+	u8              Buffer[N];
 };
 
 template <int N = K_STRING_BUILDER_DEFAULT_BUCKET_SIZE>
 struct kStringBuilder
 {
-	kStringsBucket<N>  head;
-	kStringsBucket<N> *tail    = &head;
-	umem               written = 0;
-	kStringsBucket<N> *free    = nullptr;
+	kStringsBucket<N>  Head;
+	kStringsBucket<N> *Tail      = &Head;
+	umem               Written   = 0;
+	kStringsBucket<N> *FirstFree = nullptr;
 
 	//
 	//
@@ -33,33 +33,33 @@ struct kStringBuilder
 
 		while (size > 0)
 		{
-			if (tail->written == N)
+			if (Tail->Written == N)
 			{
 				kStringsBucket<N> *new_buk = (kStringsBucket<N> *)kAlloc(sizeof(kStringsBucket<N>));
 				if (!new_buk) break;
 
-				new_buk->next    = 0;
-				new_buk->written = 0;
-				tail->next       = new_buk;
-				tail             = new_buk;
+				new_buk->Next    = 0;
+				new_buk->Written = 0;
+				Tail->Next       = new_buk;
+				Tail             = new_buk;
 			}
 
-			imem write_size = kMin(size, N - tail->written);
+			imem write_size = kMin(size, N - Tail->Written);
 
-			memcpy(tail->buffer + tail->written, data, write_size);
+			memcpy(Tail->Buffer + Tail->Written, data, write_size);
 
-			tail->written += write_size;
+			Tail->Written += write_size;
 			size -= write_size;
 			data += write_size;
 
 			rc += write_size;
 		}
 
-		written += rc;
+		Written += rc;
 		return rc;
 	}
 
-	imem Write(kString string) { return Write(string.data, string.count); }
+	imem Write(kString string) { return Write(string.Items, string.Count); }
 
 	imem Write(char value) { return Write((u8 *)&value, 1); }
 
@@ -114,22 +114,22 @@ struct kStringBuilder
 
 	kString ToString(kAllocator *allocator = nullptr)
 	{
-		if (written == 0) return kString("");
+		if (Written == 0) return kString("");
 
 		kString string;
-		string.data  = allocator ? (uint8_t *)kAlloc(allocator, written + 1) : (uint8_t *)kAlloc(written + 1);
-		string.count = 0;
+		string.Items = allocator ? (uint8_t *)kAlloc(allocator, Written + 1) : (uint8_t *)kAlloc(Written + 1);
+		string.Count = 0;
 
-		if (!string.data) return string;
+		if (!string.Items) return string;
 
-		for (kStringsBucket<N> *bucket = &head; bucket; bucket = bucket->next)
+		for (kStringsBucket<N> *bucket = &Head; bucket; bucket = bucket->Next)
 		{
-			imem copy_size = bucket->written;
-			memcpy(string.data + string.count, bucket->buffer, copy_size);
-			string.count += copy_size;
+			imem copy_size = bucket->Written;
+			memcpy(string.Items + string.Count, bucket->Buffer, copy_size);
+			string.Count += copy_size;
 		}
 
-		string.data[string.count] = 0;
+		string.Items[string.Count] = 0;
 		return string;
 	}
 
@@ -142,14 +142,14 @@ struct kStringBuilder
 
 	void Reset()
 	{
-		if (tail != &head)
+		if (Tail != &Head)
 		{
-			kAssert(tail->next == nullptr && head.next);
-			tail->next = free;
-			free       = head.next;
+			kAssert(Tail->Next == nullptr && Head.Next);
+			Tail->Next = FirstFree;
+			FirstFree  = Head.Next;
 		}
-		head = {};
-		tail = &head;
+		Head = {};
+		Tail = &Head;
 	}
 };
 
@@ -157,14 +157,14 @@ template <int N>
 void kFreeStringBuilder(kStringBuilder<N> *builder)
 {
 	builder->Reset();
-	kStringsBucket<N> *bucket = builder->free;
+	kStringsBucket<N> *bucket = builder->FirstFree;
 	while (bucket)
 	{
-		kStringsBucket<N> *next = bucket->next;
+		kStringsBucket<N> *next = bucket->Next;
 		kFree(bucket, sizeof(*bucket));
 		bucket = next;
 	}
-	builder->free = nullptr;
+	builder->FirstFree = nullptr;
 }
 
 inproc kString kFormatStringV(const char *fmt, va_list list)

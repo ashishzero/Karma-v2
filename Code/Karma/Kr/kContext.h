@@ -3,11 +3,11 @@
 
 typedef struct kContext
 {
-	kAllocator           allocator;
-	kRandomSource        random;
-	kHandleAssertionProc assertion;
-	kLogger              logger;
-	kFatalErrorProc      fatal;
+	kAllocator           Allocator;
+	kRandomSource        Random;
+	kHandleAssertionProc Assertion;
+	kLogger              Logger;
+	kFatalErrorProc      Fatal;
 } kContext;
 
 //

@@ -15,21 +15,21 @@ static const kGlyph FallbackGlyph      = {
 
 typedef struct kMediaBuiltin
 {
-	kTexture *texture;
-	kFont     font;
+	kTexture *Texture;
+	kFont     Font;
 } kMediaBuiltin;
 
 typedef struct kMedia
 {
-	kArena          *arena;
-	kArray<kEvent>   events;
-	kKeyboardState   keyboard;
-	kMouseState      mouse;
-	kWindowState     window;
-	kMediaUserEvents user;
-	kRenderBackend   render;
-	kMediaBackend    backend;
-	kMediaBuiltin    builtin;
+	kArena          *Arena;
+	kArray<kEvent>   Events;
+	kKeyboardState   Keyboard;
+	kMouseState      Mouse;
+	kWindowState     Window;
+	kMediaUserEvents User;
+	kRenderBackend   Render;
+	kMediaBackend    Backend;
+	kMediaBuiltin    Builtin;
 } kMedia;
 
 static kMedia g_Media;
@@ -41,179 +41,179 @@ static kMedia g_Media;
 void          kFallbackUserLoadProc(void) {}
 void          kFallbackUserReleaseProc(void) {}
 void          kFallbackUserUpdateProc(float dt) {}
-kSpan<kEvent> kGetEvents(void) { return g_Media.events; }
-kArena       *kGetFrameArena(void) { return g_Media.arena; }
-void         *kGetUserEventData(void) { return g_Media.user.data; }
-void          kSetUserEventData(void *data) { g_Media.user.data = data; }
-void          kGetUserEvents(kMediaUserEvents *user) { memcpy(user, &g_Media.user, sizeof(g_Media.user)); }
+kSpan<kEvent> kGetEvents(void) { return g_Media.Events; }
+kArena       *kGetFrameArena(void) { return g_Media.Arena; }
+void         *kGetUserEventData(void) { return g_Media.User.Data; }
+void          kSetUserEventData(void *data) { g_Media.User.Data = data; }
+void          kGetUserEvents(kMediaUserEvents *user) { memcpy(user, &g_Media.User, sizeof(g_Media.User)); }
 
 void          kSetUserEvents(const kMediaUserEvents &user)
 {
-	memcpy(&g_Media.user, &user, sizeof(g_Media.user));
-
-	if (!g_Media.user.load) g_Media.user.load = kFallbackUserLoadProc;
-
-	if (!g_Media.user.release) g_Media.user.release = kFallbackUserLoadProc;
-
-	if (!g_Media.user.update) g_Media.user.update = kFallbackUserUpdateProc;
+	memcpy(&g_Media.User, &user, sizeof(g_Media.User));
+	if (!g_Media.User.Load) g_Media.User.Load = kFallbackUserLoadProc;
+	if (!g_Media.User.Release) g_Media.User.Release = kFallbackUserLoadProc;
+	if (!g_Media.User.Update) g_Media.User.Update = kFallbackUserUpdateProc;
 }
 
-bool   kIsKeyDown(kKey key) { return g_Media.keyboard.keys[key].down; }
-bool   kKeyPressed(kKey key) { return g_Media.keyboard.keys[key].flags & kPressed; }
-bool   kKeyReleased(kKey key) { return g_Media.keyboard.keys[key].flags & kReleased; }
-u8     kKeyHits(kKey key) { return g_Media.keyboard.keys[key].hits; }
-uint   kGetKeyModFlags(void) { return g_Media.keyboard.mods; }
-bool   kIsButtonDown(kButton button) { return g_Media.mouse.buttons[button].down; }
-bool   kButtonPressed(kButton button) { return g_Media.mouse.buttons[button].flags & kPressed; }
-bool   kButtonReleased(kButton button) { return g_Media.mouse.buttons[button].flags & kReleased; }
-kVec2i kGetCursorPosition(void) { return g_Media.mouse.cursor; }
-kVec2i kGetCursorDelta(void) { return g_Media.mouse.delta; }
-float  kGetWheelHorizontal(void) { return g_Media.mouse.wheel.x; }
-float  kGetWheelVertical(void) { return g_Media.mouse.wheel.y; }
-bool   kIsWindowClosed(void) { return g_Media.window.flags[kWindow_Closed]; }
-bool   kIsWindowResized(void) { return g_Media.window.flags[kWindow_Resized]; }
-void   kIgnoreWindowCloseEvent(void) { g_Media.window.flags[kWindow_Closed] = false; }
-bool   kIsWindowActive(void) { return g_Media.window.flags[kWindow_Active]; }
-bool   kIsWindowFullscreen(void) { return g_Media.window.flags[kWindow_Fullscreen]; }
-bool   kIsWindowMaximized(void) { return g_Media.window.flags[kWindow_Maximized]; }
-kVec2i kGetWindowSize(void) { return kVec2i(g_Media.window.width, g_Media.window.height); }
+bool   kIsKeyDown(kKey key) { return g_Media.Keyboard.Keys[key].Down; }
+bool   kKeyPressed(kKey key) { return g_Media.Keyboard.Keys[key].Flags & kPressed; }
+bool   kKeyReleased(kKey key) { return g_Media.Keyboard.Keys[key].Flags & kReleased; }
+u8     kKeyHits(kKey key) { return g_Media.Keyboard.Keys[key].Hits; }
+uint   kGetKeyModFlags(void) { return g_Media.Keyboard.Mods; }
+bool   kIsButtonDown(kButton button) { return g_Media.Mouse.Buttons[button].Down; }
+bool   kButtonPressed(kButton button) { return g_Media.Mouse.Buttons[button].Flags & kPressed; }
+bool   kButtonReleased(kButton button) { return g_Media.Mouse.Buttons[button].Flags & kReleased; }
+kVec2i kGetCursorPosition(void) { return g_Media.Mouse.Cursor; }
+kVec2i kGetCursorDelta(void) { return g_Media.Mouse.Delta; }
+float  kGetWheelHorizontal(void) { return g_Media.Mouse.Wheel.x; }
+float  kGetWheelVertical(void) { return g_Media.Mouse.Wheel.y; }
+bool   kIsWindowClosed(void) { return g_Media.Window.Flags[kWindow_Closed]; }
+bool   kIsWindowResized(void) { return g_Media.Window.Flags[kWindow_Resized]; }
+void   kIgnoreWindowCloseEvent(void) { g_Media.Window.Flags[kWindow_Closed] = false; }
+bool   kIsWindowActive(void) { return g_Media.Window.Flags[kWindow_Active]; }
+bool   kIsWindowFullscreen(void) { return g_Media.Window.Flags[kWindow_Fullscreen]; }
+bool   kIsWindowMaximized(void) { return g_Media.Window.Flags[kWindow_Maximized]; }
+kVec2i kGetWindowSize(void) { return kVec2i(g_Media.Window.Width, g_Media.Window.Height); }
 
 float  kGetWindowAspectRatio(void)
 {
-	float y = (float)g_Media.window.height;
-	float x = (float)g_Media.window.width;
+	float y = (float)g_Media.Window.Height;
+	float x = (float)g_Media.Window.Width;
 	return x / y;
 }
 
-float kGetWindowDpiScale(void) { return g_Media.window.yfactor; }
-bool  kIsCursorCaptured(void) { return g_Media.window.flags[kWindow_Capturing]; }
-bool  kIsCursorHovered(void) { return g_Media.window.flags[kWindow_Hovered]; }
-void  kGetKeyboardState(kKeyboardState *keyboard) { memcpy(keyboard, &g_Media.keyboard, sizeof(g_Media.keyboard)); }
+float kGetWindowDpiScale(void) { return g_Media.Window.DpiFactor; }
+bool  kIsCursorCaptured(void) { return g_Media.Window.Flags[kWindow_Capturing]; }
+bool  kIsCursorHovered(void) { return g_Media.Window.Flags[kWindow_Hovered]; }
+void  kGetKeyboardState(kKeyboardState *keyboard) { memcpy(keyboard, &g_Media.Keyboard, sizeof(g_Media.Keyboard)); }
 
 void  kGetKeyState(kKeyState *state, kKey key)
 {
-	memcpy(state, &g_Media.keyboard.keys[key], sizeof(g_Media.keyboard.keys[key]));
+	memcpy(state, &g_Media.Keyboard.Keys[key], sizeof(g_Media.Keyboard.Keys[key]));
 }
 
-void kGetMouseState(kMouseState *mouse) { memcpy(mouse, &g_Media.mouse, sizeof(g_Media.mouse)); }
+void kGetMouseState(kMouseState *mouse) { memcpy(mouse, &g_Media.Mouse, sizeof(g_Media.Mouse)); }
 
 void kGetButtonState(kKeyState *state, kButton button)
 {
-	memcpy(state, &g_Media.mouse.buttons[button], sizeof(g_Media.mouse.buttons));
+	memcpy(state, &g_Media.Mouse.Buttons[button], sizeof(g_Media.Mouse.Buttons));
 }
 
-void kGetWindowState(kWindowState *state) { memcpy(state, &g_Media.window, sizeof(g_Media.window)); }
-void kSetKeyboardState(const kKeyboardState &keyboard) { memcpy(&g_Media.keyboard, &keyboard, sizeof(g_Media.keyboard)); }
+void kGetWindowState(kWindowState *state) { memcpy(state, &g_Media.Window, sizeof(g_Media.Window)); }
+void kSetKeyboardState(const kKeyboardState &keyboard)
+{
+	memcpy(&g_Media.Keyboard, &keyboard, sizeof(g_Media.Keyboard));
+}
 
 void kSetKeyState(const kKeyState &state, kKey key)
 {
-	memcpy(&g_Media.keyboard.keys[key], &state, sizeof(g_Media.keyboard.keys[key]));
+	memcpy(&g_Media.Keyboard.Keys[key], &state, sizeof(g_Media.Keyboard.Keys[key]));
 }
 
-void kSetKeyModFlags(uint mods) { g_Media.keyboard.mods = mods; }
+void kSetKeyModFlags(uint mods) { g_Media.Keyboard.Mods = mods; }
 
-void kSetMouseState(const kMouseState &mouse) { memcpy(&g_Media.mouse, &mouse, sizeof(g_Media.mouse)); }
+void kSetMouseState(const kMouseState &mouse) { memcpy(&g_Media.Mouse, &mouse, sizeof(g_Media.Mouse)); }
 
 void kSetButtonState(const kKeyState &state, kButton button)
 {
-	memcpy(&g_Media.mouse.buttons[button], &state, sizeof(g_Media.mouse.buttons[button]));
+	memcpy(&g_Media.Mouse.Buttons[button], &state, sizeof(g_Media.Mouse.Buttons[button]));
 }
 
 void kClearInput(void)
 {
-	g_Media.events.Reset();
-	memset(&g_Media.keyboard, 0, sizeof(g_Media.keyboard));
-	memset(&g_Media.mouse, 0, sizeof(g_Media.mouse));
+	g_Media.Events.Reset();
+	memset(&g_Media.Keyboard, 0, sizeof(g_Media.Keyboard));
+	memset(&g_Media.Mouse, 0, sizeof(g_Media.Mouse));
 }
 
 void kClearFrame(void)
 {
-	kResetArena(g_Media.arena);
+	kResetArena(g_Media.Arena);
 
-	g_Media.events.count  = 0;
-	g_Media.keyboard.mods = 0;
+	g_Media.Events.Count  = 0;
+	g_Media.Keyboard.Mods = 0;
 
 	for (uint key = 0; key < kKey_Count; ++key)
 	{
-		g_Media.keyboard.keys[key].flags = 0;
-		g_Media.keyboard.keys[key].hits  = 0;
+		g_Media.Keyboard.Keys[key].Flags = 0;
+		g_Media.Keyboard.Keys[key].Hits  = 0;
 	}
 
 	for (uint button = 0; button < kButton_Count; ++button)
 	{
-		g_Media.mouse.buttons[button].flags = 0;
-		g_Media.mouse.buttons[button].hits  = 0;
+		g_Media.Mouse.Buttons[button].Flags = 0;
+		g_Media.Mouse.Buttons[button].Hits  = 0;
 	}
 
-	memset(&g_Media.mouse.wheel, 0, sizeof(g_Media.mouse.wheel));
+	memset(&g_Media.Mouse.Wheel, 0, sizeof(g_Media.Mouse.Wheel));
 
-	g_Media.window.flags[kWindow_Resized] = false;
-	g_Media.window.flags[kWindow_Closed]  = false;
+	g_Media.Window.Flags[kWindow_Resized] = false;
+	g_Media.Window.Flags[kWindow_Closed]  = false;
 }
 
-void kAddEvent(const kEvent &ev) { g_Media.events.Add(ev); }
+void kAddEvent(const kEvent &ev) { g_Media.Events.Add(ev); }
 
 void kAddKeyEvent(kKey key, bool down, bool repeat)
 {
 	bool       pressed  = down && !repeat;
 	bool       released = !down;
-	kKeyState *state    = &g_Media.keyboard.keys[key];
-	state->down         = down;
+	kKeyState *state    = &g_Media.Keyboard.Keys[key];
+	state->Down         = down;
 	if (released)
 	{
-		state->flags |= kReleased;
+		state->Flags |= kReleased;
 	}
 	if (pressed)
 	{
-		state->flags |= kPressed;
-		state->hits += 1;
+		state->Flags |= kPressed;
+		state->Hits += 1;
 	}
-	kEvent ev = {.kind = down ? kEvent_KeyPressed : kEvent_KeyReleased, .key = {.symbol = key, .repeat = repeat}};
+	kEvent ev = {.Kind = down ? kEvent_KeyPressed : kEvent_KeyReleased, .Key = {.Symbol = key, .Repeat = repeat}};
 	kAddEvent(ev);
 }
 
 void kAddButtonEvent(kButton button, bool down)
 {
-	kKeyState *state    = &g_Media.mouse.buttons[button];
-	bool       previous = state->down;
+	kKeyState *state    = &g_Media.Mouse.Buttons[button];
+	bool       previous = state->Down;
 	bool       pressed  = down && !previous;
 	bool       released = !down && previous;
-	state->down         = down;
+	state->Down         = down;
 	if (released)
 	{
-		state->flags |= kReleased;
-		state->hits += 1;
+		state->Flags |= kReleased;
+		state->Hits += 1;
 	}
 	if (pressed)
 	{
-		state->flags |= kPressed;
+		state->Flags |= kPressed;
 	}
-	kEvent ev = {.kind = down ? kEvent_ButtonPressed : kEvent_ButtonReleased, .button = {.symbol = button}};
+	kEvent ev = {.Kind = down ? kEvent_ButtonPressed : kEvent_ButtonReleased, .Button = {.Symbol = button}};
 	kAddEvent(ev);
 }
 
 void kAddTextInputEvent(u32 codepoint, u32 mods)
 {
-	kEvent ev = {.kind = kEvent_TextInput, .text = {.codepoint = codepoint, .mods = mods}};
+	kEvent ev = {.Kind = kEvent_TextInput, .Text = {.Codepoint = codepoint, .Mods = mods}};
 	kAddEvent(ev);
 }
 
 void kAddDoubleClickEvent(kButton button)
 {
-	kKeyState *state = &g_Media.mouse.buttons[button];
-	state->flags |= kDoubleClicked;
-	kEvent ev = {.kind = kEvent_DoubleClicked, .button = {.symbol = button}};
+	kKeyState *state = &g_Media.Mouse.Buttons[button];
+	state->Flags |= kDoubleClicked;
+	kEvent ev = {.Kind = kEvent_DoubleClicked, .Button = {.Symbol = button}};
 	kAddEvent(ev);
 }
 
 void kAddCursorEvent(kVec2i pos)
 {
-	int xdel = pos.x - g_Media.mouse.cursor.x;
-	int ydel = pos.y - g_Media.mouse.cursor.y;
-	g_Media.mouse.delta.x += xdel;
-	g_Media.mouse.delta.y += ydel;
-	g_Media.mouse.cursor = pos;
-	kEvent ev          = {.kind = kEvent_CursorMoved, .cursor = {.position = pos}};
+	int xdel = pos.x - g_Media.Mouse.Cursor.x;
+	int ydel = pos.y - g_Media.Mouse.Cursor.y;
+	g_Media.Mouse.Delta.x += xdel;
+	g_Media.Mouse.Delta.y += ydel;
+	g_Media.Mouse.Cursor = pos;
+	kEvent ev            = {.Kind = kEvent_CursorMoved, .Cursor = {.Position = pos}};
 	kAddEvent(ev);
 }
 
@@ -221,73 +221,73 @@ void kAddCursorDeltaEvent(kVec2i delta)
 {
 	int xdel = delta.x;
 	int ydel = delta.y;
-	g_Media.mouse.delta.x += xdel;
-	g_Media.mouse.delta.y += ydel;
-	g_Media.mouse.cursor.x += xdel;
-	g_Media.mouse.cursor.y += ydel;
-	kEvent ev = {.kind = kEvent_CursorMoved, .cursor = {.position = g_Media.mouse.cursor}};
+	g_Media.Mouse.Delta.x += xdel;
+	g_Media.Mouse.Delta.y += ydel;
+	g_Media.Mouse.Cursor.x += xdel;
+	g_Media.Mouse.Cursor.y += ydel;
+	kEvent ev = {.Kind = kEvent_CursorMoved, .Cursor = {.Position = g_Media.Mouse.Cursor}};
 	kAddEvent(ev);
 }
 
 void kAddWheelEvent(float horz, float vert)
 {
-	g_Media.mouse.wheel.x += horz;
-	g_Media.mouse.wheel.y += vert;
+	g_Media.Mouse.Wheel.x += horz;
+	g_Media.Mouse.Wheel.y += vert;
 
-	kEvent ev = {.kind = kEvent_WheelMoved, .wheel = {.horizontal = horz, .vertical = vert}};
+	kEvent ev = {.Kind = kEvent_WheelMoved, .Wheel = {.Horz = horz, .Vert = vert}};
 
 	kAddEvent(ev);
 }
 
 void kAddCursorEnterEvent(void)
 {
-	g_Media.window.flags[kWindow_Hovered] = true;
-	kEvent ev                           = {.kind = kEvent_CursorEnter};
+	g_Media.Window.Flags[kWindow_Hovered] = true;
+	kEvent ev                             = {.Kind = kEvent_CursorEnter};
 	kAddEvent(ev);
 }
 
 void kAddCursorLeaveEvent(void)
 {
-	g_Media.window.flags[kWindow_Hovered] = false;
-	kEvent ev                           = {.kind = kEvent_CursorLeave};
+	g_Media.Window.Flags[kWindow_Hovered] = false;
+	kEvent ev                             = {.Kind = kEvent_CursorLeave};
 	kAddEvent(ev);
 }
 
 void kAddWindowResizeEvent(u32 width, u32 height, bool fullscreen)
 {
-	g_Media.window.width                     = width;
-	g_Media.window.height                    = height;
-	g_Media.window.flags[kWindow_Resized]    = true;
-	g_Media.window.flags[kWindow_Fullscreen] = fullscreen;
-	kEvent ev                              = {.kind = kEvent_Resized, .resized = {.width = width, .height = height}};
+	g_Media.Window.Width                     = width;
+	g_Media.Window.Height                    = height;
+	g_Media.Window.Flags[kWindow_Resized]    = true;
+	g_Media.Window.Flags[kWindow_Fullscreen] = fullscreen;
+	kEvent ev                                = {.Kind = kEvent_Resized, .Resized = {.Width = width, .Height = height}};
 	kAddEvent(ev);
 
-	g_Media.render.ResizeSwapChain(width, height);
+	g_Media.Render.ResizeSwapChain(width, height);
 }
 
 void kAddWindowActivateEvent(bool active)
 {
-	g_Media.window.flags[kWindow_Active] = active;
-	kEvent ev                          = {.kind = active ? kEvent_Activated : kEvent_Deactivated};
+	g_Media.Window.Flags[kWindow_Active] = active;
+	kEvent ev                            = {.Kind = active ? kEvent_Activated : kEvent_Deactivated};
 	kAddEvent(ev);
 }
 
 void kAddWindowCloseEvent(void)
 {
-	g_Media.window.flags[kWindow_Closed] = true;
-	kEvent ev                          = {.kind = kEvent_Closed};
+	g_Media.Window.Flags[kWindow_Closed] = true;
+	kEvent ev                            = {.Kind = kEvent_Closed};
 	kAddEvent(ev);
 }
 
-void kAddWindowMaximizeEvent(void) { g_Media.window.flags[kWindow_Maximized] = true; }
-void kAddWindowRestoreEvent(void) { g_Media.window.flags[kWindow_Maximized] = false; }
-void kAddWindowCursorCaptureEvent(void) { g_Media.window.flags[kWindow_Capturing] = true; }
-void kAddWindowCursorReleaseEvent(void) { g_Media.window.flags[kWindow_Capturing] = false; }
+void kAddWindowMaximizeEvent(void) { g_Media.Window.Flags[kWindow_Maximized] = true; }
+void kAddWindowRestoreEvent(void) { g_Media.Window.Flags[kWindow_Maximized] = false; }
+void kAddWindowCursorCaptureEvent(void) { g_Media.Window.Flags[kWindow_Capturing] = true; }
+void kAddWindowCursorReleaseEvent(void) { g_Media.Window.Flags[kWindow_Capturing] = false; }
 
 void kAddWindowDpiChangedEvent(float yfactor)
 {
-	g_Media.window.yfactor = yfactor;
-	kEvent ev            = {.kind = kEvent_DpiChanged};
+	g_Media.Window.DpiFactor = yfactor;
+	kEvent ev                = {.Kind = kEvent_DpiChanged};
 	kAddEvent(ev);
 }
 
@@ -295,23 +295,23 @@ void kAddWindowDpiChangedEvent(float yfactor)
 //
 //
 
-void kResizeWindow(u32 w, u32 h) { g_Media.backend.ResizeWindow(w, h); }
-void kToggleWindowFullscreen(void) { g_Media.backend.ToggleWindowFullscreen(); }
-void kReleaseCursor(void) { g_Media.backend.ReleaseCursor(); }
-void kCaptureCursor(void) { g_Media.backend.CaptureCursor(); }
-int  kGetWindowCaptionSize(void) { return g_Media.backend.GetWindowCaptionSize(); }
-void kMaximizeWindow(void) { g_Media.backend.MaximizeWindow(); }
-void kRestoreWindow(void) { g_Media.backend.RestoreWindow(); }
-void kMinimizeWindow(void) { g_Media.backend.MinimizeWindow(); }
-void kCloseWindow(void) { g_Media.backend.CloseWindow(); }
+void kResizeWindow(u32 w, u32 h) { g_Media.Backend.ResizeWindow(w, h); }
+void kToggleWindowFullscreen(void) { g_Media.Backend.ToggleWindowFullscreen(); }
+void kReleaseCursor(void) { g_Media.Backend.ReleaseCursor(); }
+void kCaptureCursor(void) { g_Media.Backend.CaptureCursor(); }
+int  kGetWindowCaptionSize(void) { return g_Media.Backend.GetWindowCaptionSize(); }
+void kMaximizeWindow(void) { g_Media.Backend.MaximizeWindow(); }
+void kRestoreWindow(void) { g_Media.Backend.RestoreWindow(); }
+void kMinimizeWindow(void) { g_Media.Backend.MinimizeWindow(); }
+void kCloseWindow(void) { g_Media.Backend.CloseWindow(); }
 
 //
 //
 //
 
-void kUserLoad(void) { g_Media.user.load(); }
-void kUserUpdate(float dt) { g_Media.user.update(dt); }
-void kUserRelease(void) { g_Media.user.release(); }
+void kUserLoad(void) { g_Media.User.Load(); }
+void kUserUpdate(float dt) { g_Media.User.Update(dt); }
+void kUserRelease(void) { g_Media.User.Release(); }
 
 void kUpdateFrame(float dt)
 {
@@ -325,11 +325,11 @@ void kUpdateFrame(float dt)
 	}
 
 	kRenderFrame frame;
-	kGetFrameData(&frame.render2d);
+	kGetFrameData(&frame.Frame2D);
 
-	g_Media.render.ExecuteFrame(frame);
-	g_Media.render.Present();
-	g_Media.render.NextFrame();
+	g_Media.Render.ExecuteFrame(frame);
+	g_Media.Render.Present();
+	g_Media.Render.NextFrame();
 }
 
 //
@@ -341,20 +341,20 @@ void kUpdateFrame(float dt)
 static void kCreateBuiltinResources(void)
 {
 	{
-		u8           pixels[] = {0xff, 0xff, 0xff, 0xff};
+		u8           pixels[]   = {0xff, 0xff, 0xff, 0xff};
 
-		kTextureSpec spec     = {};
-		spec.width            = 1;
-		spec.height           = 1;
-		spec.pitch            = 1 * sizeof(u32);
-		spec.format           = kFormat_RGBA8_UNORM;
-		spec.pixels           = pixels;
+		kTextureSpec spec       = {};
+		spec.width              = 1;
+		spec.height             = 1;
+		spec.pitch              = 1 * sizeof(u32);
+		spec.format             = kFormat_RGBA8_UNORM;
+		spec.pixels             = pixels;
 
-		g_Media.builtin.texture = g_Media.render.CreateTexture(spec);
+		g_Media.Builtin.Texture = g_Media.Render.CreateTexture(spec);
 	}
 
 	{
-		kFont       *font = &g_Media.builtin.font;
+		kFont       *font = &g_Media.Builtin.Font;
 
 		kTextureSpec spec = {};
 		spec.format       = kFormat_R8_UNORM;
@@ -363,47 +363,47 @@ static void kCreateBuiltinResources(void)
 		spec.pitch        = kEmFontAtlasWidth;
 		spec.pixels       = (u8 *)kEmFontAtlasPixels;
 
-		font->texture     = g_Media.render.CreateTexture(spec);
+		font->Atlas       = g_Media.Render.CreateTexture(spec);
 
-		if (!font->texture)
+		if (!font->Atlas)
 		{
-			font->texture  = g_Media.builtin.texture;
-			font->map      = nullptr;
-			font->glyphs   = nullptr;
-			font->fallback = (kGlyph *)&FallbackGlyph;
-			font->mincp    = 0;
-			font->maxcp    = 0;
-			font->count    = 0;
-			font->size     = (i16)FallbackFontHeight;
-			font->ascent   = (i16)FallbackFontHeight;
-			font->descent  = (i16)FallbackFontHeight;
-			font->linegap  = (i16)FallbackFontHeight;
+			font->Atlas        = g_Media.Builtin.Texture;
+			font->CodepointMap = nullptr;
+			font->Glyphs       = nullptr;
+			font->Fallback     = (kGlyph *)&FallbackGlyph;
+			font->MinCodepoint = 0;
+			font->MaxCodepoint = 0;
+			font->GlyphsCount  = 0;
+			font->Height       = (i16)FallbackFontHeight;
+			font->Ascent       = (i16)FallbackFontHeight;
+			font->Descent      = (i16)FallbackFontHeight;
+			font->Linegap      = (i16)FallbackFontHeight;
 			return;
 		}
 
-		font->map      = (u16 *)kEmFontGlyphMap;
-		font->glyphs   = (kGlyph *)kEmFontGlyphs;
-		font->fallback = (kGlyph *)&font->glyphs[kEmFontGlyphCount - 1];
-		font->mincp    = kEmFontMinCodepoint;
-		font->maxcp    = kEmFontMaxCodepoint;
-		font->count    = kEmFontGlyphCount;
-		font->size     = (i16)kEmFontSize;
-		font->ascent   = (i16)kEmFontAscent;
-		font->descent  = (i16)kEmFontDescent;
-		font->linegap  = (i16)kEmFontLineGap;
+		font->CodepointMap = (u16 *)kEmFontGlyphMap;
+		font->Glyphs       = (kGlyph *)kEmFontGlyphs;
+		font->Fallback     = (kGlyph *)&font->Glyphs[kEmFontGlyphCount - 1];
+		font->MinCodepoint = kEmFontMinCodepoint;
+		font->MaxCodepoint = kEmFontMaxCodepoint;
+		font->GlyphsCount  = kEmFontGlyphCount;
+		font->Height       = (i16)kEmFontSize;
+		font->Ascent       = (i16)kEmFontAscent;
+		font->Descent      = (i16)kEmFontDescent;
+		font->Linegap      = (i16)kEmFontLineGap;
 	}
 }
 
 static void kDestroyBuiltinResources(void)
 {
-	if (g_Media.builtin.font.texture != g_Media.builtin.texture)
+	if (g_Media.Builtin.Font.Atlas != g_Media.Builtin.Texture)
 	{
-		g_Media.render.DestroyTexture(g_Media.builtin.font.texture);
+		g_Media.Render.DestroyTexture(g_Media.Builtin.Font.Atlas);
 	}
 
-	if (g_Media.builtin.texture)
+	if (g_Media.Builtin.Texture)
 	{
-		g_Media.render.DestroyTexture(g_Media.builtin.texture);
+		g_Media.Render.DestroyTexture(g_Media.Builtin.Texture);
 	}
 }
 
@@ -415,26 +415,26 @@ int kEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user)
 {
 	memset(&g_Media, 0, sizeof(g_Media));
 
-	kCreateMediaBackend(&g_Media.backend);
+	kCreateMediaBackend(&g_Media.Backend);
 
 	kLogInfoEx("Windows", "Creating render backend.\n");
-	kCreateRenderBackend(&g_Media.render);
+	kCreateRenderBackend(&g_Media.Render);
 
-	void *window = g_Media.backend.CreateWindow(&g_Media.window, spec.window);
-	g_Media.render.CreateSwapChain(window);
+	void *window = g_Media.Backend.CreateWindow(&g_Media.Window, spec.Window);
+	g_Media.Render.CreateSwapChain(window);
 
-	g_Media.events.Reserve(64);
-	g_Media.backend.LoadMouseState(&g_Media.mouse);
-	g_Media.backend.LoadKeyboardState(&g_Media.keyboard);
+	g_Media.Events.Reserve(64);
+	g_Media.Backend.LoadMouseState(&g_Media.Mouse);
+	g_Media.Backend.LoadKeyboardState(&g_Media.Keyboard);
 
 	kSetUserEvents(user);
 
 	kAllocator *allocator = kGetContextAllocator();
-	g_Media.arena           = kAllocArena(spec.arena, allocator);
+	g_Media.Arena         = kAllocArena(spec.Arena, allocator);
 
-	if (g_Media.arena != &kFallbackArena)
+	if (g_Media.Arena != &kFallbackArena)
 	{
-		kLogInfoEx("Windows", "Allocated frame arena of size: %zu bytes\n", (u64)g_Media.arena->cap);
+		kLogInfoEx("Windows", "Allocated frame arena of size: %zu bytes\n", (u64)g_Media.Arena->Cap);
 	}
 	else
 	{
@@ -445,31 +445,31 @@ int kEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user)
 
 	kTexture *textures[kTextureType_Count];
 	for (int i = 0; i < kTextureType_Count; ++i)
-		textures[i] = g_Media.builtin.texture;
+		textures[i] = g_Media.Builtin.Texture;
 
-	kCreateRenderContext(kDefaultRenderSpec, textures, &g_Media.builtin.font);
+	kCreateRenderContext(kDefaultRenderSpec, textures, &g_Media.Builtin.Font);
 
 	kLogInfoEx("Windows", "Calling user load.\n");
-	g_Media.user.load();
+	g_Media.User.Load();
 
-	int status = g_Media.backend.EventLoop();
+	int status = g_Media.Backend.EventLoop();
 
-	g_Media.render.Flush();
+	g_Media.Render.Flush();
 
 	kLogInfoEx("Windows", "Calling user release.\n");
-	g_Media.user.release();
+	g_Media.User.Release();
 
-	kFreeArena(g_Media.arena, allocator);
+	kFreeArena(g_Media.Arena, allocator);
 	kDestroyRenderContext();
 	kDestroyBuiltinResources();
 
-	g_Media.render.DestroySwapChain();
-	g_Media.backend.DestroyWindow();
-	g_Media.render.Destroy();
+	g_Media.Render.DestroySwapChain();
+	g_Media.Backend.DestroyWindow();
+	g_Media.Render.Destroy();
 
 	memset(&g_Media, 0, sizeof(g_Media));
 
 	return status;
 }
 
-void kBreakLoop(int status) { g_Media.backend.BreakLoop(status); }
+void kBreakLoop(int status) { g_Media.Backend.BreakLoop(status); }

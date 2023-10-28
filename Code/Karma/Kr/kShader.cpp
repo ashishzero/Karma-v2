@@ -97,7 +97,7 @@ bool kCompileShader(kString src, kString path, kString *compiled)
 		return false;
 	}
 
-	hr = kHLSL_Compile(src.data, src.count, (char *)path.data, 0, D3D_COMPILE_STANDARD_FILE_INCLUDE, "Main", version, 0,
+	hr = kHLSL_Compile(src.Items, src.Count, (char *)path.Items, 0, D3D_COMPILE_STANDARD_FILE_INCLUDE, "Main", version, 0,
 	                   0, &compiled_blob, &err);
 
 	if (FAILED(hr))
@@ -118,9 +118,9 @@ bool kCompileShader(kString src, kString path, kString *compiled)
 
 	if (compiled_blob)
 	{
-		compiled->count = (imem)compiled_blob->GetBufferSize();
-		compiled->data  = (u8 *)kAlloc(compiled->count);
-		memcpy(compiled->data, compiled_blob->GetBufferPointer(), compiled->count);
+		compiled->Count = (imem)compiled_blob->GetBufferSize();
+		compiled->Items  = (u8 *)kAlloc(compiled->Count);
+		memcpy(compiled->Items, compiled_blob->GetBufferPointer(), compiled->Count);
 		compiled_blob->Release();
 	}
 	else

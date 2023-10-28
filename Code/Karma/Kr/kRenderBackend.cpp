@@ -17,7 +17,7 @@ void      kPresentFallback(void) {}
 
 kTexture *kCreateTextureFallback(const kTextureSpec &) { return (kTexture *)&kFallbackTexture; }
 void      kDestroyTextureFallback(kTexture *) {}
-kVec2i    kGetTextureSizeFallback(kTexture *) { return kVec2i(0); }
+kVec2u    kGetTextureSizeFallback(kTexture *) { return kVec2u(0); }
 void      kResizeTextureFallback(kTexture *, u32, u32) {}
 void      kExecuteFrameFallback(const kRenderFrame &) {}
 void      kNextFrameFallback(void) {}

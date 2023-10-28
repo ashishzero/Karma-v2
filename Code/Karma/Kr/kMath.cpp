@@ -40,10 +40,16 @@ bool kAlmostEqual(kVec4 a, kVec4 b, float delta)
 	       kAlmostEqual(a.w, b.w, delta);
 }
 
+bool kAlmostEqual(kBivec3 a, kBivec3 b, float delta)
+{
+	return kAlmostEqual(a.yz, b.yz, delta) && kAlmostEqual(a.zx, b.zx, delta) && kAlmostEqual(a.xy, b.xy, delta);
+}
+
 bool  kIsNull(float a) { return kAlmostEqual(a, 0.0f); }
 bool  kIsNull(kVec2 a) { return kAlmostEqual(a, kVec2(0.0f)); }
 bool  kIsNull(kVec3 a) { return kAlmostEqual(a, kVec3(0.0f)); }
 bool  kIsNull(kVec4 a) { return kAlmostEqual(a, kVec4(0.0f)); }
+bool  kIsNull(kBivec3 a) { return kAlmostEqual(a, kBivec3(0.0f)); }
 bool  kIsNull(int32_t a) { return a == 0; }
 bool  kIsNull(kVec2i a) { return a.x == 0 && a.y == 0; }
 bool  kIsNull(kVec3i a) { return a.x == 0 && a.y == 0 && a.z == 0; }
@@ -94,6 +100,14 @@ kVec4 kNormalize(kVec4 v)
 	float len = kLength(v);
 	kAssert(len != 0);
 	kVec4 res = v * (1.0f / len);
+	return res;
+}
+
+kBivec3 kNormalize(kBivec3 v)
+{
+	float len = kLength(v);
+	kAssert(len != 0);
+	kBivec3 res = v / len;
 	return res;
 }
 
@@ -555,64 +569,66 @@ kMat4 &operator*=(kMat4 &t, kMat4 &o)
 	return t;
 }
 
-kQuat  operator-(kQuat q) { return kQuat(-q.x, -q.y, -q.z, -q.w); }
-kQuat  operator-(kQuat r1, kQuat r2) { return kQuat(r1.x - r2.x, r1.y - r2.y, r1.z - r2.z, r1.w - r2.w); }
-kQuat  operator+(kQuat r1, kQuat r2) { return kQuat(r1.x + r2.x, r1.y + r2.y, r1.z + r2.z, r1.w + r2.w); }
-kQuat  operator*(kQuat q, float s) { return kQuat(q.x * s, q.y * s, q.z * s, q.w * s); }
-kQuat  operator*(float s, kQuat q) { return kQuat(q.x * s, q.y * s, q.z * s, q.w * s); }
+kRotor3  operator-(kRotor3 q) { return kRotor3(-q.s, -q.b); }
+kRotor3  operator-(kRotor3 r1, kRotor3 r2) { return kRotor3(r1.s - r2.s, r1.b - r2.b); }
+kRotor3  operator+(kRotor3 r1, kRotor3 r2) { return kRotor3(r1.s + r2.s, r1.b + r2.b); }
+kRotor3  operator*(kRotor3 q, float s) { return kRotor3(q.s * s, q.b * s); }
+kRotor3  operator*(float s, kRotor3 q) { return kRotor3(q.s * s, q.b * s); }
 
-kQuat &operator-=(kQuat &q, kQuat other)
-{
-	q = q + other;
-	return q;
-}
-kQuat &operator+=(kQuat &q, kQuat other)
+kRotor3 &operator-=(kRotor3 &q, kRotor3 other)
 {
 	q = q - other;
 	return q;
 }
+kRotor3 &operator+=(kRotor3 &q, kRotor3 other)
+{
+	q = q + other;
+	return q;
+}
 
-float kDotProduct(kQuat q1, kQuat q2) { return q1.x * q2.x + q1.y * q2.y + q1.z * q2.z + q1.w * q2.w; }
-float kLength(kQuat q) { return kSquareRoot(kDotProduct(q, q)); }
+float kDotProduct(kRotor3 q1, kRotor3 q2)
+{
+	return q1.s * q2.s + q1.b.xy * q2.b.xy + q1.b.yz * q2.b.yz + q1.b.zx * q2.b.zx;
+}
 
-kQuat kNormalize(kQuat q)
+float   kLength(kRotor3 q) { return kSquareRoot(kDotProduct(q, q)); }
+
+kRotor3 kNormalize(kRotor3 q)
 {
 	float len = kLength(q);
 	kAssert(len != 0);
 	return q * (1.0f / len);
 }
 
-kQuat kConjugate(kQuat q) { return kQuat(-q.x, -q.y, -q.z, q.w); }
+kRotor3 kReverse(kRotor3 q) { return kRotor3(q.s, -q.b); }
 
-kQuat operator*(kQuat q1, kQuat q2)
+kRotor3 operator*(kRotor3 p, kRotor3 q)
 {
-	float a = q1.w;
-	float b = q1.x;
-	float c = q1.y;
-	float d = q1.z;
-
-	float e = q2.w;
-	float f = q2.x;
-	float g = q2.y;
-	float h = q2.z;
-
-	kQuat res;
-	res.w = a * e - b * f - c * g - d * h;
-	res.x = a * f + b * e + c * h - d * g;
-	res.y = a * g - b * h + c * e + d * f;
-	res.z = a * h + b * g - c * f + d * e;
-	return res;
+	kRotor3 r;
+	r.s    = p.s * q.s - p.b.xy * q.b.xy - p.b.zx * q.b.zx - p.b.yz * q.b.yz;
+	r.b.yz = p.b.yz * q.s + p.s * q.b.yz + p.b.zx * q.b.xy - p.b.xy * q.b.zx;
+	r.b.zx = p.b.zx * q.s + p.s * q.b.zx - p.b.yz * q.b.xy + p.b.xy * q.b.yz;
+	r.b.xy = p.b.xy * q.s + p.s * q.b.xy + p.b.yz * q.b.yz - p.b.yz * q.b.yz;
+	return r;
 }
 
-kVec3 operator*(kQuat q, kVec3 v)
+kVec3 operator*(kRotor3 p, kVec3 x)
 {
-	kQuat p   = kQuat(v.x, v.y, v.z, 0);
-	kQuat qc  = kConjugate(q);
-	kQuat res = (q * p * qc);
-	return kVec3(res.x, res.y, res.z);
+	kVec3 q, r;
+	q.x       = p.s * x.x + x.y * p.b.xy + x.z * p.b.zx;
+	q.y       = p.s * x.y - x.x * p.b.xy + x.z * p.b.yz;
+	q.z       = p.s * x.z - x.x * p.b.zx - x.y * p.b.yz;
+
+	float tri = x.x * p.b.yz - x.y * p.b.zx + x.z * p.b.xy;
+
+	r.x       = p.s * q.x + q.y * p.b.xy + q.z * p.b.zx + tri * p.b.yz;
+	r.y       = p.s * q.y - q.x * p.b.xy - tri * p.b.zx + q.z * p.b.yz;
+	r.z       = p.s * q.z + tri * p.b.xy - q.x * p.b.zx - q.y * p.b.yz;
+
+	return r;
 }
 
-kVec3 kRotate(kQuat q, kVec3 v) { return q * v; }
+kVec3 kRotate(kRotor3 q, kVec3 v) { return q * v; }
 
 //
 //
@@ -645,31 +661,31 @@ kVec3 kForwardDirection(const kMat4 &m)
 	return v;
 }
 
-kVec3 kRightDirection(kQuat q)
+kVec3 kRightDirection(kRotor3 q)
 {
-	kVec3 Right;
-	Right.x = 1 - 2 * (q.y * q.y + q.z * q.z);
-	Right.y = 2 * (q.x * q.y + q.z * q.w);
-	Right.z = 2 * (q.x * q.z - q.y * q.w);
-	return kNormalize(Right);
+	kVec3 right;
+	right.x = 1 - 2 * (q.b.zx * q.b.zx + q.b.xy * q.b.xy);
+	right.y = 2 * (q.b.yz * q.b.zx + q.b.xy * q.s);
+	right.z = 2 * (q.b.yz * q.b.xy - q.b.zx * q.s);
+	return kNormalize(right);
 }
 
-kVec3 kUpDirection(kQuat q)
-{
-	kVec3 forward;
-	forward.x = 2 * (q.x * q.y - q.z * q.w);
-	forward.y = 1 - 2 * (q.x * q.x + q.z * q.z);
-	forward.z = 2 * (q.y * q.z + q.x * q.w);
-	return kNormalize(forward);
-}
-
-kVec3 kForwardDirection(kQuat q)
+kVec3 kUpDirection(kRotor3 q)
 {
 	kVec3 up;
-	up.x = 2 * (q.x * q.z + q.y * q.w);
-	up.y = 2 * (q.y * q.z - q.x * q.w);
-	up.z = 1 - 2 * (q.x * q.x + q.y * q.y);
+	up.x = 2 * (q.b.yz * q.b.zx - q.b.xy * q.s);
+	up.y = 1 - 2 * (q.b.yz * q.b.yz + q.b.xy * q.b.xy);
+	up.z = 2 * (q.b.zx * q.b.xy + q.b.yz * q.s);
 	return kNormalize(up);
+}
+
+kVec3 kForwardDirection(kRotor3 q)
+{
+	kVec3 forward;
+	forward.x = 2 * (q.b.yz * q.b.xy + q.b.zx * q.s);
+	forward.y = 2 * (q.b.zx * q.b.xy - q.b.yz * q.s);
+	forward.z = 1 - 2 * (q.b.yz * q.b.yz + q.b.zx * q.b.zx);
+	return kNormalize(forward);
 }
 
 //
@@ -712,16 +728,16 @@ kMat4 kMat3ToMat4(const kMat3 &mat)
 	return result;
 }
 
-void kQuatToAngleAxis(kQuat q, float *angle, kVec3 *axis)
+void kRotor3ToAngleAxis(kRotor3 q, float *angle, kVec3 *axis)
 {
-	float len = kSquareRoot(q.x * q.x + q.y * q.y + q.z * q.z);
+	float len = kSquareRoot(q.b.yz * q.b.yz + q.b.zx * q.b.zx + q.b.xy * q.b.xy);
 	if (len)
 	{
-		*angle  = 2.0f * kArcTan2(len, q.w);
+		*angle  = 2.0f * kArcTan2(len, q.s);
 		len     = 1.0f / len;
-		axis->x = q.x * len;
-		axis->y = q.y * len;
-		axis->z = q.z * len;
+		axis->x = q.b.yz * len;
+		axis->y = q.b.zx * len;
+		axis->z = q.b.xy * len;
 	}
 	else
 	{
@@ -731,12 +747,12 @@ void kQuatToAngleAxis(kQuat q, float *angle, kVec3 *axis)
 	}
 }
 
-kMat4 kQuatToMat4(kQuat q)
+kMat4 kRotor3ToMat4(kRotor3 q)
 {
-	float i  = q.x;
-	float j  = q.y;
-	float k  = q.z;
-	float r  = q.w;
+	float i  = q.b.yz;
+	float j  = q.b.zx;
+	float k  = q.b.xy;
+	float r  = q.s;
 
 	float ii = i * i;
 	float jj = j * j;
@@ -774,15 +790,15 @@ kMat4 kQuatToMat4(kQuat q)
 	return m;
 }
 
-kVec3 kQuatToEulerAngles(kQuat q)
+kVec3 kRotor3ToEulerAngles(kRotor3 q)
 {
 	kVec3 angles;
 
-	float sinr_cosp = 2.0f * (q.w * q.x + q.y * q.z);
-	float cosr_cosp = 1.0f - 2.0f * (q.x * q.x + q.y * q.y);
+	float sinr_cosp = 2.0f * (q.s * q.b.yz + q.b.zx * q.b.xy);
+	float cosr_cosp = 1.0f - 2.0f * (q.b.yz * q.b.yz + q.b.zx * q.b.zx);
 	angles.z        = kArcTan2(sinr_cosp, cosr_cosp);
 
-	float sinp      = 2.0f * (q.w * q.y - q.z * q.x);
+	float sinp      = 2.0f * (q.s * q.b.zx - q.b.xy * q.b.yz);
 	if (kAbsolute(sinp) >= 1.0f)
 	{
 		// use 90 degrees if out of range
@@ -793,95 +809,110 @@ kVec3 kQuatToEulerAngles(kQuat q)
 		angles.x = kArcSin(sinp);
 	}
 
-	float siny_cosp = 2.0f * (q.w * q.z + q.x * q.y);
-	float cosy_cosp = 1.0f - 2.0f * (q.y * q.y + q.z * q.z);
+	float siny_cosp = 2.0f * (q.s * q.b.xy + q.b.yz * q.b.zx);
+	float cosy_cosp = 1.0f - 2.0f * (q.b.zx * q.b.zx + q.b.xy * q.b.xy);
 	angles.y        = kArcTan2(siny_cosp, cosy_cosp);
 
 	return angles;
 }
 
-kQuat kAngleAxisToQuat(kVec3 axis, float angle)
+kRotor3 kQuaternionToRotor3(float x, float y, float z, float w) { return kRotor3(w, x, y, z); }
+kRotor3 kQuaternionToRotor3(kVec4 vec) { return kRotor3(vec.w, vec.x, vec.y, vec.z); }
+
+kRotor3 kPlaneToRotor3(kBivec3 plane, float angle)
+{
+	kRotor3 r;
+	float   sina = kSin(angle / 20.f);
+	r.s          = kCos(angle / 20.f);
+	r.b.xy       = -sina * plane.xy;
+	r.b.yz       = -sina * plane.yz;
+	r.b.zx       = -sina * plane.zx;
+	return r;
+}
+
+kRotor3 kAngleAxisToRotor3(kVec3 axis, float angle)
 {
 	float r = kCos(angle * 0.5f);
 	float s = kSin(angle * 0.5f);
 	float i = s * axis.x;
 	float j = s * axis.y;
 	float k = s * axis.z;
-	return kQuat(i, j, k, r);
+	return kRotor3(r, i, j, k);
 }
 
-kQuat kAngleAxisNormalizedToQuat(kVec3 axis, float angle) { return kAngleAxisToQuat(kNormalize(axis), angle); }
+kRotor3 kPlaneNormalizedToRotor3(kBivec3 plane, float angle) { return kPlaneToRotor3(kNormalize(plane), angle); }
+kRotor3 kAngleAxisNormalizedToRotor3(kVec3 axis, float angle) { return kAngleAxisToRotor3(kNormalize(axis), angle); }
 
-kQuat kMat4ToQuat(const kMat4 &m)
+kRotor3 kMat4ToRotor3(const kMat4 &m)
 {
-	kQuat q;
-	float trace = m.m2[0][0] + m.m2[1][1] + m.m2[2][2];
+	kRotor3 q;
+	float   trace = m.m2[0][0] + m.m2[1][1] + m.m2[2][2];
 	if (trace > 0.0f)
 	{
 		float s = 0.5f / kSquareRoot(trace + 1.0f);
-		q.w     = 0.25f / s;
-		q.x     = (m.m2[2][1] - m.m2[1][2]) * s;
-		q.y     = (m.m2[0][2] - m.m2[2][0]) * s;
-		q.z     = (m.m2[1][0] - m.m2[0][1]) * s;
+		q.s     = 0.25f / s;
+		q.b.yz  = (m.m2[2][1] - m.m2[1][2]) * s;
+		q.b.zx  = (m.m2[0][2] - m.m2[2][0]) * s;
+		q.b.xy  = (m.m2[1][0] - m.m2[0][1]) * s;
 	}
 	else
 	{
 		if (m.m2[0][0] > m.m2[1][1] && m.m2[0][0] > m.m2[2][2])
 		{
 			float s = 2.0f * kSquareRoot(1.0f + m.m2[0][0] - m.m2[1][1] - m.m2[2][2]);
-			q.w     = (m.m2[2][1] - m.m2[1][2]) / s;
-			q.x     = 0.25f * s;
-			q.y     = (m.m2[0][1] + m.m2[1][0]) / s;
-			q.z     = (m.m2[0][2] + m.m2[2][0]) / s;
+			q.s     = (m.m2[2][1] - m.m2[1][2]) / s;
+			q.b.yz  = 0.25f * s;
+			q.b.zx  = (m.m2[0][1] + m.m2[1][0]) / s;
+			q.b.xy  = (m.m2[0][2] + m.m2[2][0]) / s;
 		}
 		else if (m.m2[1][1] > m.m2[2][2])
 		{
 			float s = 2.0f * kSquareRoot(1.0f + m.m2[1][1] - m.m2[0][0] - m.m2[2][2]);
-			q.w     = (m.m2[0][2] - m.m2[2][0]) / s;
-			q.x     = (m.m2[0][1] + m.m2[1][0]) / s;
-			q.y     = 0.25f * s;
-			q.z     = (m.m2[1][2] + m.m2[2][1]) / s;
+			q.s     = (m.m2[0][2] - m.m2[2][0]) / s;
+			q.b.yz  = (m.m2[0][1] + m.m2[1][0]) / s;
+			q.b.zx  = 0.25f * s;
+			q.b.xy  = (m.m2[1][2] + m.m2[2][1]) / s;
 		}
 		else
 		{
 			float s = 2.0f * kSquareRoot(1.0f + m.m2[2][2] - m.m2[0][0] - m.m2[1][1]);
-			q.w     = (m.m2[1][0] - m.m2[0][1]) / s;
-			q.x     = (m.m2[0][2] + m.m2[2][0]) / s;
-			q.y     = (m.m2[1][2] + m.m2[2][1]) / s;
-			q.z     = 0.25f * s;
+			q.s     = (m.m2[1][0] - m.m2[0][1]) / s;
+			q.b.yz  = (m.m2[0][2] + m.m2[2][0]) / s;
+			q.b.zx  = (m.m2[1][2] + m.m2[2][1]) / s;
+			q.b.xy  = 0.25f * s;
 		}
 	}
 	return kNormalize(q);
 }
 
-kQuat kMat4NomalizedToQuat(const kMat4 &m)
+kRotor3 kMat4NomalizedToRotor3(const kMat4 &m)
 {
 	kMat4 nm;
 	nm.rows[0] = kVec4(kNormalize(m.rows[0].xyz), m.rows[0].w);
 	nm.rows[1] = kVec4(kNormalize(m.rows[1].xyz), m.rows[1].w);
 	nm.rows[2] = kVec4(kNormalize(m.rows[2].xyz), m.rows[2].w);
 	nm.rows[3] = kVec4(kNormalize(m.rows[3].xyz), m.rows[3].w);
-	return kMat4ToQuat(nm);
+	return kMat4ToRotor3(nm);
 }
 
-kQuat kEulerAnglesToQuat(float pitch, float yaw, float roll)
+kRotor3 kEulerAnglesToRotor3(float pitch, float yaw, float roll)
 {
-	float cy = kCos(roll * 0.5f);
-	float sy = kSin(roll * 0.5f);
-	float cp = kCos(yaw * 0.5f);
-	float sp = kSin(yaw * 0.5f);
-	float cr = kCos(pitch * 0.5f);
-	float sr = kSin(pitch * 0.5f);
+	float   cy = kCos(roll * 0.5f);
+	float   sy = kSin(roll * 0.5f);
+	float   cp = kCos(yaw * 0.5f);
+	float   sp = kSin(yaw * 0.5f);
+	float   cr = kCos(pitch * 0.5f);
+	float   sr = kSin(pitch * 0.5f);
 
-	kQuat q;
-	q.w = cy * cp * cr + sy * sp * sr;
-	q.x = cy * cp * sr - sy * sp * cr;
-	q.y = sy * cp * sr + cy * sp * cr;
-	q.z = sy * cp * cr - cy * sp * sr;
+	kRotor3 q;
+	q.s    = cy * cp * cr + sy * sp * sr;
+	q.b.yz = cy * cp * sr - sy * sp * cr;
+	q.b.zx = sy * cp * sr + cy * sp * cr;
+	q.b.xy = sy * cp * cr - cy * sp * sr;
 	return q;
 }
 
-kQuat kEulerAnglesToQuat(kVec3 euler) { return kEulerAnglesToQuat(euler.x, euler.y, euler.z); }
+kRotor3 kEulerAnglesToRotor3(kVec3 euler) { return kEulerAnglesToRotor3(euler.x, euler.y, euler.z); }
 
 //
 //
@@ -1182,37 +1213,36 @@ kMat4 kPerspectiveLH(float fov, float aspect_ratio, float n, float f)
 	return m;
 }
 
-kQuat kQuatIdentity() { return kQuat(0, 0, 0, 1); }
-
-kQuat kQuatBetween(kVec3 from, kVec3 to)
+kRotor3 kRotor3Between(kVec3 from, kVec3 to)
 {
-	kQuat q;
-	float w = 1.0f + kDotProduct(from, to);
+	kRotor3 q;
+	float   w = 1.0f + kDotProduct(from, to);
 
 	if (w)
 	{
-		q = kQuat(kVec4(kCrossProduct(from, to), w));
+		q.s = w;
+		q.b = kWedgeProduct(from, to);
 	}
 	else
 	{
 		kVec3 xyz = kAbsolute(from.x) > kAbsolute(from.z) ? kVec3(-from.y, from.x, 0.f) : kVec3(0.f, -from.z, from.y);
-		q         = kQuat(kVec3Arg(xyz), w);
+		q         = kRotor3(w, kVec3Arg(xyz));
 	}
 
 	return kNormalize(q);
 }
 
-kQuat kQuatBetween(kQuat a, kQuat b)
+kRotor3 kRotor3Between(kRotor3 a, kRotor3 b)
 {
-	kQuat t = kConjugate(a);
-	t       = t * (1.0f / kDotProduct(t, t));
+	kRotor3 t = kReverse(a);
+	t         = t * (1.0f / kDotProduct(t, t));
 	return t * b;
 }
 
-kQuat kQuatLookAt(kVec3 from, kVec3 to, kVec3 world_forward)
+kRotor3 kRotor3LookAt(kVec3 from, kVec3 to, kVec3 world_forward)
 {
 	kVec3 dir = to - from;
-	return kQuatBetween(world_forward, dir);
+	return kRotor3Between(world_forward, dir);
 }
 
 //
@@ -1322,10 +1352,9 @@ float kEaseInOutBounce(float x)
 //
 
 kVec2 kSlerp(kVec2 from, kVec2 to, float t) { return kSlerp(from, to, kAngleBetween(from, to), t); }
-
 kVec3 kSlerp(kVec3 from, kVec3 to, float t) { return kSlerp(from, to, kAngleBetween(from, to), t); }
 
-kQuat kSlerp(kQuat from, kQuat to, float t)
+kRotor3 kSlerp(kRotor3 from, kRotor3 to, float t)
 {
 	float dot = kClamp(-1.0f, 1.0f, kDotProduct(from, to));
 
@@ -1338,7 +1367,7 @@ kQuat kSlerp(kQuat from, kQuat to, float t)
 
 	if (dot > 0.9999f)
 	{
-		kQuat result = kLerp(from, to, t);
+		kRotor3 result = kLerp(from, to, t);
 		return kNormalize(result);
 	}
 
@@ -1382,13 +1411,13 @@ kVec4 kStep(kVec4 edge, kVec4 val)
 	return res;
 }
 
-kQuat kStep(kQuat edge, kQuat val)
+kRotor3 kStep(kRotor3 edge, kRotor3 val)
 {
-	kQuat res;
-	res.x = kStep(edge.x, val.x);
-	res.y = kStep(edge.y, val.y);
-	res.z = kStep(edge.z, val.z);
-	res.w = kStep(edge.w, val.w);
+	kRotor3 res;
+	res.b.yz = kStep(edge.b.yz, val.b.yz);
+	res.b.zx = kStep(edge.b.zx, val.b.zx);
+	res.b.xy = kStep(edge.b.xy, val.b.xy);
+	res.s    = kStep(edge.s, val.s);
 	return res;
 }
 
@@ -1486,7 +1515,7 @@ kVec2 kRotateAround(kVec2 point, kVec2 center, float angle)
 	return res;
 }
 
-kQuat kRotateTowards(kQuat from, kQuat to, float max_angle)
+kRotor3 kRotateTowards(kRotor3 from, kRotor3 to, float max_angle)
 {
 	if (max_angle)
 	{
