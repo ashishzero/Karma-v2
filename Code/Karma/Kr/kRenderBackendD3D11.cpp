@@ -55,12 +55,7 @@ typedef struct kD3D11_Texture : kTexture
 
 struct kD3D11_RenderPipeline
 {
-	kRenderPipelineConfig      Config = {.Msaa              = kMultiSamplingAntiAliasing_8,
-	                                     .Bloom             = kBloom_Enabled,
-	                                     .Hdr               = kHighDynamicRange_AES,
-	                                     .BloomFilterRadius = 0.005f,
-	                                     .BloomStrength     = 0.15f,
-	                                     .Intensity         = kVec3(1)};
+	kRenderPipelineConfig      Config;
 	ID3D11Texture2D           *BackBuffer;
 	ID3D11RenderTargetView    *BackBufferRTV;
 	kVec2u                     BackBufferSize;
@@ -961,9 +956,9 @@ static kTexture *kD3D11_CreateTexture(const kTextureSpec &spec)
 
 	D3D11_TEXTURE2D_DESC desc = {};
 
-	desc.Width                = spec.width;
-	desc.Height               = spec.height;
-	desc.Format               = kD3D11_FormatMap[spec.format];
+	desc.Width                = spec.Width;
+	desc.Height               = spec.Height;
+	desc.Format               = kD3D11_FormatMap[spec.Format];
 	desc.ArraySize            = 1;
 	desc.BindFlags            = D3D11_BIND_SHADER_RESOURCE;
 	desc.Usage                = D3D11_USAGE_DEFAULT;
@@ -974,11 +969,11 @@ static kTexture *kD3D11_CreateTexture(const kTextureSpec &spec)
 	desc.MipLevels            = 1;
 
 	D3D11_SUBRESOURCE_DATA source;
-	source.pSysMem          = spec.pixels;
-	source.SysMemPitch      = spec.pitch;
+	source.pSysMem          = spec.Pixels;
+	source.SysMemPitch      = spec.Pitch;
 	source.SysMemSlicePitch = 0;
 
-	HRESULT hr              = g_Device->CreateTexture2D(&desc, spec.pixels ? &source : nullptr, &r->Resource);
+	HRESULT hr              = g_Device->CreateTexture2D(&desc, spec.Pixels ? &source : nullptr, &r->Resource);
 
 	if (FAILED(hr))
 	{
@@ -995,7 +990,7 @@ static kTexture *kD3D11_CreateTexture(const kTextureSpec &spec)
 		return r;
 	}
 
-	r->Size  = kVec2u(spec.width, spec.height);
+	r->Size  = kVec2u(spec.Width, spec.Height);
 	r->state = kResourceState_Ready;
 
 	return r;
@@ -1319,7 +1314,7 @@ static void kD3D11_DestroySwapChain(void)
 	kRelease(&g_SwapChain);
 }
 
-static void kD3D11_CreateSwapChain(void *_window)
+static void kD3D11_CreateSwapChain(void *_window, const kRenderPipelineConfig &config)
 {
 	kLogInfoEx("D3D11", "Creating swap chain.\n");
 
@@ -1349,6 +1344,8 @@ static void kD3D11_CreateSwapChain(void *_window)
 		kLogHresultError(hr, "DirectX11", "Failed to create swap chain");
 		return;
 	}
+
+	g_RenderPipeline.Config = config;
 
 	kD3D11_CreateSwapChainBuffers();
 }

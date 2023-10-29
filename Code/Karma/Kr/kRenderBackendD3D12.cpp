@@ -205,18 +205,18 @@ static kTexture *kD3D12_CreateTexture(const kTextureSpec &spec)
 	D3D12_RESOURCE_DESC desc   = {};
 	desc.Dimension             = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
 	desc.Alignment             = 0;
-	desc.Width                 = spec.width;
-	desc.Height                = spec.height;
+	desc.Width                 = spec.Width;
+	desc.Height                = spec.Height;
 	desc.DepthOrArraySize      = 1;
 	desc.MipLevels             = 1;
-	desc.Format                = kDXGI_FormatMap[spec.format];
+	desc.Format                = kDXGI_FormatMap[spec.Format];
 	desc.SampleDesc.Count      = 1;
 	desc.SampleDesc.Quality    = 0;
 
 	D3D12_HEAP_PROPERTIES heap = {};
 	heap.Type                  = D3D12_HEAP_TYPE_DEFAULT;
 
-	r->d3dstate                = spec.pixels ? D3D12_RESOURCE_STATE_COPY_DEST : D3D12_RESOURCE_STATE_COMMON;
+	r->d3dstate                = spec.Pixels ? D3D12_RESOURCE_STATE_COPY_DEST : D3D12_RESOURCE_STATE_COMMON;
 
 	HRESULT hr = d3d12.device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &desc, r->d3dstate, 0,
 	                                                   IID_PPV_ARGS(&r->resource));
@@ -228,7 +228,7 @@ static kTexture *kD3D12_CreateTexture(const kTextureSpec &spec)
 		return (kD3D12_Texture *)&kFallbackTexture;
 	}
 
-	if (spec.pixels)
+	if (spec.Pixels)
 	{
 		D3D12_PLACED_SUBRESOURCE_FOOTPRINT layout;
 
@@ -272,12 +272,12 @@ static kTexture *kD3D12_CreateTexture(const kTextureSpec &spec)
 			return r;
 		}
 
-		u8 *src_scan = spec.pixels;
-		for (UINT y = 0; y < spec.height; y++)
+		u8 *src_scan = spec.Pixels;
+		for (UINT y = 0; y < spec.Height; y++)
 		{
 			UINT8 *dst_scan = data + layout.Offset + y * layout.Footprint.RowPitch;
-			memcpy(dst_scan, src_scan, spec.pitch);
-			src_scan += spec.pitch;
+			memcpy(dst_scan, src_scan, spec.Pitch);
+			src_scan += spec.Pitch;
 		}
 
 		buffer->Unmap(0, 0);
@@ -451,7 +451,7 @@ static void kD3D12_DestroySwapChain(void)
 	}
 }
 
-static void kD3D12_CreateSwapChain(void *_window)
+static void kD3D12_CreateSwapChain(void *_window, const kRenderPipelineConfig &config)
 {
 	kLogInfoEx("D3D12", "Creating swap chain.\n");
 

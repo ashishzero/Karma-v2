@@ -19,7 +19,7 @@ project "Karma"
          ["Kr/Math"] = { "Kr/kMath.h", "Kr/kMath.cpp" },
          ["Kr/Platform"] = { "Kr/kPlatform.h", "Kr/kPlatform.cpp", "kMain.cpp" },
          ["Kr/Media"] = { "Kr/kMedia.h", "Kr/kMediaBackend.h", "Kr/kMedia.cpp" },
-         ["Kr/Render"] = { "Kr/kRender.h", "Kr/kRenderShared.h", "Kr/kRenderBackend.h", "Kr/kRender.cpp", "Kr/kRenderBackend.cpp" },
+         ["Kr/Render"] = { "Kr/kRender.h", "Kr/kRenderConfig.h", "Kr/kRenderShared.h", "Kr/kRenderBackend.h", "Kr/kRender.cpp", "Kr/kRenderBackend.cpp" },
          ["Kr/Windows"] = { "Kr/kWindowsCommon.h", "Kr/kD3DShaders.h" },
          ["Kr/Windows/Media"] = { "Kr/kMediaBackendWin32.cpp" },
          ["Kr/Windows/D3D11"] = { "Kr/kRenderBackendD3D11.cpp" },

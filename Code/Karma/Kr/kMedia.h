@@ -1,5 +1,6 @@
 #pragma once
 #include "kCommon.h"
+#include "kRenderConfig.h"
 
 typedef enum kKey
 {
@@ -360,11 +361,20 @@ typedef struct kWindowSpec
 
 typedef struct kMediaSpec
 {
-	kWindowSpec Window;
-	kArenaSpec  Arena;
+	kWindowSpec           Window;
+	kArenaSpec            Arena;
+	kRenderPipelineConfig RenderPipeline;
 } kMediaSpec;
 
-static const kMediaSpec kDefaultSpec = {.Arena = {.Alignment = sizeof(8), .Capacity = kMegaByte * 64}};
+static const kArenaSpec            kDefaultArena          = {.Alignment = sizeof(8), .Capacity = kMegaByte * 64};
+static const kRenderPipelineConfig kDefaultRenderPipeline = {.Msaa              = kMultiSamplingAntiAliasing_8,
+                                                             .Bloom             = kBloom_Enabled,
+                                                             .Hdr               = kHighDynamicRange_AES,
+                                                             .BloomFilterRadius = 0.005f,
+                                                             .BloomStrength     = 0.15f,
+                                                             .Intensity         = kVec3(1)};
 
-int                     kEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user);
-void                    kBreakLoop(int status);
+static const kMediaSpec            kDefaultSpec = {.Arena = kDefaultArena, .RenderPipeline = kDefaultRenderPipeline};
+
+int                                kEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user);
+void                               kBreakLoop(int status);

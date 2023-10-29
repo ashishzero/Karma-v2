@@ -43,17 +43,17 @@ typedef enum kFormat
 
 typedef struct kTextureSpec
 {
-	kFormat format;
-	u32     width;
-	u32     height;
-	u32     pitch;
-	u8     *pixels;
+	kFormat Format;
+	u32     Width;
+	u32     Height;
+	u32     Pitch;
+	u8     *Pixels;
 } kTextureSpec;
 
 extern bool           kEnableDebugLayer;
 static const kTexture kFallbackTexture;
 
-typedef void (*kSwapChainCreateProc)(void *);
+typedef void (*kSwapChainCreateProc)(void *, const kRenderPipelineConfig &);
 typedef void (*kSwapChainDestroyProc)(void);
 typedef void (*kSwapChainResizeProc)(uint, uint);
 typedef void (*kSwapChainPresentProc)(void);
@@ -88,7 +88,7 @@ typedef struct kRenderBackend
 	kRenderBackendDestroyProc         Destroy;
 } kRenderBackend;
 
-void        kCreateSwapChainFallback(void *);
+void        kCreateSwapChainFallback(void *, const kRenderPipelineConfig &);
 void        kDestroySwapChainFallback(void);
 void        kResizeSwapChainFallback(uint, uint);
 void        kPresentFallback(void);

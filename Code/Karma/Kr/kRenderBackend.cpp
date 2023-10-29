@@ -10,7 +10,7 @@ bool kEnableDebugLayer = false;
 //
 //
 
-void      kCreateSwapChainFallback(void *) {}
+void      kCreateSwapChainFallback(void *, const kRenderPipelineConfig &) {}
 void      kDestroySwapChainFallback(void) {}
 void      kResizeSwapChainFallback(uint, uint) {}
 void      kPresentFallback(void) {}

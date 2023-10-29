@@ -344,11 +344,11 @@ static void kCreateBuiltinResources(void)
 		u8           pixels[]   = {0xff, 0xff, 0xff, 0xff};
 
 		kTextureSpec spec       = {};
-		spec.width              = 1;
-		spec.height             = 1;
-		spec.pitch              = 1 * sizeof(u32);
-		spec.format             = kFormat_RGBA8_UNORM;
-		spec.pixels             = pixels;
+		spec.Width              = 1;
+		spec.Height             = 1;
+		spec.Pitch              = 1 * sizeof(u32);
+		spec.Format             = kFormat_RGBA8_UNORM;
+		spec.Pixels             = pixels;
 
 		g_Media.Builtin.Texture = g_Media.Render.CreateTexture(spec);
 	}
@@ -357,11 +357,11 @@ static void kCreateBuiltinResources(void)
 		kFont       *font = &g_Media.Builtin.Font;
 
 		kTextureSpec spec = {};
-		spec.format       = kFormat_R8_UNORM;
-		spec.width        = kEmFontAtlasWidth;
-		spec.height       = kEmFontAtlasHeight;
-		spec.pitch        = kEmFontAtlasWidth;
-		spec.pixels       = (u8 *)kEmFontAtlasPixels;
+		spec.Format       = kFormat_R8_UNORM;
+		spec.Width        = kEmFontAtlasWidth;
+		spec.Height       = kEmFontAtlasHeight;
+		spec.Pitch        = kEmFontAtlasWidth;
+		spec.Pixels       = (u8 *)kEmFontAtlasPixels;
 
 		font->Atlas       = g_Media.Render.CreateTexture(spec);
 
@@ -421,7 +421,7 @@ int kEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user)
 	kCreateRenderBackend(&g_Media.Render);
 
 	void *window = g_Media.Backend.CreateWindow(&g_Media.Window, spec.Window);
-	g_Media.Render.CreateSwapChain(window);
+	g_Media.Render.CreateSwapChain(window, spec.RenderPipeline);
 
 	g_Media.Events.Reserve(64);
 	g_Media.Backend.LoadMouseState(&g_Media.Mouse);
