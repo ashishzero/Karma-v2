@@ -28,7 +28,7 @@ constexpr uint K_BACK_BUFFER_COUNT            = 3;
 constexpr uint K_MAX_BLOOM_BLUR_MIPS          = 16;
 constexpr uint K_INITIAL_VERTEX_BUFFER2D_SIZE = 1048576;
 constexpr uint K_INITIAL_INDEX_BUFFER2D_SIZE  = 1048576 * 6;
-constexpr uint K_MAX_BLOOM_MIPS               = 8;
+constexpr uint K_MAX_BLOOM_MIPS               = 6;
 
 enum kD3D11_RasterizerState
 {
@@ -888,9 +888,15 @@ static void kD3D11_ExecuteBloomPass(void)
 	g_DeviceContext->CSSetUnorderedAccessViews(0, 1, &g_RenderPipeline.BloomMipsUAV[0], 0);
 	g_DeviceContext->CSSetShaderResources(0, 1, &g_RenderPipeline.BloomInput);
 	g_DeviceContext->Dispatch(dispatchs[0].x, dispatchs[0].y, 1);
+
+	g_DeviceContext->CSSetShader(g_ComputeShaders[kComputeShader_BloomDownSampleKarisAvg], 0, 0);
+	g_DeviceContext->CSSetUnorderedAccessViews(0, 1, &g_RenderPipeline.BloomMipsUAV[1], 0);
+	g_DeviceContext->CSSetShaderResources(0, 1, &g_RenderPipeline.BloomMipsSRV[0]);
+	g_DeviceContext->Dispatch(dispatchs[0].x, dispatchs[0].y, 1);
+
 	g_DeviceContext->CSSetShader(g_ComputeShaders[kComputeShader_BloomDownSample], 0, 0);
 
-	for (int mip = 1; mip < g_RenderPipeline.BloomMaxMipLevel; ++mip)
+	for (int mip = 2; mip < g_RenderPipeline.BloomMaxMipLevel; ++mip)
 	{
 		g_DeviceContext->CSSetUnorderedAccessViews(0, 1, &g_RenderPipeline.BloomMipsUAV[mip], 0);
 		g_DeviceContext->CSSetShaderResources(0, 1, &g_RenderPipeline.BloomMipsSRV[mip - 1]);
