@@ -295,6 +295,16 @@ void kAddWindowDpiChangedEvent(float yfactor)
 //
 //
 
+void kGetRenderPipelineConfig(kRenderPipelineConfig *config) { g_Media.Render.GetRenderPipelineConfig(config); }
+void kApplyRenderPipelineConfig(const kRenderPipelineConfig &config)
+{
+	g_Media.Render.ApplyRenderPipelineConfig(config);
+}
+
+//
+//
+//
+
 void kResizeWindow(u32 w, u32 h) { g_Media.Backend.ResizeWindow(w, h); }
 void kToggleWindowFullscreen(void) { g_Media.Backend.ToggleWindowFullscreen(); }
 void kReleaseCursor(void) { g_Media.Backend.ReleaseCursor(); }

@@ -15,6 +15,9 @@ void      kDestroySwapChainFallback(void) {}
 void      kResizeSwapChainFallback(uint, uint) {}
 void      kPresentFallback(void) {}
 
+void      kGetRenderPipelineConfigFallback(kRenderPipelineConfig *) {}
+void      kApplyRenderPipelineConfigFallback(const kRenderPipelineConfig &) {}
+
 kTexture *kCreateTextureFallback(const kTextureSpec &) { return (kTexture *)&kFallbackTexture; }
 void      kDestroyTextureFallback(kTexture *) {}
 kVec2u    kGetTextureSizeFallback(kTexture *) { return kVec2u(0); }
@@ -30,21 +33,24 @@ void      kDestroyFallback(void) {}
 
 void kFallbackRenderBackend(kRenderBackend *backend)
 {
-	backend->CreateSwapChain  = kCreateSwapChainFallback;
-	backend->DestroySwapChain = kDestroySwapChainFallback;
-	backend->ResizeSwapChain  = kResizeSwapChainFallback;
-	backend->Present          = kPresentFallback;
+	backend->CreateSwapChain           = kCreateSwapChainFallback;
+	backend->DestroySwapChain          = kDestroySwapChainFallback;
+	backend->ResizeSwapChain           = kResizeSwapChainFallback;
+	backend->Present                   = kPresentFallback;
 
-	backend->CreateTexture    = kCreateTextureFallback;
-	backend->DestroyTexture   = kDestroyTextureFallback;
-	backend->GetTextureSize   = kGetTextureSizeFallback;
-	backend->ResizeTexture    = kResizeTextureFallback;
+	backend->GetRenderPipelineConfig   = kGetRenderPipelineConfigFallback;
+	backend->ApplyRenderPipelineConfig = kApplyRenderPipelineConfigFallback;
 
-	backend->ExecuteFrame     = kExecuteFrameFallback;
-	backend->NextFrame        = kNextFrameFallback;
-	backend->Flush            = kFlushFallback;
+	backend->CreateTexture             = kCreateTextureFallback;
+	backend->DestroyTexture            = kDestroyTextureFallback;
+	backend->GetTextureSize            = kGetTextureSizeFallback;
+	backend->ResizeTexture             = kResizeTextureFallback;
 
-	backend->Destroy          = kDestroyFallback;
+	backend->ExecuteFrame              = kExecuteFrameFallback;
+	backend->NextFrame                 = kNextFrameFallback;
+	backend->Flush                     = kFlushFallback;
+
+	backend->Destroy                   = kDestroyFallback;
 }
 
 extern bool kD3D11_CreateRenderBackend(kRenderBackend *backend);

@@ -58,4 +58,3 @@ struct kRenderPipelineConfig
 	float                      BloomStrength;
 	kVec3                      Intensity;
 };
-

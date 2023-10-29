@@ -77,18 +77,6 @@ void                 Update(float dt)
 		kToggleWindowFullscreen();
 	}
 
-	//if (kKeyPressed(kKey_H))
-	//{
-	//	rt_config.tonemapping = (kToneMappingMethod)((rt_config.tonemapping + 1) % kToneMappingMethod_Count);
-	//	kApplyRenderTargetConfig(rt_config);
-	//}
-
-	//if (kKeyPressed(kKey_A))
-	//{
-	//	rt_config.antialiasing = (kAntiAliasingMethod)((rt_config.antialiasing + 1) % kAntiAliasingMethod_Count);
-	//	kApplyRenderTargetConfig(rt_config);
-	//}
-
 	kVec2i    size    = kGetWindowSize();
 	float     ar      = kGetWindowAspectRatio();
 	float     yfactor = kGetWindowDpiScale();

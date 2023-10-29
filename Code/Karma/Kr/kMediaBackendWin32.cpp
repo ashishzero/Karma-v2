@@ -929,8 +929,8 @@ static LRESULT kWin32_ClientWndProc(HWND wnd, UINT msg, WPARAM wparam, LPARAM lp
 
 typedef struct kWin32Backend
 {
-	kWin32Window window;
-	HANDLE       avrt_handle;
+	kWin32Window Window;
+	HANDLE       AvrtHandle;
 } kWin32Backend;
 
 static kWin32Backend g_Win32;
@@ -942,8 +942,8 @@ static kWin32Backend g_Win32;
 static void kWin32_DestroyWindow(void)
 {
 	kLogInfoEx("Windows", "Destroying window.\n");
-	kWin32_RequestDestroyWindow(g_Win32.window.Wnd);
-	memset(&g_Win32.window, 0, sizeof(g_Win32.window));
+	kWin32_RequestDestroyWindow(g_Win32.Window.Wnd);
+	memset(&g_Win32.Window, 0, sizeof(g_Win32.Window));
 }
 
 static void *kWin32_CreateWindow(kWindowState *ws, const kWindowSpec &spec)
@@ -988,43 +988,43 @@ static void *kWin32_CreateWindow(kWindowState *ws, const kWindowSpec &spec)
 		height = rect.bottom - rect.top;
 	}
 
-	g_Win32.window.Style    = style;
-	g_Win32.window.Captions = (spec.Flags & kWindowStyle_DisableCaptions);
+	g_Win32.Window.Style    = style;
+	g_Win32.Window.Captions = (spec.Flags & kWindowStyle_DisableCaptions);
 
-	g_Win32.window.Wnd = kWin32_RequestCreateWindow(WS_EX_APPWINDOW, title, style, CW_USEDEFAULT, CW_USEDEFAULT, width,
+	g_Win32.Window.Wnd = kWin32_RequestCreateWindow(WS_EX_APPWINDOW, title, style, CW_USEDEFAULT, CW_USEDEFAULT, width,
 	                                                height, 0, 0, instance, 0);
 
-	if (!g_Win32.window.Wnd)
+	if (!g_Win32.Window.Wnd)
 	{
 		kLogHresultError(GetLastError(), "Windows", "Failed to create window");
 		return 0;
 	}
 
 	BOOL dark = TRUE;
-	DwmSetWindowAttribute(g_Win32.window.Wnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &dark, sizeof(dark));
+	DwmSetWindowAttribute(g_Win32.Window.Wnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &dark, sizeof(dark));
 
 	if (spec.Flags & kWindowStyle_ForceSharpCorners)
 	{
 		LONG corner = DWMWCP_DONOTROUND;
-		DwmSetWindowAttribute(g_Win32.window.Wnd, DWMWA_WINDOW_CORNER_PREFERENCE, &corner, sizeof(corner));
+		DwmSetWindowAttribute(g_Win32.Window.Wnd, DWMWA_WINDOW_CORNER_PREFERENCE, &corner, sizeof(corner));
 	}
 
-	UINT dpi = GetDpiForWindow(g_Win32.window.Wnd);
-	SetRectEmpty(&g_Win32.window.Border);
-	AdjustWindowRectExForDpi(&g_Win32.window.Border, g_Win32.window.Style, FALSE, WS_EX_APPWINDOW, dpi);
-	g_Win32.window.Border.left *= -1;
-	g_Win32.window.Border.top *= -1;
+	UINT dpi = GetDpiForWindow(g_Win32.Window.Wnd);
+	SetRectEmpty(&g_Win32.Window.Border);
+	AdjustWindowRectExForDpi(&g_Win32.Window.Border, g_Win32.Window.Style, FALSE, WS_EX_APPWINDOW, dpi);
+	g_Win32.Window.Border.left *= -1;
+	g_Win32.Window.Border.top *= -1;
 
-	SetWindowLongPtrW(g_Win32.window.Wnd, GWLP_USERDATA, (LONG_PTR)&g_Win32.window);
-	SetWindowPos(g_Win32.window.Wnd, NULL, 0, 0, 0, 0,
+	SetWindowLongPtrW(g_Win32.Window.Wnd, GWLP_USERDATA, (LONG_PTR)&g_Win32.Window);
+	SetWindowPos(g_Win32.Window.Wnd, NULL, 0, 0, 0, 0,
 	             SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
 
-	ShowWindow(g_Win32.window.Wnd, SW_SHOWNORMAL);
-	UpdateWindow(g_Win32.window.Wnd);
+	ShowWindow(g_Win32.Window.Wnd, SW_SHOWNORMAL);
+	UpdateWindow(g_Win32.Window.Wnd);
 
 	if (spec.Flags & kWindowStyle_Fullscreen)
 	{
-		kWin32_ToggleWindowFullscreen(&g_Win32.window);
+		kWin32_ToggleWindowFullscreen(&g_Win32.Window);
 	}
 
 	//
@@ -1032,32 +1032,32 @@ static void *kWin32_CreateWindow(kWindowState *ws, const kWindowSpec &spec)
 	//
 
 	RECT rc = {0};
-	GetClientRect(g_Win32.window.Wnd, &rc);
+	GetClientRect(g_Win32.Window.Wnd, &rc);
 
 	ws->Width  = rc.right - rc.left;
 	ws->Height = rc.bottom - rc.top;
 
-	if (GetActiveWindow() == g_Win32.window.Wnd)
+	if (GetActiveWindow() == g_Win32.Window.Wnd)
 	{
 		ws->Flags[kWindow_Active] = true;
 	}
 
 	POINT pt = {};
 	GetCursorPos(&pt);
-	ScreenToClient(g_Win32.window.Wnd, &pt);
+	ScreenToClient(g_Win32.Window.Wnd, &pt);
 
 	if (PtInRect(&rc, pt))
 	{
 		ws->Flags[kWindow_Hovered] = true;
 	}
 
-	TRACKMOUSEEVENT tme = {.cbSize = sizeof(tme), .dwFlags = TME_LEAVE, .hwndTrack = g_Win32.window.Wnd};
+	TRACKMOUSEEVENT tme = {.cbSize = sizeof(tme), .dwFlags = TME_LEAVE, .hwndTrack = g_Win32.Window.Wnd};
 	TrackMouseEvent(&tme);
 
-	ws->Flags[kWindow_Fullscreen] = g_Win32.window.Fullscreen;
-	ws->DpiFactor                   = (float)dpi / USER_DEFAULT_SCREEN_DPI;
+	ws->Flags[kWindow_Fullscreen] = g_Win32.Window.Fullscreen;
+	ws->DpiFactor                 = (float)dpi / USER_DEFAULT_SCREEN_DPI;
 
-	return (void *)g_Win32.window.Wnd;
+	return (void *)g_Win32.Window.Wnd;
 }
 
 static u64 kWin32_GetPerformanceFrequency(void)
@@ -1093,33 +1093,33 @@ static int kWin32_EventLoop(void)
 				status = (int)msg.wParam;
 				return status;
 			}
-			kWin32_ClientWndProc(g_Win32.window.Wnd, msg.message, msg.wParam, msg.lParam);
+			kWin32_ClientWndProc(g_Win32.Window.Wnd, msg.message, msg.wParam, msg.lParam);
 		}
 
-		if (g_Win32.window.DpiChanged)
+		if (g_Win32.Window.DpiChanged)
 		{
-			UINT dpi = GetDpiForWindow(g_Win32.window.Wnd);
-			SetRectEmpty(&g_Win32.window.Border);
-			AdjustWindowRectExForDpi(&g_Win32.window.Border, g_Win32.window.Style, FALSE, WS_EX_APPWINDOW, dpi);
-			g_Win32.window.Border.left *= -1;
-			g_Win32.window.Border.top *= -1;
+			UINT dpi = GetDpiForWindow(g_Win32.Window.Wnd);
+			SetRectEmpty(&g_Win32.Window.Border);
+			AdjustWindowRectExForDpi(&g_Win32.Window.Border, g_Win32.Window.Style, FALSE, WS_EX_APPWINDOW, dpi);
+			g_Win32.Window.Border.left *= -1;
+			g_Win32.Window.Border.top *= -1;
 
 			float yfactor = (float)dpi / USER_DEFAULT_SCREEN_DPI;
 			kAddWindowDpiChangedEvent(yfactor);
-			g_Win32.window.DpiChanged = false;
+			g_Win32.Window.DpiChanged = false;
 		}
 
-		if (g_Win32.window.Resized)
+		if (g_Win32.Window.Resized)
 		{
 			RECT rc;
-			GetClientRect(g_Win32.window.Wnd, &rc);
+			GetClientRect(g_Win32.Window.Wnd, &rc);
 
 			u32 width  = (u32)(rc.right - rc.left);
 			u32 height = (u32)(rc.bottom - rc.top);
 
-			kAddWindowResizeEvent(width, height, g_Win32.window.Fullscreen);
+			kAddWindowResizeEvent(width, height, g_Win32.Window.Fullscreen);
 
-			g_Win32.window.Resized = false;
+			g_Win32.Window.Resized = false;
 		}
 
 		u32 mods = kWin32_GetKeyModFlags();
@@ -1140,15 +1140,15 @@ static int kWin32_EventLoop(void)
 //
 //
 
-static void kWin32_ResizeWindowImpl(u32 w, u32 h) { kWin32_ResizeWindow(&g_Win32.window, w, h); }
-static void kWin32_ToggleWindowFullscreenImpl(void) { kWin32_ToggleWindowFullscreen(&g_Win32.window); }
-static void kWin32_ReleaseCursorImpl(void) { kWin32_ReleaseCursor(&g_Win32.window); }
-static void kWin32_CaptureCursorImpl(void) { kWin32_CaptureCursor(&g_Win32.window); }
-static int  kWin32_GetWindowCaptionSizeImpl(void) { return kWin32_GetWindowCaptionSize(&g_Win32.window); }
-static void kWin32_MaximizeWindowImpl(void) { kWin32_MaximizeWindow(&g_Win32.window); }
-static void kWin32_RestoreWindowImpl(void) { kWin32_RestoreWindow(&g_Win32.window); }
-static void kWin32_MinimizeWindowImpl(void) { kWin32_MinimizeWindow(&g_Win32.window); }
-static void kWin32_CloseWindowImpl(void) { kWin32_CloseWindow(&g_Win32.window); }
+static void kWin32_ResizeWindowImpl(u32 w, u32 h) { kWin32_ResizeWindow(&g_Win32.Window, w, h); }
+static void kWin32_ToggleWindowFullscreenImpl(void) { kWin32_ToggleWindowFullscreen(&g_Win32.Window); }
+static void kWin32_ReleaseCursorImpl(void) { kWin32_ReleaseCursor(&g_Win32.Window); }
+static void kWin32_CaptureCursorImpl(void) { kWin32_CaptureCursor(&g_Win32.Window); }
+static int  kWin32_GetWindowCaptionSizeImpl(void) { return kWin32_GetWindowCaptionSize(&g_Win32.Window); }
+static void kWin32_MaximizeWindowImpl(void) { kWin32_MaximizeWindow(&g_Win32.Window); }
+static void kWin32_RestoreWindowImpl(void) { kWin32_RestoreWindow(&g_Win32.Window); }
+static void kWin32_MinimizeWindowImpl(void) { kWin32_MinimizeWindow(&g_Win32.Window); }
+static void kWin32_CloseWindowImpl(void) { kWin32_CloseWindow(&g_Win32.Window); }
 
 //
 //
@@ -1176,7 +1176,7 @@ static void kWin32_LoadMouseState(kMouseState *mouse)
 {
 	POINT pt = {0};
 	GetCursorPos(&pt);
-	ScreenToClient(g_Win32.window.Wnd, &pt);
+	ScreenToClient(g_Win32.Window.Wnd, &pt);
 	mouse->Cursor.x                     = pt.x;
 	mouse->Cursor.y                     = pt.y;
 	mouse->Buttons[kButton_Left].Down   = GetAsyncKeyState(VK_LBUTTON) & 0x8000;
@@ -1192,15 +1192,15 @@ static void kWin32_BreakLoop(int status) { PostQuitMessage(status); }
 
 void        kWin32_DestroyBackend(void)
 {
-	if (g_Win32.avrt_handle) AvRevertMmThreadCharacteristics(g_Win32.avrt_handle);
+	if (g_Win32.AvrtHandle) AvRevertMmThreadCharacteristics(g_Win32.AvrtHandle);
 	kWin32_StopWindowServer();
 	memset(&g_Win32, 0, sizeof(g_Win32));
 }
 
 void kWin32_CreateBackend(kMediaBackend *backend)
 {
-	DWORD task_index    = 0;
-	g_Win32.avrt_handle = AvSetMmThreadCharacteristicsW(L"Games", &task_index);
+	DWORD task_index   = 0;
+	g_Win32.AvrtHandle = AvSetMmThreadCharacteristicsW(L"Games", &task_index);
 
 	kWin32_MapVirutalKeys();
 	kWin32_StartWindowServer();

@@ -320,6 +320,13 @@ void kAddWindowDpiChangedEvent(float scale);
 //
 //
 
+void kGetRenderPipelineConfig(kRenderPipelineConfig *config);
+void kApplyRenderPipelineConfig(const kRenderPipelineConfig &config);
+
+//
+//
+//
+
 void kResizeWindow(u32 w, u32 h);
 void kToggleWindowFullscreen(void);
 void kReleaseCursor(void);

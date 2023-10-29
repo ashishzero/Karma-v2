@@ -1352,6 +1352,24 @@ static void kD3D11_CreateSwapChain(void *_window, const kRenderPipelineConfig &c
 
 static void kD3D11_Present(void) { g_SwapChain->Present(1, 0); }
 
+static void kD3D11_GetRenderPipelineConfig(kRenderPipelineConfig *config) { *config = g_RenderPipeline.Config; }
+
+static void kD3D11_ApplyRenderPipelineConfig(const kRenderPipelineConfig &config)
+{
+	bool resize = false;
+	if (config.Msaa != g_RenderPipeline.Config.Msaa || config.Bloom != g_RenderPipeline.Config.Bloom ||
+	    config.Hdr != g_RenderPipeline.Config.Hdr)
+	{
+		resize = true;
+	}
+
+	g_RenderPipeline.Config = config;
+	if (resize)
+	{
+		kD3D11_ResizeSwapChainBuffers(0, 0);
+	}
+}
+
 static void kD3D11_ExecuteFrame(const kRenderFrame &frame)
 {
 	kD3D11_ExecuteGeometryPass(frame);
@@ -1409,21 +1427,24 @@ bool kD3D11_CreateRenderBackend(kRenderBackend *backend)
 
 	kDListInit(&d3d11.resource.textures.First);
 
-	backend->CreateSwapChain  = kD3D11_CreateSwapChain;
-	backend->DestroySwapChain = kD3D11_DestroySwapChain;
-	backend->ResizeSwapChain  = kD3D11_ResizeSwapChainBuffers;
-	backend->Present          = kD3D11_Present;
+	backend->CreateSwapChain           = kD3D11_CreateSwapChain;
+	backend->DestroySwapChain          = kD3D11_DestroySwapChain;
+	backend->ResizeSwapChain           = kD3D11_ResizeSwapChainBuffers;
+	backend->Present                   = kD3D11_Present;
 
-	backend->CreateTexture    = kD3D11_CreateTexture;
-	backend->DestroyTexture   = kD3D11_DestroyTexture;
-	backend->GetTextureSize   = kD3D11_GetTextureSize;
-	backend->ResizeTexture    = kD3D11_ResizeTexture;
+	backend->GetRenderPipelineConfig   = kD3D11_GetRenderPipelineConfig;
+	backend->ApplyRenderPipelineConfig = kD3D11_ApplyRenderPipelineConfig;
 
-	backend->ExecuteFrame     = kD3D11_ExecuteFrame;
-	backend->NextFrame        = kNextFrameFallback;
-	backend->Flush            = kD3D11_Flush;
+	backend->CreateTexture             = kD3D11_CreateTexture;
+	backend->DestroyTexture            = kD3D11_DestroyTexture;
+	backend->GetTextureSize            = kD3D11_GetTextureSize;
+	backend->ResizeTexture             = kD3D11_ResizeTexture;
 
-	backend->Destroy          = kD3D11_DestroyRenderBackend;
+	backend->ExecuteFrame              = kD3D11_ExecuteFrame;
+	backend->NextFrame                 = kNextFrameFallback;
+	backend->Flush                     = kD3D11_Flush;
+
+	backend->Destroy                   = kD3D11_DestroyRenderBackend;
 
 	return true;
 }
