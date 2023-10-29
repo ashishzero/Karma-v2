@@ -1,9 +1,12 @@
 #include "kBlit.fx"
 
+static float2 VertexPositions[4] = { float2(-1.0, -1.0), float2(1.0, -1.0), float2(-1.0, 1.0), float2(1.0, 1.0) };
+
 kVertexOutput Main(kVertexInput input)
 {
 	kVertexOutput output;
-	output.tex = float2((input.Id << 1) & 2, input.Id & 2);
-	output.pos = float4(output.tex * float2(2.0f, -2.0f) + float2(-1.0f, 1.0f), 0.0f, 1.0f);
+	float2 position = VertexPositions[input.Id];
+	output.pos = float4(position, 0.0, 1.0);
+	output.tex = position * float2(0.5f, -0.5f) + 0.5f;
 	return output;
 }

@@ -66,3 +66,4 @@ project "Karma"
             '%{wks.location}\\Build\\Prebuild\\Prebuild.exe "%{file.relpath}"'
         }
         buildoutputs { 'Kr/Shaders/Generated/%{file.basename}.hlsl.h' }
+        buildinputs { "%{file.relpath}", "Kr/Shaders/kFilters.fx" }

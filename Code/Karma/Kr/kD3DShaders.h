@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Shaders/Generated/kBlit.cs.hlsl.h"
 #include "Shaders/Generated/kBlit.vs.hlsl.h"
 #include "Shaders/Generated/kBlit.ps.hlsl.h"
 #include "Shaders/Generated/kQuad.vs.hlsl.h"
@@ -7,6 +8,8 @@
 #include "Shaders/Generated/kToneMap.ps.hlsl.h"
 #include "Shaders/Generated/kThreshold.cs.hlsl.h"
 #include "Shaders/Generated/kBloomDownSample.cs.hlsl.h"
+#include "Shaders/Generated/kBloomUpSampleMix.cs.hlsl.h"
+#include "Shaders/Generated/kBloomBlurUpSample.cs.hlsl.h"
 
 enum kVertexShaderKind
 {
@@ -25,8 +28,11 @@ enum kPixelShaderKind
 
 enum kComputeShaderKind
 {
+	kComputeShader_Blit,
 	kComputeShader_Threshold,
-	kComputeShader_Bloom,
+	kComputeShader_BloomDownSample,
+	kComputeShader_BloomBlurUpSample,
+	kComputeShader_BloomUpSampleMix,
 	kComputeShader_Count
 };
 
@@ -36,5 +42,5 @@ static_assert(kArrayCount(VertexShadersMap) == kVertexShader_Count, "");
 static const kString PixelShadersMap[] = {kString(kQuadPS), kString(kBlitPS), kString(kToneMapPS)};
 static_assert(kArrayCount(PixelShadersMap) == kPixelShader_Count, "");
 
-static const kString ComputeShadersMap[] = {kString(kThresholdCS), kString(kBloomDownSampleCS)};
+static const kString ComputeShadersMap[] = {kString(kBlitCS), kString(kThresholdCS), kString(kBloomDownSampleCS), kString(kBloomBlurUpSampleCS), kString(kBloomUpSampleMixCS)};
 static_assert(kArrayCount(ComputeShadersMap) == kComputeShader_Count, "");

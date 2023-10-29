@@ -28,8 +28,7 @@ constexpr uint K_BACK_BUFFER_COUNT            = 3;
 constexpr uint K_MAX_BLOOM_BLUR_MIPS          = 16;
 constexpr uint K_INITIAL_VERTEX_BUFFER2D_SIZE = 1048576;
 constexpr uint K_INITIAL_INDEX_BUFFER2D_SIZE  = 1048576 * 6;
-constexpr uint K_MAX_RENDER_PASS              = 8;
-constexpr uint K_MAX_INTERMEDIATE_TEXTURES    = 32;
+constexpr uint K_MAX_BLOOM_MIPS               = 8;
 
 enum kD3D11_RasterizerState
 {
@@ -56,20 +55,28 @@ typedef struct kD3D11_Texture : kTexture
 
 struct kD3D11_RenderPipeline
 {
-	kRenderPipelineConfig     Config = {.Msaa      = kMultiSamplingAntiAliasing_8,
-	                                    .Bloom     = kBloom_Enabled,
-	                                    .Hdr       = kHighDynamicRange_AES,
-	                                    .Intensity = kVec3(1)};
-	ID3D11Texture2D          *BackBuffer;
-	ID3D11RenderTargetView   *BackBufferRTV;
-	kVec2u                    BackBufferSize;
-	ID3D11RenderTargetView   *GeometryRTV;
-	ID3D11DepthStencilView   *GeometryDSV;
-	ID3D11Texture2D          *GeometryDst;
-	ID3D11Texture2D          *GeometrySrc;
-	ID3D11Texture2D          *GeometryDepth;
-	DXGI_FORMAT               GeometryRenderTargetFormat;
-	ID3D11ShaderResourceView *PostProcessResource;
+	kRenderPipelineConfig      Config = {.Msaa              = kMultiSamplingAntiAliasing_8,
+	                                     .Bloom             = kBloom_Enabled,
+	                                     .Hdr               = kHighDynamicRange_AES,
+	                                     .BloomFilterRadius = 0.005f,
+	                                     .BloomStrength     = 0.15f,
+	                                     .Intensity         = kVec3(1)};
+	ID3D11Texture2D           *BackBuffer;
+	ID3D11RenderTargetView    *BackBufferRTV;
+	kVec2u                     BackBufferSize;
+	ID3D11RenderTargetView    *GeometryRTV;
+	ID3D11DepthStencilView    *GeometryDSV;
+	ID3D11Texture2D           *GeometryDst;
+	ID3D11Texture2D           *GeometrySrc;
+	ID3D11Texture2D           *GeometryDepth;
+	DXGI_FORMAT                GeometryRenderTargetFormat;
+	int                        BloomMaxMipLevel;
+	ID3D11ShaderResourceView  *BloomInput;
+	kVec2u                     BloomMipsDispatchs[K_MAX_BLOOM_MIPS];
+	ID3D11UnorderedAccessView *BloomMipsUAV[K_MAX_BLOOM_MIPS];
+	ID3D11ShaderResourceView  *BloomMipsSRV[K_MAX_BLOOM_MIPS];
+	ID3D11Texture2D           *BloomBuffer;
+	ID3D11ShaderResourceView  *PostProcessResource;
 };
 
 //
@@ -680,54 +687,6 @@ static bool kD3D11_UploadScratchData(const void *data, UINT size)
 // Render Passes
 //
 
-// enum kD3D11_RenderPassFlags
-//{
-//	kD3D11_RenderPass_ClearColor = 0x1,
-//	kD3D11_RenderPass_ClearDepth = 0x2,
-//	kD3D11_RenderPass_Resolve    = 0x4,
-// };
-//
-// struct kD3D11_Resolve
-//{
-//	DXGI_FORMAT format;
-//	uint        src;
-//	uint        dst;
-// };
-//
-// struct kD3D11_GeometryPass
-//{
-//	uint           rtv;
-//	uint           dsv;
-//	uint           flags;
-//	kVec4          color;
-//	float          depth;
-//	kD3D11_Resolve resolve;
-// };
-//
-// struct kD3D11_TonemapPass
-//{
-//	kVec2u size;
-//	uint   rtv;
-//	uint   srcs[2];
-// };
-//
-// struct kD3D11_BlitPass
-//{
-//	kVec2u size;
-//	uint   rtv;
-//	uint   srv;
-// };
-//
-// struct kD3D11_ThresholdPass
-//{
-//	kVec2u size;
-//	uint   src;
-//	uint   dst;
-// };
-
-// struct kD3D11_BloomPass
-//{};
-
 static void kD3D11_BeginGeometryPass(void)
 {
 	g_DeviceContext->ClearRenderTargetView(g_RenderPipeline.GeometryRTV, g_RenderPipeline.Config.Clear.m);
@@ -886,8 +845,8 @@ static void kD3D11_ExecuteTonemapPass(void)
 	g_DeviceContext->OMSetDepthStencilState(g_DepthStencilStates[kDepthTest_Disabled], 0);
 	g_DeviceContext->RSSetState(g_RasterizerStates[kD3D11_RasterizerState_ScissorDisabled]);
 	g_DeviceContext->OMSetBlendState(g_BlendStates[kBlendMode_Opaque], 0, 0xffffffff);
-	g_DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	g_DeviceContext->Draw(6, 0);
+	g_DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+	g_DeviceContext->Draw(4, 0);
 	g_DeviceContext->ClearState();
 }
 
@@ -909,58 +868,61 @@ static void kD3D11_ExecuteBlitPass(void)
 	g_DeviceContext->PSSetSamplers(0, 1, &g_SamplerStates[kTextureFilter_LinearWrap]);
 	g_DeviceContext->OMSetBlendState(g_BlendStates[kBlendMode_Opaque], 0, 0xffffffff);
 	g_DeviceContext->OMSetDepthStencilState(g_DepthStencilStates[kDepthTest_Disabled], 0);
-	g_DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	g_DeviceContext->Draw(6, 0);
+	g_DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+	g_DeviceContext->Draw(4, 0);
 	g_DeviceContext->ClearState();
 }
 
-// static void kD3D11_ExecuteThresholdPass(const kD3D11_ThresholdPass &pass, float threshold)
-//{
-//	if (!kD3D11_UploadScratchData(&threshold, sizeof(kVec4))) return;
-//
-//	g_DeviceContext->CSSetShader(g_ComputeShaders[kComputeShader_Threshold], 0, 0);
-//	g_DeviceContext->CSSetConstantBuffers(0, 1, &g_DynamicBuffers[kD3D11_DynamicBuffer_Scratch]);
-//	g_DeviceContext->CSSetShaderResources(0, 1, &g_Intermediates.srv[pass.src]);
-//	g_DeviceContext->CSSetUnorderedAccessViews(0, 1, &g_Intermediates.uav[pass.dst], 0);
-//
-//	UINT x_thrd_group = (UINT)ceilf(pass.size.x / 32.0f);
-//	UINT y_thrd_group = (UINT)ceilf(pass.size.y / 16.0f);
-//	g_DeviceContext->Dispatch(x_thrd_group, y_thrd_group, 1);
-//	g_DeviceContext->ClearState();
-// }
+struct kD3D11_BloomUpSampleParams
+{
+	kVec2 FilterRadius;
+	float MixStrength;
+};
 
 static void kD3D11_ExecuteBloomPass(void)
 {
-	// kD3D11_ThresholdPass       threshold;
+	kVec2u *dispatchs = g_RenderPipeline.BloomMipsDispatchs;
 
-	// kD3D11_RenderTarget       *src    = pass.params[0];
-	// kD3D11_RenderTarget       *dst    = pass.params[1];
+	g_DeviceContext->CSSetShader(g_ComputeShaders[kComputeShader_Blit], 0, 0);
+	g_DeviceContext->CSSetSamplers(0, 1, &g_SamplerStates[kTextureFilter_LinearClamp]);
+	g_DeviceContext->CSSetUnorderedAccessViews(0, 1, &g_RenderPipeline.BloomMipsUAV[0], 0);
+	g_DeviceContext->CSSetShaderResources(0, 1, &g_RenderPipeline.BloomInput);
+	g_DeviceContext->Dispatch(dispatchs[0].x, dispatchs[0].y, 1);
+	g_DeviceContext->CSSetShader(g_ComputeShaders[kComputeShader_BloomDownSample], 0, 0);
 
-	// ID3D11ShaderResourceView  *srvs[] = {src->srv};
-	// ID3D11UnorderedAccessView *uavs[] = {dst->uav};
+	for (int mip = 1; mip < g_RenderPipeline.BloomMaxMipLevel; ++mip)
+	{
+		g_DeviceContext->CSSetUnorderedAccessViews(0, 1, &g_RenderPipeline.BloomMipsUAV[mip], 0);
+		g_DeviceContext->CSSetShaderResources(0, 1, &g_RenderPipeline.BloomMipsSRV[mip - 1]);
+		g_DeviceContext->Dispatch(dispatchs[mip].x, dispatchs[mip].y, 1);
+	}
 
-	// D3D11_MAPPED_SUBRESOURCE   mapped;
-	// HRESULT                    hr =
-	//	g_DeviceContext->Map(d3d11.swapchain.csbuffers[kComputeShader_Bloom], 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
-	// if (FAILED(hr)) return;
+	g_DeviceContext->ClearState();
 
-	// u32 value = 1;
-	// memcpy(mapped.pData, &value, sizeof(value));
+	kD3D11_BloomUpSampleParams params;
+	params.FilterRadius.x = g_RenderPipeline.Config.BloomFilterRadius;
+	params.FilterRadius.y = g_RenderPipeline.Config.BloomFilterRadius;
+	params.MixStrength    = g_RenderPipeline.Config.BloomStrength;
 
-	// g_DeviceContext->Unmap(d3d11.swapchain.csbuffers[kComputeShader_Bloom], 0);
+	kD3D11_UploadScratchData(&params, sizeof(params));
 
-	// g_DeviceContext->CSSetShader(g_ComputeShaders[kComputeShader_Bloom], 0, 0);
-	// g_DeviceContext->CSSetConstantBuffers(0, 1, &d3d11.swapchain.csbuffers[kComputeShader_Bloom]);
-	// g_DeviceContext->CSSetShaderResources(0, kArrayCount(srvs), srvs);
-	// g_DeviceContext->CSSetUnorderedAccessViews(0, kArrayCount(uavs), uavs, 0);
+	g_DeviceContext->CSSetShader(g_ComputeShaders[kComputeShader_BloomBlurUpSample], 0, 0);
+	g_DeviceContext->CSSetSamplers(0, 1, &g_SamplerStates[kTextureFilter_LinearClamp]);
+	g_DeviceContext->CSSetConstantBuffers(0, 1, &g_DynamicBuffers[kD3D11_DynamicBuffer_Scratch]);
 
-	//// TODO:: USE CLAMP TO EDGE
-	// g_DeviceContext->CSSetSamplers(0, 1, &g_SamplerStates[kTextureFilter_LinearWrap]);
+	for (int mip = g_RenderPipeline.BloomMaxMipLevel - 2; mip >= 1; --mip)
+	{
+		g_DeviceContext->CSSetUnorderedAccessViews(0, 1, &g_RenderPipeline.BloomMipsUAV[mip], 0);
+		g_DeviceContext->CSSetShaderResources(0, 1, &g_RenderPipeline.BloomMipsSRV[mip + 1]);
+		g_DeviceContext->Dispatch(dispatchs[mip].x, dispatchs[mip].y, 1);
+	}
 
-	// UINT x_thrd_group = (UINT)ceilf((dst->size.x >> 1) / 32.0f);
-	// UINT y_thrd_group = (UINT)ceilf((dst->size.y >> 1) / 16.0f);
-	// g_DeviceContext->Dispatch(x_thrd_group, y_thrd_group, 1);
-	// g_DeviceContext->ClearState();
+	g_DeviceContext->CSSetShader(g_ComputeShaders[kComputeShader_BloomUpSampleMix], 0, 0);
+	g_DeviceContext->CSSetUnorderedAccessViews(0, 1, &g_RenderPipeline.BloomMipsUAV[0], 0);
+	g_DeviceContext->CSSetShaderResources(0, 1, &g_RenderPipeline.BloomMipsSRV[1]);
+	g_DeviceContext->Dispatch(dispatchs[0].x, dispatchs[0].y, 1);
+
+	g_DeviceContext->ClearState();
 }
 
 typedef kMemoryPool<kD3D11_Texture> kD3D11_TexturePool;
@@ -1098,8 +1060,17 @@ static void kD3D11_ResizeTexture(kTexture *texture, u32 w, u32 h)
 static void kD3D11_DestroySwapChainBuffers(void)
 {
 	kDebugTraceEx("D3D11", "Destroying swap chain render targets.\n");
+	g_RenderPipeline.BloomMaxMipLevel           = 0;
 	g_RenderPipeline.GeometryRenderTargetFormat = DXGI_FORMAT_UNKNOWN;
 	kRelease(&g_RenderPipeline.PostProcessResource);
+	kRelease(&g_RenderPipeline.BloomInput);
+	for (uint mip = 0; mip < K_MAX_BLOOM_MIPS; ++mip)
+	{
+		g_RenderPipeline.BloomMipsDispatchs[mip] = kVec2u(0);
+		kRelease(&g_RenderPipeline.BloomMipsUAV[mip]);
+		kRelease(&g_RenderPipeline.BloomMipsSRV[mip]);
+	}
+	kRelease(&g_RenderPipeline.BloomBuffer);
 	kRelease(&g_RenderPipeline.GeometryDSV);
 	kRelease(&g_RenderPipeline.GeometryRTV);
 	kRelease(&g_RenderPipeline.GeometryDepth);
@@ -1107,6 +1078,26 @@ static void kD3D11_DestroySwapChainBuffers(void)
 	kRelease(&g_RenderPipeline.GeometrySrc);
 	kRelease(&g_RenderPipeline.BackBufferRTV);
 	kRelease(&g_RenderPipeline.BackBuffer);
+}
+
+static void kD3D11_ReCalculateBloomMaxLevels(void)
+{
+	g_RenderPipeline.BloomMaxMipLevel = 0;
+	kVec2u size                       = g_RenderPipeline.BackBufferSize;
+	for (uint mip = 0; mip < K_MAX_BLOOM_MIPS; ++mip)
+	{
+		if (size.x == 0 || size.y == 0)
+		{
+			break;
+		}
+
+		g_RenderPipeline.BloomMipsDispatchs[mip].x = (u32)ceilf((float)size.x / 32.0f);
+		g_RenderPipeline.BloomMipsDispatchs[mip].y = (u32)ceilf((float)size.y / 16.0f);
+
+		size.x /= 2;
+		size.y /= 2;
+		g_RenderPipeline.BloomMaxMipLevel += 1;
+	}
 }
 
 static void kD3D11_CreateSwapChainBuffers(void)
@@ -1132,6 +1123,8 @@ static void kD3D11_CreateSwapChainBuffers(void)
 		kLogHresultError(hr, "DirectX11", "Failed to create back buffer render target view");
 		return;
 	}
+
+	ID3D11Texture2D *output = g_RenderPipeline.BackBuffer;
 
 	//
 	//
@@ -1210,11 +1203,82 @@ static void kD3D11_CreateSwapChainBuffers(void)
 		}
 	}
 
-	// TODO: Bloom!!
+	output = g_RenderPipeline.GeometryDst ? g_RenderPipeline.GeometryDst : g_RenderPipeline.GeometrySrc;
 
-	ID3D11Texture2D *resource =
-		g_RenderPipeline.GeometryDst ? g_RenderPipeline.GeometryDst : g_RenderPipeline.GeometrySrc;
-	hr = g_Device->CreateShaderResourceView(resource, 0, &g_RenderPipeline.PostProcessResource);
+	if (g_RenderPipeline.Config.Bloom != kBloom_Disabled)
+	{
+		hr = g_Device->CreateShaderResourceView(output, 0, &g_RenderPipeline.BloomInput);
+		if (FAILED(hr))
+		{
+			kLogHresultError(hr, "DirectX11", "Failed to create post process shader resource");
+			return;
+		}
+
+		kD3D11_ReCalculateBloomMaxLevels();
+
+		kVec2u               size  = g_RenderPipeline.BackBufferSize;
+
+		D3D11_TEXTURE2D_DESC bloom = {};
+		bloom.Width                = size.x;
+		bloom.Height               = size.y;
+		bloom.MipLevels            = g_RenderPipeline.BloomMaxMipLevel;
+		bloom.ArraySize            = 1;
+		bloom.Format               = DXGI_FORMAT_R11G11B10_FLOAT;
+		bloom.SampleDesc.Quality   = 0;
+		bloom.SampleDesc.Count     = 1;
+		bloom.Usage                = D3D11_USAGE_DEFAULT;
+		bloom.BindFlags            = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
+
+		hr                         = g_Device->CreateTexture2D(&bloom, 0, &g_RenderPipeline.BloomBuffer);
+		if (FAILED(hr))
+		{
+			kLogHresultError(hr, "DirectX11", "Failed to create bloom texture");
+			return;
+		}
+
+		output                               = g_RenderPipeline.BloomBuffer;
+
+		D3D11_SHADER_RESOURCE_VIEW_DESC srv  = {};
+		srv.Format                           = bloom.Format;
+		srv.ViewDimension                    = D3D11_SRV_DIMENSION_TEXTURE2D;
+		srv.Texture2D.MipLevels              = 1;
+
+		D3D11_UNORDERED_ACCESS_VIEW_DESC uav = {};
+		uav.Format                           = bloom.Format;
+		uav.ViewDimension                    = D3D11_UAV_DIMENSION_TEXTURE2D;
+
+		for (int mip = 0; mip < g_RenderPipeline.BloomMaxMipLevel; ++mip)
+		{
+			srv.Texture2D.MostDetailedMip = mip;
+			hr                            = g_Device->CreateShaderResourceView(g_RenderPipeline.BloomBuffer, &srv,
+			                                                                   &g_RenderPipeline.BloomMipsSRV[mip]);
+			if (FAILED(hr))
+			{
+				kLogHresultError(hr, "DirectX11", "Failed to create bloom shader resource view (%u)", mip);
+				return;
+			}
+
+			uav.Texture2D.MipSlice = mip;
+			hr                     = g_Device->CreateUnorderedAccessView(g_RenderPipeline.BloomBuffer, &uav,
+			                                                             &g_RenderPipeline.BloomMipsUAV[mip]);
+			if (FAILED(hr))
+			{
+				kLogHresultError(hr, "DirectX11", "Failed to create bloom unordered access view (%d)", mip);
+				return;
+			}
+		}
+	}
+
+	D3D11_TEXTURE2D_DESC output_desc;
+	output->GetDesc(&output_desc);
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC pp_srv = {};
+	pp_srv.Format                          = output_desc.Format;
+	pp_srv.ViewDimension                   = D3D11_SRV_DIMENSION_TEXTURE2D;
+	pp_srv.Texture2D.MipLevels             = 1;
+	pp_srv.Texture2D.MostDetailedMip       = 0;
+
+	hr = g_Device->CreateShaderResourceView(output, &pp_srv, &g_RenderPipeline.PostProcessResource);
 	if (FAILED(hr))
 	{
 		kLogHresultError(hr, "DirectX11", "Failed to create post process shader resource");

@@ -70,7 +70,8 @@ struct kRenderPipelineConfig
 	kBloom                     Bloom;
 	kHighDynamicRange          Hdr;
 	kVec4                      Clear;
-	float                      Threshold;
+	float                      BloomFilterRadius;
+	float                      BloomStrength;
 	kVec3                      Intensity;
 };
 

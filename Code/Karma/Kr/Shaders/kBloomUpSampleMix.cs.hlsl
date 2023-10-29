@@ -1,5 +1,11 @@
 #include "kFilters.fx"
 
+cbuffer constants : register(b0)
+{
+	float2 FilterRadius;
+	float MixStrength;
+}
+
 Texture2D<float3> TexImage : register(t0);
 SamplerState Sampler : register(s0);
 RWTexture2D<float3> Output : register(u0);
@@ -14,7 +20,9 @@ void Main(uint3 DTid : SV_DispatchThreadID)
 	
 	if (pos.x < (uint)w && pos.y < (uint)h)
 	{
-		float2 uv = (float2) pos / float2(w - 1, h - 1);
-		Output[pos] = kDownsample36(TexImage, Sampler, uv);
+		float2 uv = (float2)pos / float2(w - 1, h - 1);
+		float3 hdr = Output[pos];
+		float3 blur = kBlurUpSampleTent3x3(TexImage, Sampler, uv, FilterRadius);
+		Output[pos] = lerp(hdr, blur, MixStrength);
 	}
 }
