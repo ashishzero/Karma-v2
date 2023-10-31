@@ -126,7 +126,7 @@ void                 Update(float dt)
 		Colors[i].w = kEaseInCirc(TFactors[i]);
 		kMat3   rot = kRotation3x3(kLerp(0.0f, Angles[i], t));
 		kPushTransform(rot);
-		float rf = 0; //Rotations[i];
+		float rf = Rotations[i];
 		kDrawTextQuadCenteredRotated(Chars[i], kLerp(kVec2(0), Rects[i], t), rf * chfactor, Colors[i], tdim);
 		kPopTransform();
 		TFactors[i] = kLerp(TFactors[i], 1.0f, 0.09f);
@@ -138,8 +138,7 @@ void                 Update(float dt)
 		DissappearColors[i].w = kEaseOutCirc(DissappearTFactors[i]);
 		kMat3   rot = kRotation3x3(kLerp(0.0f, DissappearAngles[i], t));
 		kPushTransform(rot);
-		float rf = 0;
-		 //DissappearRotations[i];
+		float rf = DissappearRotations[i];
 		kDrawTextQuadCenteredRotated(DissappearChars[i], kLerp(kVec2(0), Dissappear[i], t), rf * chfactor, DissappearColors[i], tdim);
 		kPopTransform();
 		DissappearTFactors[i] = kLerp(DissappearTFactors[i], 0.0f, 0.09f);
@@ -153,19 +152,19 @@ void                 Update(float dt)
 	kDrawRectCentered(kVec2(0, -30), kVec2(10), kVec4(1, 1, 1, 1));
 	kDrawRectCentered(kVec2(0, 30), kVec2(10), kVec4(1, 1, 1, 1));
 
-	//kDrawLine(kVec2(0), kVec2(20, 20), kVec4(50, 50, 0, 1));
+	kDrawLine(kVec2(0), kVec2(20, 20), kVec4(50, 50, 0, 1));
 
 	kEndScene();
 
-	//kBeginScene(0, (float)size.x, 0, (float)size.y, -1.0f, 1.0f, rect);
+	kBeginScene(0, (float)size.x, 0, (float)size.y, -1.0f, 1.0f, rect);
 
-	//kVec2 dd = kCalculateText(pf, 0.75f * yfactor);
-	//kDrawRect(kVec2(0), dd, kVec4(0, 0, 0, 0.75f));
-	//kDrawText(pf, kVec2(0), kVec4(1, 0, 0, 1), 0.75f * yfactor);
+	kVec2 dd = kCalculateText(pf, 0.75f * yfactor);
+	kDrawRect(kVec2(0), dd, kVec4(0, 0, 0, 0.75f));
+	kDrawText(pf, kVec2(0), kVec4(1, 0, 0, 1), 0.75f * yfactor);
 
-	//kDrawRect(kVec2(0), kVec2(10), kVec4(1, 1, 0, 1));
+	kDrawRect(kVec2(0), kVec2(10), kVec4(1, 1, 0, 1));
 
-	//kEndScene();
+	kEndScene();
 }
 
 void Main(int argc, const char **argv)
@@ -174,11 +173,11 @@ void Main(int argc, const char **argv)
 	kMediaUserEvents user = {.Update = Update};
 	kMediaSpec       spec = kDefaultSpec;
 
-	spec.Window.Width = 1024;
-	spec.Window.Height = 1024;
+	//spec.Window.Width = 1024;
+	//spec.Window.Height = 1024;
 
-	spec.RenderPipeline.BloomFilterRadius = 0;
+	//spec.RenderPipeline.BloomFilterRadius = 0;
 	spec.RenderPipeline.Intensity = kVec3(20);
-	spec.RenderPipeline.Clear = kVec4(1, 0, 1, 1);
+	//spec.RenderPipeline.Clear = kVec4(1, 0, 1, 1);
 	kEventLoop(spec, user);
 }

@@ -20,7 +20,7 @@ void Main(uint3 DTid : SV_DispatchThreadID)
 	
 	if (pos.x < (uint)w && pos.y < (uint)h)
 	{
-		float2 uv = (float2) pos / float2(w - 1, h - 1);
+		float2 uv = ((float2) pos + float2(0.5, 0.5)) / float2(w, h);
 		Output[pos] = TexImage[pos] + kBlurUpSampleTent3x3(BlurImage, Sampler, uv, FilterRadius);
 	}
 }

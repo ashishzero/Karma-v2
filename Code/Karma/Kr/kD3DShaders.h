@@ -19,7 +19,7 @@ enum kVertexShaderKind
 	kVertexShader_Count
 };
 
-static const kString kVertexShaderStrings[] = {"VertexShader_Quad", "VertexShader_Blit"};
+static const kString kVertexShaderStrings[] = {"Quad", "Blit"};
 static_assert(kArrayCount(kVertexShaderStrings) == kVertexShader_Count, "");
 
 enum kPixelShaderKind
@@ -44,12 +44,8 @@ enum kComputeShaderKind
 	kComputeShader_Count
 };
 
-static const kString kComputeShaderStrings[] = {"ComputeShader_Blit",
-                                                "ComputeShader_Threshold",
-                                                "ComputeShader_BloomDownSample",
-                                                "ComputeShader_BloomDownSampleKarisAvg",
-                                                "ComputeShader_BlurUpSample",
-                                                "ComputeShader_UpSampleMix"};
+static const kString kComputeShaderStrings[] = {
+	"Blit", "Threshold", "BloomDownSample", "BloomDownSampleKarisAvg", "BlurUpSample", "UpSampleMix"};
 static_assert(kArrayCount(kComputeShaderStrings) == kComputeShader_Count, "");
 
 static const kString VertexShadersMap[] = {kString(kQuadVS), kString(kBlitVS)};
@@ -58,5 +54,10 @@ static_assert(kArrayCount(VertexShadersMap) == kVertexShader_Count, "");
 static const kString PixelShadersMap[] = {kString(kQuadPS), kString(kBlitPS), kString(kToneMapPS)};
 static_assert(kArrayCount(PixelShadersMap) == kPixelShader_Count, "");
 
-static const kString ComputeShadersMap[] = {kString(kBlitCS), kString(kThresholdCS), kString(kBloomDownSampleCS), kString(kBloomDownSampleKarisAvgCS), kString(kBloomBlurUpSampleCS), kString(kBloomUpSampleMixCS)};
+static const kString ComputeShadersMap[] = {kString(kBlitCS),
+                                            kString(kThresholdCS),
+                                            kString(kBloomDownSampleCS),
+                                            kString(kBloomDownSampleKarisAvgCS),
+                                            kString(kBloomBlurUpSampleCS),
+                                            kString(kBloomUpSampleMixCS)};
 static_assert(kArrayCount(ComputeShadersMap) == kComputeShader_Count, "");
