@@ -15,6 +15,7 @@ void Main(uint3 DTid : SV_DispatchThreadID)
 	if (pos.x < (uint)w && pos.y < (uint)h)
 	{
 		float2 uv = (float2) pos / float2(w - 1, h - 1);
-		Output[pos] = kDownsample36(TexImage, Sampler, uv);
+		float3 color = kDownsample36(TexImage, Sampler, uv);
+		Output[pos]  = color;
 	}
 }

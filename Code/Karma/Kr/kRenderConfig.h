@@ -10,6 +10,9 @@ typedef enum kDepthTest : u8
 	kDepthTest_Count
 } kDepthTest;
 
+static const kString kDepthTestStrings[] = {"Depth_Disabled", "Depth_Enabled"};
+static_assert(kArrayCount(kDepthTestStrings) == kDepthTest_Count, "");
+
 typedef enum kBlendMode : u8
 {
 	kBlendMode_Opaque,
@@ -19,6 +22,10 @@ typedef enum kBlendMode : u8
 	kBlendMode_Count,
 } kBlendMode;
 
+static const kString kBlendModeStrings[] = {"BlendMode_Opaque", "BlendMode_Normal", "BlendMode_Additive",
+                                            "BlendMode_Subtractive"};
+static_assert(kArrayCount(kBlendModeStrings) == kBlendMode_Count, "");
+
 typedef enum kTextureFilter : u8
 {
 	kTextureFilter_LinearWrap,
@@ -27,6 +34,10 @@ typedef enum kTextureFilter : u8
 	kTextureFilter_PointClamp,
 	kTextureFilter_Count
 } kTextureFilter;
+
+static const kString kTextureFilterStrings[] = {"TextureFilter_LinearWrap", "TextureFilter_LinearClamp",
+                                                "TextureFilter_PointWrap", "TextureFilter_PointClamp"};
+static_assert(kArrayCount(kTextureFilterStrings) == kTextureFilter_Count, "");
 
 enum kMultiSamplingAntiAliasing
 {

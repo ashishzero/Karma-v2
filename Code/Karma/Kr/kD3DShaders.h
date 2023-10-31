@@ -19,6 +19,9 @@ enum kVertexShaderKind
 	kVertexShader_Count
 };
 
+static const kString kVertexShaderStrings[] = {"VertexShader_Quad", "VertexShader_Blit"};
+static_assert(kArrayCount(kVertexShaderStrings) == kVertexShader_Count, "");
+
 enum kPixelShaderKind
 {
 	kPixelShader_Quad,
@@ -26,6 +29,9 @@ enum kPixelShaderKind
 	kPixelShader_Tonemap,
 	kPixelShader_Count
 };
+
+static const kString kPixelShaderStrings[] = {"Quad", "Blit", "Tonemap"};
+static_assert(kArrayCount(kPixelShaderStrings) == kPixelShader_Count, "");
 
 enum kComputeShaderKind
 {
@@ -37,6 +43,14 @@ enum kComputeShaderKind
 	kComputeShader_BloomUpSampleMix,
 	kComputeShader_Count
 };
+
+static const kString kComputeShaderStrings[] = {"ComputeShader_Blit",
+                                                "ComputeShader_Threshold",
+                                                "ComputeShader_BloomDownSample",
+                                                "ComputeShader_BloomDownSampleKarisAvg",
+                                                "ComputeShader_BlurUpSample",
+                                                "ComputeShader_UpSampleMix"};
+static_assert(kArrayCount(kComputeShaderStrings) == kComputeShader_Count, "");
 
 static const kString VertexShadersMap[] = {kString(kQuadVS), kString(kBlitVS)};
 static_assert(kArrayCount(VertexShadersMap) == kVertexShader_Count, "");
