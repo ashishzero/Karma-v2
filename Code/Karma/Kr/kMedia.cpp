@@ -359,6 +359,7 @@ static void kCreateBuiltinResources(void)
 		spec.Pitch              = 1 * sizeof(u32);
 		spec.Format             = kFormat_RGBA8_UNORM;
 		spec.Pixels             = pixels;
+		spec.Name               = "White";
 
 		g_Media.Builtin.Texture = g_Media.Render.CreateTexture(spec);
 	}
@@ -372,6 +373,7 @@ static void kCreateBuiltinResources(void)
 		spec.Height       = kEmFontAtlasHeight;
 		spec.Pitch        = kEmFontAtlasWidth;
 		spec.Pixels       = (u8 *)kEmFontAtlasPixels;
+		spec.Name         = "BuiltinFont";
 
 		font->Atlas       = g_Media.Render.CreateTexture(spec);
 

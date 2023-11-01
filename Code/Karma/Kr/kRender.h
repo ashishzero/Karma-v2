@@ -1,8 +1,6 @@
 #pragma once
 #include "kRenderShared.h"
 
-#define K_MAX_CIRCLE_SEGMENTS 512
-
 typedef struct kGlyph
 {
 	kRect  Rect;
@@ -30,33 +28,14 @@ typedef struct kFont
 //
 //
 
-typedef struct kRenderStackMemoryUsage
+typedef struct kRenderMemory
 {
-	imem Textures[kTextureType_Count];
-	imem Transforms;
-	imem Rects;
-	imem Blends;
-	imem Scratch;
-} kRenderStackMemoryUsage;
-
-typedef struct kRenderMemoryUsage
-{
-	imem                    Vertices;
-	imem                    Indices;
-	imem                    Textures[kTextureType_Count];
-	imem                    Rects;
-	imem                    Passes;
-	imem                    Commands;
-	kRenderStackMemoryUsage Stack;
-	float                   TotalMegaBytes;
+	u32   VertexSize;
+	u32   IndexSize;
+	u32   SceneSize;
+	u32   CommandSize;
+	float MB;
 } kRenderMemoryUsage;
-
-typedef struct kRenderMemoryStatistics
-{
-	kRenderMemoryUsage Allocated;
-	kRenderMemoryUsage UsedLastFrame;
-	kRenderMemoryUsage MaxUsed;
-} kRenderMemoryStatistics;
 
 //
 //
@@ -64,28 +43,16 @@ typedef struct kRenderMemoryStatistics
 
 typedef struct kRenderSpec
 {
-	float Thickness;
-	u32   Vertices;
-	u32   Indices;
-	u32   Params;
-	u32   Commands;
-	u32   Scenes;
-	u32   Rects;
-	u32   Transforms;
-	u32   Textures;
-	u32   Scratch;
+	u32 Vertices;
+	u32 Indices;
+	u32 Commands;
+	u32 Scenes;
 } kRenderSpec;
 
-static constexpr kRenderSpec kDefaultRenderSpec = {.Thickness  = 1,
-                                                   .Vertices   = 1048576,
-                                                   .Indices    = 1048576 * 6,
-                                                   .Params     = 1024,
-                                                   .Commands   = 512,
-                                                   .Scenes     = 64,
-                                                   .Rects      = 256,
-                                                   .Transforms = 256,
-                                                   .Textures   = 256,
-                                                   .Scratch    = 16384};
+static constexpr kRenderSpec kDefaultRenderSpec = {.Vertices = 1048576,
+                                                   .Indices  = 1048576 * 6,
+                                                   .Commands = 512,
+                                                   .Scenes   = 64};
 
 //
 //
@@ -93,10 +60,11 @@ static constexpr kRenderSpec kDefaultRenderSpec = {.Thickness  = 1,
 
 void kCreateRenderContext(const kRenderSpec &spec, kTexture *textures[kTextureType_Count], kFont *font);
 void kDestroyRenderContext(void);
-const kRenderMemoryStatistics *kGetRenderMemoryStatistics(void);
+void kGetRenderMemoryUsage(kRenderMemory *usage);
+void kGetRenderMemoryCaps(kRenderMemory *usage);
 
-void                           kResetFrame(void);
-void                           kGetFrameData(kRenderFrame2D *frame);
+void kResetFrame(void);
+void kGetFrameData(kRenderFrame2D *frame);
 
 //
 //
@@ -118,6 +86,10 @@ void kSetTextureFilter(kTextureFilter filter);
 void kSetTexture(kTexture *texture, kTextureType idx);
 void kPushTexture(kTexture *texture, kTextureType idx);
 void kPopTexture(kTextureType idx);
+
+void kSetOutLineStyle(kVec3 color, float width);
+void kPushOutLineStyle(kVec3 color, float width);
+void kPopOutLineStyle(void);
 
 void kSetRect(kRect rect);
 void kSetRectEx(float x, float y, float w, float h);

@@ -954,9 +954,9 @@ static void kD3D12_ExecuteFrame(const kRenderFrame &render)
 				cpu.ptr += srv_stride;
 			}
 
-			gc->DrawIndexedInstanced(cmd.IndexOffset, 1, index_offset, vertex_offset, 0);
-			vertex_offset += cmd.VertexOffset;
-			index_offset += cmd.IndexOffset;
+			gc->DrawIndexedInstanced(cmd.IndexCount, 1, index_offset, vertex_offset, 0);
+			vertex_offset += cmd.VertexCount;
+			index_offset += cmd.IndexCount;
 		}
 	}
 

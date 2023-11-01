@@ -22,7 +22,7 @@ static kArray<float> DissappearTFactors;
 
 void                 Update(float dt)
 {
-	kArena *            arena     = kGetFrameArena();
+	kArena *arena = kGetFrameArena();
 
 	if (kKeyPressed(kKey_Escape))
 	{
@@ -77,27 +77,28 @@ void                 Update(float dt)
 		kToggleWindowFullscreen();
 	}
 
-	kVec2i    size    = kGetWindowSize();
-	float     ar      = kGetWindowAspectRatio();
-	float     yfactor = kGetWindowDpiScale();
+	kVec2i size    = kGetWindowSize();
+	float  ar      = kGetWindowAspectRatio();
+	float  yfactor = kGetWindowDpiScale();
 
-	kVec4     clear   = kVec4(0.01f, 0.01f, 0.01f, 1.0f);
-	//kTexture *rt      = kGetWindowRenderTarget();
+	kVec4  clear   = kVec4(0.01f, 0.01f, 0.01f, 1.0f);
+	// kTexture *rt      = kGetWindowRenderTarget();
 
-	//kString   tm      = kFormatString(arena, "ToneMapping : %s", kToneMappingMethodStrings[rt_config.tonemapping]);
-	//kString   aa      = kFormatString(arena, "AntiAliasing: %s", kAntiAliasingMethodStrings[rt_config.antialiasing]);
+	// kString   tm      = kFormatString(arena, "ToneMapping : %s", kToneMappingMethodStrings[rt_config.tonemapping]);
+	// kString   aa      = kFormatString(arena, "AntiAliasing: %s", kAntiAliasingMethodStrings[rt_config.antialiasing]);
 
-	stabilized_dt     = kLerp(dt, stabilized_dt, 0.9f);
+	stabilized_dt = kLerp(dt, stabilized_dt, 0.9f);
 
-	const kRenderMemoryStatistics *mem = kGetRenderMemoryStatistics();
+	kRenderMemory used_mem, alloc_mem;
+	kGetRenderMemoryUsage(&used_mem);
 
-	int                            fps = (int)(1.0f / stabilized_dt);
-	kString                        pf  = kFormatString(
-        arena, "FPS: %d (%.2fms)\nRender Memory: %.3f / %.3f MB\nLast Frame Render Memory: %.3f MB", fps,
-        1000 * stabilized_dt, mem->MaxUsed.TotalMegaBytes, mem->Allocated.TotalMegaBytes, mem->UsedLastFrame.TotalMegaBytes);
+	kGetRenderMemoryCaps(&alloc_mem);
 
+	int     fps  = (int)(1.0f / stabilized_dt);
+	kString pf   = kFormatString(arena, "FPS: %d (%.2fms)\nRender Memory: %.3f / %.3f MB", fps, 1000 * stabilized_dt,
+	                             used_mem.MB, alloc_mem.MB);
 
-	kRect rect = kRect(0.0f, 0.0f, (float)size.x, (float)size.y);
+	kRect   rect = kRect(0.0f, 0.0f, (float)size.x, (float)size.y);
 
 	while (DissappearTFactors.Count && DissappearTFactors.Last() < 0.001f)
 	{
@@ -113,18 +114,17 @@ void                 Update(float dt)
 
 	time += dt;
 
-
 	kBeginScene(ar, 100, rect);
 
 	float chfactor = kSin(time);
 
-	float dim = 15.0f;
-	float tdim = 0.5f;
+	float dim      = 15.0f;
+	float tdim     = 0.5f;
 	for (imem i = 0; i < Rects.Count; ++i)
 	{
 		float t     = kEaseInOutBounce(TFactors[i]);
 		Colors[i].w = kEaseInCirc(TFactors[i]);
-		kMat3   rot = kRotation3x3(kLerp(0.0f, Angles[i], t));
+		kMat3 rot   = kRotation3x3(kLerp(0.0f, Angles[i], t));
 		kPushTransform(rot);
 		float rf = Rotations[i];
 		kDrawTextQuadCenteredRotated(Chars[i], kLerp(kVec2(0), Rects[i], t), rf * chfactor, Colors[i], tdim);
@@ -134,12 +134,13 @@ void                 Update(float dt)
 
 	for (imem i = 0; i < Dissappear.Count; ++i)
 	{
-		float t     = kEaseOutExpo(DissappearTFactors[i]);
+		float t               = kEaseOutExpo(DissappearTFactors[i]);
 		DissappearColors[i].w = kEaseOutCirc(DissappearTFactors[i]);
-		kMat3   rot = kRotation3x3(kLerp(0.0f, DissappearAngles[i], t));
+		kMat3 rot             = kRotation3x3(kLerp(0.0f, DissappearAngles[i], t));
 		kPushTransform(rot);
 		float rf = DissappearRotations[i];
-		kDrawTextQuadCenteredRotated(DissappearChars[i], kLerp(kVec2(0), Dissappear[i], t), rf * chfactor, DissappearColors[i], tdim);
+		kDrawTextQuadCenteredRotated(DissappearChars[i], kLerp(kVec2(0), Dissappear[i], t), rf * chfactor,
+		                             DissappearColors[i], tdim);
 		kPopTransform();
 		DissappearTFactors[i] = kLerp(DissappearTFactors[i], 0.0f, 0.09f);
 	}
@@ -158,11 +159,15 @@ void                 Update(float dt)
 
 	kBeginScene(0, (float)size.x, 0, (float)size.y, -1.0f, 1.0f, rect);
 
+	kPushOutLineStyle(kVec3(1), 0.5f * kMap01(-1.0f, 1.0f, chfactor));
+
 	kVec2 dd = kCalculateText(pf, 0.75f * yfactor);
 	kDrawRect(kVec2(0), dd, kVec4(0, 0, 0, 0.75f));
 	kDrawText(pf, kVec2(0), kVec4(1, 0, 0, 1), 0.75f * yfactor);
 
 	kDrawRect(kVec2(0), kVec2(10), kVec4(1, 1, 0, 1));
+
+	kPopOutLineStyle();
 
 	kEndScene();
 }
@@ -173,11 +178,11 @@ void Main(int argc, const char **argv)
 	kMediaUserEvents user = {.Update = Update};
 	kMediaSpec       spec = kDefaultSpec;
 
-	//spec.Window.Width = 1024;
-	//spec.Window.Height = 1024;
+	// spec.Window.Width = 1024;
+	// spec.Window.Height = 1024;
 
-	//spec.RenderPipeline.BloomFilterRadius = 0;
-	spec.RenderPipeline.Intensity = kVec3(20);
-	//spec.RenderPipeline.Clear = kVec4(1, 0, 1, 1);
+	// spec.RenderPipeline.BloomFilterRadius = 0;
+	spec.RenderPipeline.Intensity = kVec3(1);
+	// spec.RenderPipeline.Clear = kVec4(1, 0, 1, 1);
 	kEventLoop(spec, user);
 }

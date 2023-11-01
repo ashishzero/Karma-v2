@@ -1,21 +1,28 @@
 #include "kQuad.fx"
 
-Texture2D           SrcTexture : register(t0);
-Texture2D           MaskTexture : register(t1);
-SamplerState        Sampler : register(s0);
+Texture2D SrcTexture : register(t0);
+Texture2D MaskTexture : register(t1);
+SamplerState Sampler : register(s0);
 
-static const float3 OutLineColor = float3(1.0, 1.0, 1.0);
-static const float  OutLineWidth = 0.1;
-
-float4 Main(kVertexOutput input) : SV_Target
+cbuffer constants : register(b0)
 {
-	float4 sampled = SrcTexture.Sample(Sampler, input.tex);
-	float  sd_mask = MaskTexture.Sample(Sampler, input.tex).r;
-	float4 masked = MaskTexture.Sample(Sampler, input.tex);
-	float  aaf = fwidth(sd_mask);
-	float  factor = smoothstep(0.5 - aaf, 0.5 + aaf, sd_mask);
-	float3 color = lerp(OutLineColor, sampled.rgb * input.col.rgb, factor);
-	float  outdist = (1.0 - OutLineWidth) * 0.5;
-	float  alpha = smoothstep(outdist - aaf, outdist + aaf, sd_mask);
-	return float4(color, sampled.a * input.col.a * alpha);
+	float4 OutLineStyle;
+}
+
+float4 ApplyMaskSDF(float2 TexCoord, float4 ForeGroundColor, float3 BackGroundColor, float Width)
+{
+	float Mask = MaskTexture.Sample(Sampler, TexCoord).r;
+	float Delta = fwidth(Mask);
+	float Factor = smoothstep(0.5 - Delta, 0.5 + Delta, Mask);
+	float3 Color = lerp(BackGroundColor, ForeGroundColor.rgb, Factor);
+	float OutDist = (1.0 - Width) * 0.5;
+	float Alpha = smoothstep(OutDist - Delta, OutDist + Delta, Mask);
+	return float4(Color, ForeGroundColor.a * Alpha);
+}
+
+float4 Main(kVertexOutput In) : SV_Target
+{
+	float4 Shade = SrcTexture.Sample(Sampler, In.TexCoord) * In.Color;
+	float4 Color = ApplyMaskSDF(In.TexCoord, Shade, OutLineStyle.rgb, OutLineStyle.w);
+	return Color;
 }

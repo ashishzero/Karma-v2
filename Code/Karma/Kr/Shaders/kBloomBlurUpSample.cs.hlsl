@@ -13,14 +13,14 @@ RWTexture2D<float3> Output : register(u0);
 [numthreads(32, 16, 1)]
 void Main(uint3 DTid : SV_DispatchThreadID)
 {
-	uint2 pos = DTid.xy;
+	uint2 Pos = DTid.xy;
 	
-	float w, h;
-	Output.GetDimensions(w, h);
+	float Width, Height;
+	Output.GetDimensions(Width, Height);
 	
-	if (pos.x < (uint)w && pos.y < (uint)h)
+	if (Pos.x < (uint) Width && Pos.y < (uint) Height)
 	{
-		float2 uv = ((float2) pos + float2(0.5, 0.5)) / float2(w, h);
-		Output[pos] = TexImage[pos] + kBlurUpSampleTent3x3(BlurImage, Sampler, uv, FilterRadius);
+		float2 TexCoord = ((float2) Pos + float2(0.5, 0.5)) / float2(Width, Height);
+		Output[Pos] = TexImage[Pos] + kBlurUpSampleTent3x3(BlurImage, Sampler, TexCoord, FilterRadius);
 	}
 }

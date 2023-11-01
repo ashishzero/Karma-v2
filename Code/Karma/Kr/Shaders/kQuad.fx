@@ -1,13 +1,13 @@
 struct kVertexInput
 {
-	float3 pos : POS;
-	float2 tex : TEX;
-	float4 col : COL;
+	float3 Position : POS;
+	float2 TexCoord : TEX;
+	float4 Color : COL;
 };
 
 struct kVertexOutput
 {
-	float2 tex : TEX;
-	float4 col : COL;
-	float4 pos : SV_Position;
+	float4 Position : SV_Position;
+	float2 TexCoord : TEX;
+	float4 Color : COL;
 };

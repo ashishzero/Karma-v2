@@ -3,15 +3,15 @@
 cbuffer constants : register(b0)
 {
 	float3 Intensity;
-	float  Threshold;
+	float Threshold;
 }
 
-float3 kThreshold(float3 color)
+float3 kThreshold(float3 Color)
 {
-	float3 factor = float3(0.2126, 0.7152, 0.0722);
-	float3 luma = factor * color * Intensity;
-	float x = step(Threshold, luma);
-	return x * color;
+	float3 Factor = float3(0.2126, 0.7152, 0.0722);
+	float3 Luma = Factor * Color * Intensity;
+	float Y = step(Threshold, Luma);
+	return Y * Color;
 }
 
 Texture2D<float4> TexImage : register(t0);
@@ -20,15 +20,15 @@ RWTexture2D<float3> Output : register(u0);
 [numthreads(32, 16, 1)]
 void Main(uint3 DTid : SV_DispatchThreadID)
 {
-	uint2 pos = DTid.xy;
+	uint2 Pos = DTid.xy;
 
-	uint w, h;
-	TexImage.GetDimensions(w, h);
+	uint Width, Height;
+	TexImage.GetDimensions(Width, Height);
 	
-	if (pos.x < w && pos.y < h)
+	if (Pos.x < Width && Pos.y < Height)
 	{
-		float4 sampled = TexImage[pos];
-		float3 color = kThreshold(sampled.xyz);
-		Output[pos] = color;
+		float4 Sampled = TexImage[Pos];
+		float3 Color = kThreshold(Sampled.xyz);
+		Output[Pos] = Color;
 	}
 }

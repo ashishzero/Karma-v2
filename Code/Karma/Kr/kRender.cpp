@@ -4,6 +4,8 @@
 
 #include <string.h>
 
+#define K_MAX_CIRCLE_SEGMENTS 512
+
 //
 //
 //
@@ -15,7 +17,9 @@ typedef struct kRenderStack2D
 	kArray<kRect>          Rects;
 	kArray<kBlendMode>     BlendModes;
 	kArray<kTextureFilter> TextureFilters;
-	kArray<kVec2>          PathVertices;
+	kArray<kVec4>          OutLineStyles;
+	kArray<kVec2>          Paths;
+	kArray<kVec2>          Normals;
 	float                  Thickness;
 } kRenderStack2D;
 
@@ -24,6 +28,7 @@ typedef struct kRenderContext2D
 	kArray<kVertex2D>        Vertices;
 	kArray<kIndex2D>         Indices;
 	kArray<kTexture *>       Textures[kTextureType_Count];
+	kArray<kVec4>            OutLineStyles;
 	kArray<kRect>            Rects;
 	kArray<kRenderScene2D>   Scenes;
 	kArray<kRenderCommand2D> Commands;
@@ -36,23 +41,18 @@ typedef struct kRenderContextBuiltin
 	kFont    *Font;
 } kRenderContextBuiltin;
 
-typedef struct kRenderContext
+struct kRenderMemoryStats
 {
-	kRenderContext2D        Context2D;
-	kRenderContextBuiltin   Builtin;
-	kRenderMemoryStatistics Memory;
-} kRenderContext;
+	kRenderMemory Used;
+	kRenderMemory Caps;
+};
 
-static kRenderContext g_RenderContext;
+kRenderContext2D          g_Render2D;
+kRenderContextBuiltin     g_Builtin;
+static kRenderMemoryStats g_Memory;
 
-static float          Sines[K_MAX_CIRCLE_SEGMENTS];
-static float          Cosines[K_MAX_CIRCLE_SEGMENTS];
-
-//
-//
-//
-
-static kRenderContext2D *kGetRenderContext2D(void) { return &g_RenderContext.Context2D; }
+static float              Sines[K_MAX_CIRCLE_SEGMENTS];
+static float              Cosines[K_MAX_CIRCLE_SEGMENTS];
 
 //
 //
@@ -105,180 +105,211 @@ static float kCosLookup(float turns)
 
 static void kPushRenderCommand(u32 dirty_flags)
 {
-	kRenderContext2D *ctx = kGetRenderContext2D();
-	kRenderCommand2D *cmd = ctx->Commands.Add();
+	kRenderCommand2D *cmd = g_Render2D.Commands.Add();
 	cmd->Flags            = dirty_flags;
 	for (int i = 0; i < kTextureType_Count; ++i)
-		cmd->Textures[i] = (u32)ctx->Textures[i].Count - 1;
-	cmd->Rect   = (u32)ctx->Rects.Count - 1;
-	cmd->BlendMode  = ctx->Stack.BlendModes.Last();
-	cmd->TextureFilter = ctx->Stack.TextureFilters.Last();
-	cmd->VertexOffset = 0;
-	cmd->IndexOffset  = 0;
+		cmd->Textures[i] = (u32)g_Render2D.Textures[i].Count - 1;
+	cmd->OutLineStyle  = (u32)g_Render2D.OutLineStyles.Count - 1;
+	cmd->Rect          = (u32)g_Render2D.Rects.Count - 1;
+	cmd->BlendMode     = g_Render2D.Stack.BlendModes.Last();
+	cmd->TextureFilter = g_Render2D.Stack.TextureFilters.Last();
+	cmd->VertexCount   = 0;
+	cmd->IndexCount    = 0;
 }
 
 static void kHandleBlendModeChange(void)
 {
-	kRenderContext2D *ctx  = kGetRenderContext2D();
-	kBlendMode        mode = ctx->Stack.BlendModes.Last();
-	kRenderCommand2D &cmd  = ctx->Commands.Last();
+	kBlendMode        mode = g_Render2D.Stack.BlendModes.Last();
+	kRenderCommand2D &cmd  = g_Render2D.Commands.Last();
 
-	if (cmd.BlendMode != mode)
+	if (cmd.BlendMode == mode)
+		return;
+
+	if (cmd.IndexCount)
 	{
-		if (cmd.IndexOffset)
-		{
-			kPushRenderCommand(kRenderDirty_Blend);
-		}
-		else
-		{
-			cmd.BlendMode = mode;
-			if (ctx->Commands.Count > 1)
-			{
-				kRenderCommand2D &prev = ctx->Commands[ctx->Commands.Count - 2];
-				if (prev.BlendMode != mode)
-				{
-					cmd.Flags |= kRenderDirty_Blend;
-				}
-				else
-				{
-					cmd.Flags &= ~kRenderDirty_Blend;
-					if (!cmd.Flags)
-					{
-						ctx->Commands.Pop();
-					}
-				}
-			}
-		}
+		kPushRenderCommand(kRenderDirty_Blend);
+		return;
+	}
+
+	cmd.BlendMode = mode;
+
+	if (g_Render2D.Commands.Count <= 1)
+		return;
+
+	kRenderCommand2D &prev = g_Render2D.Commands[g_Render2D.Commands.Count - 2];
+	if (prev.BlendMode != mode)
+	{
+		cmd.Flags |= kRenderDirty_Blend;
+		return;
+	}
+
+	cmd.Flags &= ~kRenderDirty_Blend;
+	if (!cmd.Flags)
+	{
+		g_Render2D.Commands.Pop();
 	}
 }
 
 static void kHandleTextureFilterChange(void)
 {
-	kRenderContext2D *ctx    = kGetRenderContext2D();
-	kTextureFilter    filter = ctx->Stack.TextureFilters.Last();
-	kRenderCommand2D &cmd    = ctx->Commands.Last();
+	kTextureFilter    filter = g_Render2D.Stack.TextureFilters.Last();
+	kRenderCommand2D &cmd    = g_Render2D.Commands.Last();
 
-	if (cmd.TextureFilter != filter)
+	if (cmd.TextureFilter == filter)
+		return;
+
+	if (cmd.IndexCount)
 	{
-		if (cmd.IndexOffset)
-		{
-			kPushRenderCommand(kRenderDirty_TextureFilter);
-		}
-		else
-		{
-			cmd.TextureFilter = filter;
-			if (ctx->Commands.Count > 1)
-			{
-				kRenderCommand2D &prev = ctx->Commands[ctx->Commands.Count - 2];
-				if (prev.TextureFilter != filter)
-				{
-					cmd.Flags |= kRenderDirty_TextureFilter;
-				}
-				else
-				{
-					cmd.Flags &= ~kRenderDirty_TextureFilter;
-					if (!cmd.Flags)
-					{
-						ctx->Commands.Pop();
-					}
-				}
-			}
-		}
+		kPushRenderCommand(kRenderDirty_TextureFilter);
+		return;
+	}
+
+	cmd.TextureFilter = filter;
+
+	if (g_Render2D.Commands.Count <= 1)
+		return;
+
+	kRenderCommand2D &prev = g_Render2D.Commands[g_Render2D.Commands.Count - 2];
+	if (prev.TextureFilter != filter)
+	{
+		cmd.Flags |= kRenderDirty_TextureFilter;
+		return;
+	}
+
+	cmd.Flags &= ~kRenderDirty_TextureFilter;
+	if (!cmd.Flags)
+	{
+		g_Render2D.Commands.Pop();
 	}
 }
 
 static void kHandleRectChange(void)
 {
-	kRenderContext2D *ctx  = kGetRenderContext2D();
-	kRect            &rect = ctx->Stack.Rects.Last();
-	kRenderCommand2D &cmd  = ctx->Commands.Last();
+	kRect            &rect = g_Render2D.Stack.Rects.Last();
+	kRenderCommand2D &cmd  = g_Render2D.Commands.Last();
 
-	if (memcmp(&ctx->Rects[cmd.Rect], &rect, sizeof(kRect)) != 0)
+	if (memcmp(&g_Render2D.Rects[cmd.Rect], &rect, sizeof(kRect)) == 0)
+		return;
+
+	if (cmd.IndexCount)
 	{
-		if (cmd.IndexOffset)
-		{
-			ctx->Rects.Add(rect);
-			kPushRenderCommand(kRenderDirty_Rect);
-		}
-		else
-		{
-			if (ctx->Commands.Count > 1)
-			{
-				if (cmd.Flags & kRenderDirty_Rect)
-				{
-					ctx->Rects.Pop();
-				}
+		g_Render2D.Rects.Add(rect);
+		kPushRenderCommand(kRenderDirty_Rect);
+		return;
+	}
 
-				kRenderCommand2D &prev = ctx->Commands[ctx->Commands.Count - 2];
-				if (memcmp(&ctx->Rects[prev.Rect], &rect, sizeof(kRect)) != 0)
-				{
-					ctx->Rects.Add(rect);
-					cmd.Flags |= kRenderDirty_Rect;
-					cmd.Rect = (u32)ctx->Rects.Count - 1;
-				}
-				else
-				{
-					cmd.Flags &= ~kRenderDirty_Rect;
-					cmd.Rect = (u32)ctx->Rects.Count - 1;
-					if (!cmd.Flags)
-					{
-						ctx->Commands.Pop();
-					}
-				}
-			}
-			else
-			{
-				ctx->Rects[0] = rect;
-			}
-		}
+	if (g_Render2D.Commands.Count <= 1)
+	{
+		g_Render2D.Rects[0] = rect;
+		return;
+	}
+
+	if (cmd.Flags & kRenderDirty_Rect)
+	{
+		g_Render2D.Rects.Pop();
+	}
+
+	kRenderCommand2D &prev = g_Render2D.Commands[g_Render2D.Commands.Count - 2];
+	if (memcmp(&g_Render2D.Rects[prev.Rect], &rect, sizeof(kRect)) != 0)
+	{
+		g_Render2D.Rects.Add(rect);
+		cmd.Flags |= kRenderDirty_Rect;
+		cmd.Rect = (u32)g_Render2D.Rects.Count - 1;
+		return;
+	}
+
+	cmd.Flags &= ~kRenderDirty_Rect;
+	cmd.Rect = (u32)g_Render2D.Rects.Count - 1;
+	if (!cmd.Flags)
+	{
+		g_Render2D.Commands.Pop();
+	}
+}
+
+static void kHandleOutLineStyleChange(void)
+{
+	kVec4            &style = g_Render2D.Stack.OutLineStyles.Last();
+	kRenderCommand2D &cmd   = g_Render2D.Commands.Last();
+
+	if (memcmp(&g_Render2D.OutLineStyles[cmd.OutLineStyle], &style, sizeof(kVec4)) == 0)
+		return;
+
+	if (cmd.IndexCount)
+	{
+		g_Render2D.OutLineStyles.Add(style);
+		kPushRenderCommand(kRenderDirty_OutLineStyle);
+		return;
+	}
+
+	if (g_Render2D.Commands.Count <= 1)
+	{
+		g_Render2D.OutLineStyles[0] = style;
+		return;
+	}
+
+	if (cmd.Flags & kRenderDirty_OutLineStyle)
+	{
+		g_Render2D.OutLineStyles.Pop();
+	}
+
+	kRenderCommand2D &prev = g_Render2D.Commands[g_Render2D.Commands.Count - 2];
+	if (memcmp(&g_Render2D.OutLineStyles[prev.OutLineStyle], &style, sizeof(kVec4)) != 0)
+	{
+		g_Render2D.OutLineStyles.Add(style);
+		cmd.Flags |= kRenderDirty_OutLineStyle;
+		cmd.OutLineStyle = (u32)g_Render2D.OutLineStyles.Count - 1;
+		return;
+	}
+
+	cmd.Flags &= ~kRenderDirty_OutLineStyle;
+	cmd.OutLineStyle = (u32)g_Render2D.OutLineStyles.Count - 1;
+	if (!cmd.Flags)
+	{
+		g_Render2D.Commands.Pop();
 	}
 }
 
 static void kHandleTextureChange(kTextureType type)
 {
-	kRenderContext2D *ctx     = kGetRenderContext2D();
-	kTexture         *texture = ctx->Stack.Textures[type].Last();
-	kRenderCommand2D &cmd     = ctx->Commands.Last();
+	kTexture         *texture = g_Render2D.Stack.Textures[type].Last();
+	kRenderCommand2D &cmd     = g_Render2D.Commands.Last();
 	u32               bit     = type == kTextureType_Color ? kRenderDirty_TextureColor : kRenderDirty_TextureMaskSDF;
 
-	if (ctx->Textures[type][cmd.Textures[type]] != texture)
-	{
-		if (cmd.IndexOffset)
-		{
-			ctx->Textures[type].Add(texture);
-			kPushRenderCommand(bit);
-		}
-		else
-		{
-			if (ctx->Commands.Count > 1)
-			{
-				if (cmd.Flags & bit)
-				{
-					ctx->Textures[type].Pop();
-				}
+	if (g_Render2D.Textures[type][cmd.Textures[type]] == texture)
+		return;
 
-				kRenderCommand2D &prev = ctx->Commands[ctx->Commands.Count - 2];
-				if (ctx->Textures[type][prev.Textures[type]] != texture)
-				{
-					ctx->Textures[type].Add(texture);
-					cmd.Flags |= bit;
-					cmd.Textures[type] = (u32)ctx->Textures[type].Count - 1;
-				}
-				else
-				{
-					cmd.Flags &= ~bit;
-					cmd.Textures[type] = (u32)ctx->Textures[type].Count - 1;
-					if (!cmd.Flags)
-					{
-						ctx->Commands.Pop();
-					}
-				}
-			}
-			else
-			{
-				ctx->Textures[type][0] = texture;
-			}
-		}
+	if (cmd.IndexCount)
+	{
+		g_Render2D.Textures[type].Add(texture);
+		kPushRenderCommand(bit);
+		return;
+	}
+
+	if (g_Render2D.Commands.Count <= 1)
+	{
+		g_Render2D.Textures[type][0] = texture;
+		return;
+	}
+
+	if (cmd.Flags & bit)
+	{
+		g_Render2D.Textures[type].Pop();
+	}
+
+	kRenderCommand2D &prev = g_Render2D.Commands[g_Render2D.Commands.Count - 2];
+	if (g_Render2D.Textures[type][prev.Textures[type]] != texture)
+	{
+		g_Render2D.Textures[type].Add(texture);
+		cmd.Flags |= bit;
+		cmd.Textures[type] = (u32)g_Render2D.Textures[type].Count - 1;
+		return;
+	}
+
+	cmd.Flags &= ~bit;
+	cmd.Textures[type] = (u32)g_Render2D.Textures[type].Count - 1;
+	if (!cmd.Flags)
+	{
+		g_Render2D.Commands.Pop();
 	}
 }
 
@@ -288,15 +319,15 @@ static void kHandleTextureChange(kTextureType type)
 
 void kBeginScene(const kCamera2D &camera, kRect region)
 {
-	kRenderContext2D *ctx   = kGetRenderContext2D();
-	kRenderScene2D   *scene = ctx->Scenes.Add();
-	scene->Camera           = camera;
-	scene->Region           = region;
-	scene->Commands         = kRange<u32>((u32)ctx->Commands.Count);
+	kRenderScene2D *scene = g_Render2D.Scenes.Add();
+	scene->Camera         = camera;
+	scene->Region         = region;
+	scene->Commands       = kRange<u32>((u32)g_Render2D.Commands.Count);
 
 	for (int i = 0; i < kTextureType_Count; ++i)
-		g_RenderContext.Context2D.Textures[i].Add(g_RenderContext.Context2D.Stack.Textures[i].Last());
-	g_RenderContext.Context2D.Rects.Add(g_RenderContext.Context2D.Stack.Rects.Last());
+		g_Render2D.Textures[i].Add(g_Render2D.Stack.Textures[i].Last());
+	g_Render2D.Rects.Add(g_Render2D.Stack.Rects.Last());
+	g_Render2D.OutLineStyles.Add(g_Render2D.Stack.OutLineStyles.Last());
 
 	kPushRenderCommand(kRenderDirty_Everything);
 	kPushRect(region);
@@ -324,90 +355,104 @@ void kBeginScene(float ar, float height, kRect region)
 void kEndScene(void)
 {
 	kPopRect();
-	kRenderContext2D *ctx = kGetRenderContext2D();
 
-	kRenderCommand2D &cmd = ctx->Commands.Last();
-	if (!cmd.IndexOffset)
+	kRenderCommand2D &cmd = g_Render2D.Commands.Last();
+	if (!cmd.IndexCount)
 	{
 		u32 flags = cmd.Flags;
-		if (flags & kRenderDirty_TextureColor) ctx->Textures[kTextureType_Color].Pop();
-		if (flags & kRenderDirty_TextureMaskSDF) ctx->Textures[kTextureType_MaskSDF].Pop();
-		if (flags & kRenderDirty_Rect) ctx->Rects.Pop();
-		ctx->Commands.Pop();
+		if (flags & kRenderDirty_TextureColor)
+			g_Render2D.Textures[kTextureType_Color].Pop();
+		if (flags & kRenderDirty_TextureMaskSDF)
+			g_Render2D.Textures[kTextureType_MaskSDF].Pop();
+		if (flags & kRenderDirty_Rect)
+			g_Render2D.Rects.Pop();
+		g_Render2D.Commands.Pop();
 	}
 
-	kRenderScene2D *pass = &ctx->Scenes.Last();
-	pass->Commands.End   = (u32)ctx->Commands.Count;
+	kRenderScene2D *pass = &g_Render2D.Scenes.Last();
+	pass->Commands.End   = (u32)g_Render2D.Commands.Count;
 
 	if (!pass->Commands.Length())
 	{
-		ctx->Scenes.Pop();
+		g_Render2D.Scenes.Pop();
 	}
 }
 
 void kLineThickness(float thickness)
 {
-	kRenderContext2D *ctx = kGetRenderContext2D();
-	ctx->Stack.Thickness  = thickness;
+	g_Render2D.Stack.Thickness = thickness;
 }
 
 void kSetBlendMode(kBlendMode mode)
 {
-	kRenderContext2D *ctx        = kGetRenderContext2D();
-	ctx->Stack.BlendModes.Last() = mode;
+	g_Render2D.Stack.BlendModes.Last() = mode;
 	kHandleBlendModeChange();
 }
 
 void kBeginBlendMode(kBlendMode mode)
 {
-	kRenderContext2D *ctx  = kGetRenderContext2D();
-	kBlendMode        last = ctx->Stack.BlendModes.Last();
-	ctx->Stack.BlendModes.Add(last);
+	kBlendMode last = g_Render2D.Stack.BlendModes.Last();
+	g_Render2D.Stack.BlendModes.Add(last);
 	kSetBlendMode(mode);
 }
 
 void kEndBlendMode(void)
 {
-	kRenderContext2D *ctx   = kGetRenderContext2D();
-	imem              count = ctx->Stack.BlendModes.Count;
-	kSetBlendMode(ctx->Stack.BlendModes[count - 2]);
-	ctx->Stack.BlendModes.Pop();
+	imem count = g_Render2D.Stack.BlendModes.Count;
+	kSetBlendMode(g_Render2D.Stack.BlendModes[count - 2]);
+	g_Render2D.Stack.BlendModes.Pop();
 }
 
 void kSetTextureFilter(kTextureFilter filter)
 {
-	kRenderContext2D *ctx            = kGetRenderContext2D();
-	ctx->Stack.TextureFilters.Last() = filter;
+	g_Render2D.Stack.TextureFilters.Last() = filter;
 	kHandleTextureFilterChange();
 }
 
 void kSetTexture(kTexture *texture, kTextureType idx)
 {
-	kRenderContext2D *ctx           = kGetRenderContext2D();
-	ctx->Stack.Textures[idx].Last() = texture;
+	g_Render2D.Stack.Textures[idx].Last() = texture;
 	kHandleTextureChange(idx);
 }
 
 void kPushTexture(kTexture *texture, kTextureType idx)
 {
-	kRenderContext2D *ctx  = kGetRenderContext2D();
-	kTexture         *last = ctx->Stack.Textures[idx].Last();
-	ctx->Stack.Textures[idx].Add(last);
+	kTexture *last = g_Render2D.Stack.Textures[idx].Last();
+	g_Render2D.Stack.Textures[idx].Add(last);
 	kSetTexture(texture, idx);
 }
 
 void kPopTexture(kTextureType idx)
 {
-	kRenderContext2D *ctx   = kGetRenderContext2D();
-	imem              count = ctx->Stack.Textures[idx].Count;
-	kSetTexture(ctx->Stack.Textures[idx][count - 2], idx);
-	ctx->Stack.Textures[idx].Pop();
+	imem count = g_Render2D.Stack.Textures[idx].Count;
+	kSetTexture(g_Render2D.Stack.Textures[idx][count - 2], idx);
+	g_Render2D.Stack.Textures[idx].Pop();
+}
+
+void kSetOutLineStyle(kVec3 color, float width)
+{
+	g_Render2D.Stack.OutLineStyles.Last() = kVec4(color, width);
+	kHandleOutLineStyleChange();
+}
+
+void kPushOutLineStyle(kVec3 color, float width)
+{
+	kVec4 last = g_Render2D.Stack.OutLineStyles.Last();
+	g_Render2D.Stack.OutLineStyles.Add(last);
+	kSetOutLineStyle(color, width);
+}
+
+void kPopOutLineStyle(void)
+{
+	imem  count = g_Render2D.Stack.OutLineStyles.Count;
+	kVec4 style = g_Render2D.Stack.OutLineStyles[count - 2];
+	kSetOutLineStyle(style.xyz, style.w);
+	g_Render2D.Stack.OutLineStyles.Pop();
 }
 
 void kSetRect(kRect rect)
 {
-	kRenderContext2D *ctx   = kGetRenderContext2D();
-	ctx->Stack.Rects.Last() = rect;
+	g_Render2D.Stack.Rects.Last() = rect;
 	kHandleRectChange();
 }
 
@@ -423,9 +468,8 @@ void kSetRectEx(float x, float y, float w, float h)
 
 void kPushRect(kRect rect)
 {
-	kRenderContext2D *ctx  = kGetRenderContext2D();
-	kRect             last = ctx->Stack.Rects.Last();
-	ctx->Stack.Rects.Add(last);
+	kRect last = g_Render2D.Stack.Rects.Last();
+	g_Render2D.Stack.Rects.Add(last);
 	kSetRect(rect);
 }
 
@@ -441,23 +485,20 @@ void kPushRectEx(float x, float y, float w, float h)
 
 void kPopRect(void)
 {
-	kRenderContext2D *ctx   = kGetRenderContext2D();
-	imem              count = ctx->Stack.Rects.Count;
-	kSetRect(ctx->Stack.Rects[count - 2]);
-	ctx->Stack.Rects.Pop();
+	imem count = g_Render2D.Stack.Rects.Count;
+	kSetRect(g_Render2D.Stack.Rects[count - 2]);
+	g_Render2D.Stack.Rects.Pop();
 }
 
 void kSetTransform(const kMat3 &transform)
 {
-	kRenderContext2D *ctx        = kGetRenderContext2D();
-	ctx->Stack.Transforms.Last() = transform;
+	g_Render2D.Stack.Transforms.Last() = transform;
 }
 
 void kPushTransform(const kMat3 &transform)
 {
-	kRenderContext2D *ctx  = kGetRenderContext2D();
-	kMat3             last = ctx->Stack.Transforms.Last();
-	ctx->Stack.Transforms.Add(last);
+	kMat3 last = g_Render2D.Stack.Transforms.Last();
+	g_Render2D.Stack.Transforms.Add(last);
 	kMat3 t = last * transform;
 	kSetTransform(t);
 }
@@ -474,10 +515,9 @@ void kPushTransform(kVec2 pos, float angle)
 
 void kPopTransform(void)
 {
-	kRenderContext2D *ctx   = kGetRenderContext2D();
-	imem              count = ctx->Stack.Transforms.Count;
-	kSetTransform(ctx->Stack.Transforms[count - 2]);
-	ctx->Stack.Transforms.Pop();
+	imem count = g_Render2D.Stack.Transforms.Count;
+	kSetTransform(g_Render2D.Stack.Transforms[count - 2]);
+	g_Render2D.Stack.Transforms.Pop();
 }
 
 //
@@ -486,10 +526,9 @@ void kPopTransform(void)
 
 static void kCommitPrimitive(u32 vertex, u32 index)
 {
-	kRenderContext2D *ctx = kGetRenderContext2D();
-	kRenderCommand2D &cmd = ctx->Commands.Last();
-	cmd.VertexOffset += vertex;
-	cmd.IndexOffset += index;
+	kRenderCommand2D &cmd = g_Render2D.Commands.Last();
+	cmd.VertexCount += vertex;
+	cmd.IndexCount += index;
 }
 
 //
@@ -498,28 +537,28 @@ static void kCommitPrimitive(u32 vertex, u32 index)
 
 void kDrawTriangle(kVec3 va, kVec3 vb, kVec3 vc, kVec2 ta, kVec2 tb, kVec2 tc, kVec4 ca, kVec4 cb, kVec4 cc)
 {
-	kVertex2D *vtx = g_RenderContext.Context2D.Vertices.Extend(3);
-	vtx[0].Position     = va;
-	vtx[0].TexCoord     = ta;
-	vtx[0].Color     = ca;
-	vtx[1].Position     = vb;
-	vtx[1].TexCoord     = tb;
-	vtx[1].Color     = cb;
-	vtx[2].Position     = vc;
-	vtx[2].TexCoord     = tc;
-	vtx[2].Color     = cc;
+	kVertex2D *vtx  = g_Render2D.Vertices.Extend(3);
+	vtx[0].Position = va;
+	vtx[0].TexCoord = ta;
+	vtx[0].Color    = ca;
+	vtx[1].Position = vb;
+	vtx[1].TexCoord = tb;
+	vtx[1].Color    = cb;
+	vtx[2].Position = vc;
+	vtx[2].TexCoord = tc;
+	vtx[2].Color    = cc;
 
-	if (g_RenderContext.Context2D.Stack.Transforms.Count > 1)
+	if (g_Render2D.Stack.Transforms.Count > 1)
 	{
-		kMat3 &transform = g_RenderContext.Context2D.Stack.Transforms.Last();
-		vtx[0].Position       = transform * vtx[0].Position;
-		vtx[1].Position       = transform * vtx[1].Position;
-		vtx[2].Position       = transform * vtx[2].Position;
+		kMat3 &transform = g_Render2D.Stack.Transforms.Last();
+		vtx[0].Position  = transform * vtx[0].Position;
+		vtx[1].Position  = transform * vtx[1].Position;
+		vtx[2].Position  = transform * vtx[2].Position;
 	}
 
-	u32       next = g_RenderContext.Context2D.Commands.Last().VertexOffset;
+	u32       next = g_Render2D.Commands.Last().VertexCount;
 
-	kIndex2D *idx  = g_RenderContext.Context2D.Indices.Extend(3);
+	kIndex2D *idx  = g_Render2D.Indices.Extend(3);
 	idx[0]         = next + 0;
 	idx[1]         = next + 1;
 	idx[2]         = next + 2;
@@ -549,32 +588,32 @@ void kDrawTriangle(kVec2 a, kVec2 b, kVec2 c, kVec4 color)
 
 void kDrawQuad(kVec3 va, kVec3 vb, kVec3 vc, kVec3 vd, kVec2 ta, kVec2 tb, kVec2 tc, kVec2 td, kVec4 color)
 {
-	kVertex2D *vtx = g_RenderContext.Context2D.Vertices.Extend(4);
-	vtx[0].Position     = va;
-	vtx[0].TexCoord     = ta;
-	vtx[0].Color     = color;
-	vtx[1].Position     = vb;
-	vtx[1].TexCoord     = tb;
-	vtx[1].Color     = color;
-	vtx[2].Position     = vc;
-	vtx[2].TexCoord     = tc;
-	vtx[2].Color     = color;
-	vtx[3].Position     = vd;
-	vtx[3].TexCoord     = td;
-	vtx[3].Color     = color;
+	kVertex2D *vtx  = g_Render2D.Vertices.Extend(4);
+	vtx[0].Position = va;
+	vtx[0].TexCoord = ta;
+	vtx[0].Color    = color;
+	vtx[1].Position = vb;
+	vtx[1].TexCoord = tb;
+	vtx[1].Color    = color;
+	vtx[2].Position = vc;
+	vtx[2].TexCoord = tc;
+	vtx[2].Color    = color;
+	vtx[3].Position = vd;
+	vtx[3].TexCoord = td;
+	vtx[3].Color    = color;
 
-	if (g_RenderContext.Context2D.Stack.Transforms.Count > 1)
+	if (g_Render2D.Stack.Transforms.Count > 1)
 	{
-		kMat3 &transform = g_RenderContext.Context2D.Stack.Transforms.Last();
-		vtx[0].Position       = transform * vtx[0].Position;
-		vtx[1].Position       = transform * vtx[1].Position;
-		vtx[2].Position       = transform * vtx[2].Position;
-		vtx[3].Position       = transform * vtx[3].Position;
+		kMat3 &transform = g_Render2D.Stack.Transforms.Last();
+		vtx[0].Position  = transform * vtx[0].Position;
+		vtx[1].Position  = transform * vtx[1].Position;
+		vtx[2].Position  = transform * vtx[2].Position;
+		vtx[3].Position  = transform * vtx[3].Position;
 	}
 
-	u32       next = g_RenderContext.Context2D.Commands.Last().VertexOffset;
+	u32       next = g_Render2D.Commands.Last().VertexCount;
 
-	kIndex2D *idx  = g_RenderContext.Context2D.Indices.Extend(6);
+	kIndex2D *idx  = g_Render2D.Indices.Extend(6);
 	idx[0]         = next + 0;
 	idx[1]         = next + 1;
 	idx[2]         = next + 2;
@@ -633,7 +672,10 @@ void kDrawRect(kVec3 pos, kVec2 dim, kVec4 color)
 	kDrawRect(pos, dim, kVec2(0, 0), kVec2(0, 1), kVec2(1, 1), kVec2(1, 0), color);
 }
 
-void kDrawRect(kVec2 pos, kVec2 dim, kVec4 color) { kDrawRect(kVec3(pos, 0), dim, color); }
+void kDrawRect(kVec2 pos, kVec2 dim, kVec4 color)
+{
+	kDrawRect(kVec3(pos, 0), dim, color);
+}
 
 void kDrawRect(kVec3 pos, kVec2 dim, kRect rect, kVec4 color)
 {
@@ -644,7 +686,10 @@ void kDrawRect(kVec3 pos, kVec2 dim, kRect rect, kVec4 color)
 	kDrawRect(pos, dim, uv_a, uv_b, uv_c, uv_d, color);
 }
 
-void kDrawRect(kVec2 pos, kVec2 dim, kRect rect, kVec4 color) { kDrawRect(kVec3(pos, 0), dim, rect, color); }
+void kDrawRect(kVec2 pos, kVec2 dim, kRect rect, kVec4 color)
+{
+	kDrawRect(kVec3(pos, 0), dim, rect, color);
+}
 
 void kDrawRectRotated(kVec3 pos, kVec2 dim, float angle, kVec2 uv_a, kVec2 uv_b, kVec2 uv_c, kVec2 uv_d, kVec4 color)
 {
@@ -848,9 +893,15 @@ void kDrawEllipse(kVec2 pos, float radius_a, float radius_b, kVec4 color)
 	kDrawEllipse(kVec3(pos, 0), radius_a, radius_b, color);
 }
 
-void kDrawCircle(kVec3 pos, float radius, kVec4 color) { kDrawEllipse(pos, radius, radius, color); }
+void kDrawCircle(kVec3 pos, float radius, kVec4 color)
+{
+	kDrawEllipse(pos, radius, radius, color);
+}
 
-void kDrawCircle(kVec2 pos, float radius, kVec4 color) { kDrawEllipse(kVec3(pos, 0), radius, radius, color); }
+void kDrawCircle(kVec2 pos, float radius, kVec4 color)
+{
+	kDrawEllipse(kVec3(pos, 0), radius, radius, color);
+}
 
 void kDrawPie(kVec3 pos, float radius_a, float radius_b, float theta_a, float theta_b, kVec4 color)
 {
@@ -958,9 +1009,10 @@ void kDrawPiePart(kVec2 pos, float radius_min, float radius_max, float theta_a, 
 
 void kDrawLine(kVec3 a, kVec3 b, kVec4 color)
 {
-	if (kIsNull(b - a)) return;
+	if (kIsNull(b - a))
+		return;
 
-	float thickness = g_RenderContext.Context2D.Stack.Thickness * 0.5f;
+	float thickness = g_Render2D.Stack.Thickness * 0.5f;
 	float dx        = b.x - a.x;
 	float dy        = b.y - a.y;
 	float ilen      = 1.0f / kSquareRoot(dx * dx + dy * dy);
@@ -975,18 +1027,21 @@ void kDrawLine(kVec3 a, kVec3 b, kVec4 color)
 	kDrawQuad(c0, c1, c2, c3, kVec2(0, 0), kVec2(0, 1), kVec2(1, 1), kVec2(1, 0), color);
 }
 
-void kDrawLine(kVec2 a, kVec2 b, kVec4 color) { kDrawLine(kVec3(a, 0), kVec3(b, 0), color); }
+void kDrawLine(kVec2 a, kVec2 b, kVec4 color)
+{
+	kDrawLine(kVec3(a, 0), kVec3(b, 0), color);
+}
 
 void kPathTo(kVec2 a)
 {
-	if (g_RenderContext.Context2D.Stack.PathVertices.Count)
+	if (g_Render2D.Stack.Paths.Count)
 	{
-		if (kIsNull(g_RenderContext.Context2D.Stack.PathVertices.Last() - a))
+		if (kIsNull(g_Render2D.Stack.Paths.Last() - a))
 		{
 			return;
 		}
 	}
-	g_RenderContext.Context2D.Stack.PathVertices.Add(a);
+	g_Render2D.Stack.Paths.Add(a);
 }
 
 void kArcTo(kVec2 position, float radius_a, float radius_b, float theta_a, float theta_b)
@@ -1016,20 +1071,18 @@ void kArcTo(kVec2 position, float radius_a, float radius_b, float theta_a, float
 
 void kBezierQuadraticTo(kVec2 a, kVec2 b, kVec2 c)
 {
-	imem index    = g_RenderContext.Context2D.Stack.PathVertices.Count;
+	imem index    = g_Render2D.Stack.Paths.Count;
 	int  segments = (int)kCeil(kLength(a) + kLength(b) + kLength(c));
-	if (g_RenderContext.Context2D.Stack.PathVertices.Resize(g_RenderContext.Context2D.Stack.PathVertices.Count +
-	                                                        segments + 1))
-		kBuildBezierQuadratic(a, b, c, &g_RenderContext.Context2D.Stack.PathVertices[index], segments);
+	if (g_Render2D.Stack.Paths.Resize(g_Render2D.Stack.Paths.Count + segments + 1))
+		kBuildBezierQuadratic(a, b, c, &g_Render2D.Stack.Paths[index], segments);
 }
 
 void kBezierCubicTo(kVec2 a, kVec2 b, kVec2 c, kVec2 d)
 {
-	imem index    = g_RenderContext.Context2D.Stack.PathVertices.Count;
+	imem index    = g_Render2D.Stack.Paths.Count;
 	int  segments = (int)kCeil(kLength(a) + kLength(b) + kLength(c));
-	if (g_RenderContext.Context2D.Stack.PathVertices.Resize(g_RenderContext.Context2D.Stack.PathVertices.Count +
-	                                                        segments + 1))
-		kBuildBezierCubic(a, b, c, d, &g_RenderContext.Context2D.Stack.PathVertices[index], segments);
+	if (g_Render2D.Stack.Paths.Resize(g_Render2D.Stack.Paths.Count + segments + 1))
+		kBuildBezierCubic(a, b, c, d, &g_Render2D.Stack.Paths[index], segments);
 }
 
 static inline kVec2 kLineLineIntersect(kVec2 p1, kVec2 q1, kVec2 p2, kVec2 q2)
@@ -1051,7 +1104,7 @@ static inline kVec2 kLineLineIntersect(kVec2 p1, kVec2 q1, kVec2 p2, kVec2 q2)
 
 void kDrawPathStroked(kVec4 color, bool closed, float z)
 {
-	kArray<kVec2> &path = g_RenderContext.Context2D.Stack.PathVertices;
+	kArray<kVec2> &path = g_Render2D.Stack.Paths;
 
 	if (path.Count < 2)
 	{
@@ -1070,15 +1123,15 @@ void kDrawPathStroked(kVec4 color, bool closed, float z)
 		kPathTo(path[0]);
 	}
 
-	kSpan<kVec2> normals = kSpan<kVec2>(path.Extend(path.Count - 1), path.Count - 1);
+	g_Render2D.Stack.Normals.Resize(path.Count - 1);
 
-	for (imem index = 0; index < normals.Count; ++index)
+	for (imem index = 0; index < g_Render2D.Stack.Normals.Count; ++index)
 	{
-		kVec2 v        = kNormalize(path[index + 1] - path[index]);
-		normals[index] = v;
+		kVec2 v                         = kNormalize(path[index + 1] - path[index]);
+		g_Render2D.Stack.Normals[index] = v;
 	}
 
-	float thickness = 0.5f * g_RenderContext.Context2D.Stack.Thickness;
+	float thickness = 0.5f * g_Render2D.Stack.Thickness;
 
 	kVec2 p, q;
 	kVec2 start_p, start_q;
@@ -1094,8 +1147,8 @@ void kDrawPathStroked(kVec4 color, bool closed, float z)
 		b       = path[0];
 		c       = path[1];
 
-		v1      = normals.Last();
-		v2      = normals[0];
+		v1      = g_Render2D.Stack.Normals.Last();
+		v2      = g_Render2D.Stack.Normals[0];
 
 		n1      = kVec2(-v1.y, v1.x);
 		n2      = kVec2(-v2.y, v2.x);
@@ -1119,27 +1172,27 @@ void kDrawPathStroked(kVec4 color, bool closed, float z)
 	{
 		kVec2 v, t, n;
 
-		v       = normals[0];
+		v       = g_Render2D.Stack.Normals[0];
 		n       = kVec2(-v.y, v.x);
 		t       = thickness * n;
 		prev_p  = path[0] + t;
 		prev_q  = path[0] - t;
 
-		v       = normals.Last();
+		v       = g_Render2D.Stack.Normals.Last();
 		n       = kVec2(-v.y, v.x);
 		t       = thickness * n;
 		start_p = path.Last() + t;
 		start_q = path.Last() - t;
 	}
 
-	for (imem index = 0; index + 1 < normals.Count; ++index)
+	for (imem index = 0; index + 1 < g_Render2D.Stack.Normals.Count; ++index)
 	{
 		a  = path[index + 0];
 		b  = path[index + 1];
 		c  = path[index + 2];
 
-		v1 = normals[index + 0];
-		v2 = normals[index + 1];
+		v1 = g_Render2D.Stack.Normals[index + 0];
+		v2 = g_Render2D.Stack.Normals[index + 1];
 
 		n1 = kVec2(-v1.y, v1.x);
 		n2 = kVec2(-v2.y, v2.x);
@@ -1176,7 +1229,7 @@ void kDrawPathStroked(kVec4 color, bool closed, float z)
 
 void kDrawPathFilled(kVec4 color, float z)
 {
-	kArray<kVec2> &path = g_RenderContext.Context2D.Stack.PathVertices;
+	kArray<kVec2> &path = g_Render2D.Stack.Paths;
 
 	if (path.Count < 3)
 	{
@@ -1216,7 +1269,10 @@ void kDrawPolygon(const kVec2 *vertices, u32 count, float z, kVec4 color)
 	}
 }
 
-void kDrawPolygon(const kVec2 *vertices, u32 count, kVec4 color) { kDrawPolygon(vertices, count, 0, color); }
+void kDrawPolygon(const kVec2 *vertices, u32 count, kVec4 color)
+{
+	kDrawPolygon(vertices, count, 0, color);
+}
 
 void kDrawTriangleOutline(kVec3 a, kVec3 b, kVec3 c, kVec4 color)
 {
@@ -1261,7 +1317,10 @@ void kDrawRectOutline(kVec3 pos, kVec2 dim, kVec4 color)
 	kDrawQuadOutline(a, b, c, d, color);
 }
 
-void kDrawRectOutline(kVec2 pos, kVec2 dim, kVec4 color) { kDrawRectOutline(kVec3(pos, 0), dim, color); }
+void kDrawRectOutline(kVec2 pos, kVec2 dim, kVec4 color)
+{
+	kDrawRectOutline(kVec3(pos, 0), dim, color);
+}
 
 void kDrawRectCenteredOutline(kVec3 pos, kVec2 dim, kVec4 color)
 {
@@ -1303,7 +1362,10 @@ void kDrawEllipseOutline(kVec2 pos, float radius_a, float radius_b, kVec4 color)
 	kDrawEllipseOutline(kVec3(pos, 0), radius_a, radius_b, color);
 }
 
-void kDrawCircleOutline(kVec3 pos, float radius, kVec4 color) { kDrawEllipseOutline(pos, radius, radius, color); }
+void kDrawCircleOutline(kVec3 pos, float radius, kVec4 color)
+{
+	kDrawEllipseOutline(pos, radius, radius, color);
+}
 
 void kDrawCircleOutline(kVec2 pos, float radius, kVec4 color)
 {
@@ -1529,7 +1591,8 @@ kVec2 kAdjectCursorToBaseline(const kFont *font, kVec2 cursor, float scale)
 bool kCalculateGlyphMetrics(const kFont *font, u32 codepoint, float scale, kVec2 *cursor, kVec2 *rpos, kVec2 *rsize,
                             kRect *rect)
 {
-	if (codepoint == '\r') return false;
+	if (codepoint == '\r')
+		return false;
 
 	if (codepoint == '\n')
 	{
@@ -1554,7 +1617,7 @@ bool kCalculateGlyphMetrics(const kFont *font, u32 codepoint, float scale, kVec2
 
 void kDrawTextQuad(u32 codepoint, const kFont *font, kVec3 pos, kVec4 color, float scale)
 {
-	kPushTexture(g_RenderContext.Builtin.Textures[kTextureType_Color], kTextureType_Color);
+	kPushTexture(g_Builtin.Textures[kTextureType_Color], kTextureType_Color);
 	kPushTexture(font->Atlas, kTextureType_MaskSDF);
 
 	kVec3 rpos = pos;
@@ -1581,7 +1644,7 @@ void kDrawTextQuad(u32 codepoint, const kFont *font, kVec2 pos, kVec4 color, flo
 
 void kDrawTextQuadRotated(u32 codepoint, const kFont *font, kVec3 pos, float angle, kVec4 color, float scale)
 {
-	kPushTexture(g_RenderContext.Builtin.Textures[kTextureType_Color], kTextureType_Color);
+	kPushTexture(g_Builtin.Textures[kTextureType_Color], kTextureType_Color);
 	kPushTexture(font->Atlas, kTextureType_MaskSDF);
 
 	kVec3 rpos = pos;
@@ -1608,7 +1671,7 @@ void kDrawTextQuadRotated(u32 codepoint, const kFont *font, kVec2 pos, float ang
 
 void kDrawTextQuadCentered(u32 codepoint, const kFont *font, kVec3 pos, kVec4 color, float scale)
 {
-	kPushTexture(g_RenderContext.Builtin.Textures[kTextureType_Color], kTextureType_Color);
+	kPushTexture(g_Builtin.Textures[kTextureType_Color], kTextureType_Color);
 	kPushTexture(font->Atlas, kTextureType_MaskSDF);
 
 	kVec3 rpos = pos;
@@ -1635,7 +1698,7 @@ void kDrawTextQuadCentered(u32 codepoint, const kFont *font, kVec2 pos, kVec4 co
 
 void kDrawTextQuadCenteredRotated(u32 codepoint, const kFont *font, kVec3 pos, float angle, kVec4 color, float scale)
 {
-	kPushTexture(g_RenderContext.Builtin.Textures[kTextureType_Color], kTextureType_Color);
+	kPushTexture(g_Builtin.Textures[kTextureType_Color], kTextureType_Color);
 	kPushTexture(font->Atlas, kTextureType_MaskSDF);
 
 	kVec3 rpos = pos;
@@ -1662,49 +1725,49 @@ void kDrawTextQuadCenteredRotated(u32 codepoint, const kFont *font, kVec2 pos, f
 
 void kDrawTextQuad(u32 codepoint, kVec3 pos, kVec4 color, float scale)
 {
-	kFont *font = g_RenderContext.Builtin.Font;
+	kFont *font = g_Builtin.Font;
 	kDrawTextQuad(codepoint, font, pos, color, scale);
 }
 
 void kDrawTextQuad(u32 codepoint, kVec2 pos, kVec4 color, float scale)
 {
-	kFont *font = g_RenderContext.Builtin.Font;
+	kFont *font = g_Builtin.Font;
 	kDrawTextQuad(codepoint, font, pos, color, scale);
 }
 
 void kDrawTextQuadRotated(u32 codepoint, kVec3 pos, float angle, kVec4 color, float scale)
 {
-	kFont *font = g_RenderContext.Builtin.Font;
+	kFont *font = g_Builtin.Font;
 	kDrawTextQuadRotated(codepoint, font, pos, angle, color, scale);
 }
 
 void kDrawTextQuadRotated(u32 codepoint, kVec2 pos, float angle, kVec4 color, float scale)
 {
-	kFont *font = g_RenderContext.Builtin.Font;
+	kFont *font = g_Builtin.Font;
 	kDrawTextQuadRotated(codepoint, font, pos, angle, color, scale);
 }
 
 void kDrawTextQuadCentered(u32 codepoint, kVec3 pos, kVec4 color, float scale)
 {
-	kFont *font = g_RenderContext.Builtin.Font;
+	kFont *font = g_Builtin.Font;
 	kDrawTextQuadCentered(codepoint, font, pos, color, scale);
 }
 
 void kDrawTextQuadCentered(u32 codepoint, kVec2 pos, kVec4 color, float scale)
 {
-	kFont *font = g_RenderContext.Builtin.Font;
+	kFont *font = g_Builtin.Font;
 	kDrawTextQuadCentered(codepoint, font, pos, color, scale);
 }
 
 void kDrawTextQuadCenteredRotated(u32 codepoint, kVec3 pos, float angle, kVec4 color, float scale)
 {
-	kFont *font = g_RenderContext.Builtin.Font;
+	kFont *font = g_Builtin.Font;
 	kDrawTextQuadCenteredRotated(codepoint, font, pos, angle, color, scale);
 }
 
 void kDrawTextQuadCenteredRotated(u32 codepoint, kVec2 pos, float angle, kVec4 color, float scale)
 {
-	kFont *font = g_RenderContext.Builtin.Font;
+	kFont *font = g_Builtin.Font;
 	kDrawTextQuadCenteredRotated(codepoint, font, pos, angle, color, scale);
 }
 
@@ -1724,7 +1787,8 @@ kVec2 kCalculateText(kString text, const kFont *font, float scale)
 	while (ptr < end)
 	{
 		ptr += kUTF8ToCodepoint(ptr, end, &codepoint);
-		if (codepoint == '\n') ycounts += 1;
+		if (codepoint == '\n')
+			ycounts += 1;
 		kCalculateGlyphMetrics(font, codepoint, scale, &cursor, &rpos, &rsize, &rect);
 	}
 
@@ -1737,13 +1801,13 @@ kVec2 kCalculateText(kString text, const kFont *font, float scale)
 
 kVec2 kCalculateText(kString text, float scale)
 {
-	kFont *font = g_RenderContext.Builtin.Font;
+	kFont *font = g_Builtin.Font;
 	return kCalculateText(text, font, scale);
 }
 
 void kDrawText(kString text, kVec3 pos, const kFont *font, kVec4 color, float scale)
 {
-	kPushTexture(g_RenderContext.Builtin.Textures[kTextureType_Color], kTextureType_Color);
+	kPushTexture(g_Builtin.Textures[kTextureType_Color], kTextureType_Color);
 	kPushTexture(font->Atlas, kTextureType_MaskSDF);
 
 	u32   codepoint;
@@ -1778,13 +1842,13 @@ void kDrawText(kString text, kVec2 pos, const kFont *font, kVec4 color, float sc
 
 void kDrawText(kString text, kVec3 pos, kVec4 color, float scale)
 {
-	kFont *font = g_RenderContext.Builtin.Font;
+	kFont *font = g_Builtin.Font;
 	kDrawText(text, pos, font, color, scale);
 }
 
 void kDrawText(kString text, kVec2 pos, kVec4 color, float scale)
 {
-	kFont *font = g_RenderContext.Builtin.Font;
+	kFont *font = g_Builtin.Font;
 	kDrawText(text, pos, font, color, scale);
 }
 
@@ -1805,169 +1869,131 @@ void kCreateRenderContext(const kRenderSpec &spec, kTexture *textures[kTextureTy
 	Sines[K_MAX_CIRCLE_SEGMENTS - 1]   = 0;
 
 	for (u32 i = 0; i < kTextureType_Count; ++i)
-		g_RenderContext.Builtin.Textures[i] = textures[i];
-	g_RenderContext.Builtin.Font              = font;
+		g_Builtin.Textures[i] = textures[i];
+	g_Builtin.Font             = font;
 
-	g_RenderContext.Context2D.Stack.Thickness = spec.Thickness;
+	g_Render2D.Stack.Thickness = 1.0f;
 
-	g_RenderContext.Context2D.Vertices.Reserve(spec.Vertices);
-	g_RenderContext.Context2D.Indices.Reserve(spec.Indices);
-	g_RenderContext.Context2D.Commands.Reserve(spec.Commands);
-	g_RenderContext.Context2D.Scenes.Reserve(spec.Scenes);
-	g_RenderContext.Context2D.Rects.Reserve(spec.Rects);
+	g_Render2D.Vertices.Reserve(spec.Vertices);
+	g_Render2D.Indices.Reserve(spec.Indices);
+	g_Render2D.Commands.Reserve(spec.Commands);
+	g_Render2D.Scenes.Reserve(spec.Scenes);
+	g_Render2D.Rects.Reserve(spec.Commands);
 	for (u32 i = 0; i < kTextureType_Count; ++i)
-		g_RenderContext.Context2D.Textures[i].Reserve(spec.Textures);
+		g_Render2D.Textures[i].Reserve(spec.Commands);
 
-	g_RenderContext.Context2D.Stack.Rects.Reserve((imem)spec.Rects << 1);
-	g_RenderContext.Context2D.Stack.Transforms.Reserve((imem)spec.Transforms << 1);
+	g_Render2D.Stack.Rects.Reserve(64);
+	g_Render2D.Stack.Transforms.Reserve(64);
 	for (u32 i = 0; i < kTextureType_Count; ++i)
-		g_RenderContext.Context2D.Stack.Textures[i].Reserve((imem)spec.Textures << 1);
-	g_RenderContext.Context2D.Stack.PathVertices.Reserve(spec.Scratch);
-	g_RenderContext.Context2D.Stack.BlendModes.Reserve(32);
+		g_Render2D.Stack.Textures[i].Reserve(64);
+	g_Render2D.Stack.Paths.Reserve(4096);
+	g_Render2D.Stack.Normals.Reserve(4096);
+	g_Render2D.Stack.BlendModes.Reserve(32);
 
-	g_RenderContext.Context2D.Stack.Rects.Add(kRect{});
-	g_RenderContext.Context2D.Stack.Transforms.Add(kIdentity3x3());
+	g_Render2D.Stack.Rects.Add(kRect{});
+	g_Render2D.Stack.Transforms.Add(kIdentity3x3());
 	for (u32 i = 0; i < kTextureType_Count; ++i)
-		g_RenderContext.Context2D.Stack.Textures[i].Add(g_RenderContext.Builtin.Textures[i]);
-	g_RenderContext.Context2D.Stack.BlendModes.Add(kBlendMode_Normal);
-	g_RenderContext.Context2D.Stack.TextureFilters.Add(kTextureFilter_LinearWrap);
+		g_Render2D.Stack.Textures[i].Add(g_Builtin.Textures[i]);
+	g_Render2D.Stack.OutLineStyles.Add(kVec4(0));
+	g_Render2D.Stack.BlendModes.Add(kBlendMode_Normal);
+	g_Render2D.Stack.TextureFilters.Add(kTextureFilter_LinearWrap);
 
 	kResetFrame();
 }
 
 void kDestroyRenderContext(void)
 {
-	kFree(&g_RenderContext.Context2D.Vertices);
-	kFree(&g_RenderContext.Context2D.Indices);
-	kFree(&g_RenderContext.Context2D.Commands);
-	kFree(&g_RenderContext.Context2D.Scenes);
-	kFree(&g_RenderContext.Context2D.Rects);
+	kFree(&g_Render2D.Vertices);
+	kFree(&g_Render2D.Indices);
+	kFree(&g_Render2D.Commands);
+	kFree(&g_Render2D.Scenes);
+	kFree(&g_Render2D.Rects);
 	for (u32 i = 0; i < kTextureType_Count; ++i)
-		kFree(&g_RenderContext.Context2D.Textures[i]);
+		kFree(&g_Render2D.Textures[i]);
+	kFree(&g_Render2D.OutLineStyles);
 
-	kFree(&g_RenderContext.Context2D.Stack.Rects);
-	kFree(&g_RenderContext.Context2D.Stack.Transforms);
+	kFree(&g_Render2D.Stack.Rects);
+	kFree(&g_Render2D.Stack.Transforms);
 	for (u32 i = 0; i < kTextureType_Count; ++i)
-		kFree(&g_RenderContext.Context2D.Stack.Textures[i]);
-	kFree(&g_RenderContext.Context2D.Stack.PathVertices);
-	kFree(&g_RenderContext.Context2D.Stack.BlendModes);
+		kFree(&g_Render2D.Stack.Textures[i]);
+	kFree(&g_Render2D.Stack.Paths);
+	kFree(&g_Render2D.Stack.Normals);
+	kFree(&g_Render2D.Stack.BlendModes);
+	kFree(&g_Render2D.Stack.OutLineStyles);
 
-	memset(&g_RenderContext, 0, sizeof(g_RenderContext));
+	memset(&g_Render2D, 0, sizeof(g_Render2D));
 }
 
 void kResetFrame(void)
 {
-	g_RenderContext.Context2D.Vertices.Count = 0;
-	g_RenderContext.Context2D.Indices.Count  = 0;
-	g_RenderContext.Context2D.Commands.Count = 0;
-	g_RenderContext.Context2D.Scenes.Count   = 0;
-	g_RenderContext.Context2D.Rects.Count    = 0;
+	g_Render2D.Vertices.Count = 0;
+	g_Render2D.Indices.Count  = 0;
+	g_Render2D.Commands.Count = 0;
+	g_Render2D.Scenes.Count   = 0;
+	g_Render2D.Rects.Count    = 0;
 	for (u32 i = 0; i < kTextureType_Count; ++i)
-		g_RenderContext.Context2D.Textures[i].Count = 0;
+		g_Render2D.Textures[i].Count = 0;
+	g_Render2D.OutLineStyles.Count    = 0;
 
-	g_RenderContext.Context2D.Stack.Rects.Count      = 1;
-	g_RenderContext.Context2D.Stack.Transforms.Count = 1;
+	g_Render2D.Stack.Rects.Count      = 1;
+	g_Render2D.Stack.Transforms.Count = 1;
 	for (u32 i = 0; i < kTextureType_Count; ++i)
-		g_RenderContext.Context2D.Stack.Textures[i].Count = 1;
-	g_RenderContext.Context2D.Stack.BlendModes.Count     = 1;
-	g_RenderContext.Context2D.Stack.TextureFilters.Count = 1;
-	g_RenderContext.Context2D.Stack.PathVertices.Count   = 0;
-	g_RenderContext.Context2D.Stack.Thickness            = 1.0f;
+		g_Render2D.Stack.Textures[i].Count = 1;
+	g_Render2D.Stack.OutLineStyles.Count  = 1;
+	g_Render2D.Stack.BlendModes.Count     = 1;
+	g_Render2D.Stack.TextureFilters.Count = 1;
+	g_Render2D.Stack.Paths.Count          = 0;
+	g_Render2D.Stack.Normals.Count        = 0;
+	g_Render2D.Stack.Thickness            = 1.0f;
 }
 
-static void kCalculateTotalMegaBytes(kRenderMemoryUsage *usage)
+void kGetRenderMemoryUsage(kRenderMemory *usage)
 {
-	umem total = 0;
+	memcpy(usage, &g_Memory.Used, sizeof(*usage));
+}
 
-	total += usage->Vertices * sizeof(kVertex2D);
-	total += usage->Indices * sizeof(kIndex2D);
-	for (int i = 0; i < kTextureType_Count; ++i)
-		total += usage->Textures[i] * sizeof(kTexture *);
-	total += usage->Rects * sizeof(kRect);
-	total += usage->Passes * sizeof(kRenderScene2D);
-	total += usage->Commands * sizeof(kRenderCommand2D);
-
-	for (int i = 0; i < kTextureType_Count; ++i)
-		total += usage->Stack.Textures[i] * sizeof(kTexture *);
-	total += usage->Stack.Transforms * sizeof(kMat4);
-	total += usage->Stack.Rects * sizeof(kRect);
-	total += usage->Stack.Blends * sizeof(kBlendMode);
-	total += usage->Stack.Scratch * sizeof(kVec2);
-
-	usage->TotalMegaBytes = (float)((double)total / (double)(1024 * 1024));
+void kGetRenderMemoryCaps(kRenderMemory *usage)
+{
+	memcpy(usage, &g_Memory.Caps, sizeof(*usage));
 }
 
 static void kUpdateMemoryStatictics(void)
 {
-	kRenderMemoryUsage &allocated = g_RenderContext.Memory.Allocated;
+	g_Memory.Caps.VertexSize  = (u32)(g_Render2D.Vertices.Capacity * sizeof(kVertex2D));
+	g_Memory.Caps.IndexSize   = (u32)(g_Render2D.Indices.Capacity * sizeof(kIndex2D));
+	g_Memory.Caps.CommandSize = (u32)(g_Render2D.Commands.Capacity * sizeof(kRenderCommand2D));
+	g_Memory.Caps.SceneSize   = (u32)(g_Render2D.Scenes.Capacity * sizeof(kRenderScene2D));
 
-	allocated.Vertices            = g_RenderContext.Context2D.Vertices.Allocated;
-	allocated.Indices             = g_RenderContext.Context2D.Indices.Allocated;
-	for (int i = 0; i < kTextureType_Count; ++i)
-		allocated.Textures[i] = g_RenderContext.Context2D.Textures[i].Allocated;
-	allocated.Rects    = g_RenderContext.Context2D.Rects.Allocated;
-	allocated.Passes   = g_RenderContext.Context2D.Scenes.Allocated;
-	allocated.Commands = g_RenderContext.Context2D.Commands.Allocated;
+	g_Memory.Caps.MB          = 0;
+	g_Memory.Caps.MB += (float)g_Memory.Caps.VertexSize;
+	g_Memory.Caps.MB += (float)g_Memory.Caps.IndexSize;
+	g_Memory.Caps.MB += (float)g_Memory.Caps.CommandSize;
+	g_Memory.Caps.MB += (float)g_Memory.Caps.SceneSize;
+	g_Memory.Caps.MB /= (1024 * 1024);
 
-	for (int i = 0; i < kTextureType_Count; ++i)
-		allocated.Stack.Textures[i] = g_RenderContext.Context2D.Stack.Textures[i].Allocated;
-	allocated.Stack.Transforms = g_RenderContext.Context2D.Stack.Transforms.Allocated;
-	allocated.Stack.Rects      = g_RenderContext.Context2D.Stack.Rects.Allocated;
-	allocated.Stack.Blends     = g_RenderContext.Context2D.Stack.BlendModes.Allocated;
-	allocated.Stack.Scratch    = g_RenderContext.Context2D.Stack.PathVertices.Allocated;
+	g_Memory.Used.VertexSize  = (u32)(g_Render2D.Vertices.Count * sizeof(kVertex2D));
+	g_Memory.Used.IndexSize   = (u32)(g_Render2D.Indices.Count * sizeof(kIndex2D));
+	g_Memory.Used.CommandSize = (u32)(g_Render2D.Commands.Count * sizeof(kRenderCommand2D));
+	g_Memory.Used.SceneSize   = (u32)(g_Render2D.Scenes.Count * sizeof(kRenderScene2D));
 
-	kCalculateTotalMegaBytes(&allocated);
-
-	kRenderMemoryUsage &last_frame = g_RenderContext.Memory.UsedLastFrame;
-
-	last_frame.Vertices            = g_RenderContext.Context2D.Vertices.Count;
-	last_frame.Indices             = g_RenderContext.Context2D.Indices.Count;
-	for (int i = 0; i < kTextureType_Count; ++i)
-		last_frame.Textures[i] = g_RenderContext.Context2D.Textures[i].Count;
-	last_frame.Rects    = g_RenderContext.Context2D.Rects.Count;
-	last_frame.Passes   = g_RenderContext.Context2D.Scenes.Count;
-	last_frame.Commands = g_RenderContext.Context2D.Commands.Count;
-
-	for (int i = 0; i < kTextureType_Count; ++i)
-		last_frame.Stack.Textures[i] = g_RenderContext.Context2D.Stack.Textures[i].Count;
-	last_frame.Stack.Transforms = g_RenderContext.Context2D.Stack.Transforms.Count;
-	last_frame.Stack.Rects      = g_RenderContext.Context2D.Stack.Rects.Count;
-	last_frame.Stack.Blends     = g_RenderContext.Context2D.Stack.BlendModes.Count;
-	last_frame.Stack.Scratch    = g_RenderContext.Context2D.Stack.PathVertices.Count;
-
-	kCalculateTotalMegaBytes(&last_frame);
-
-	kRenderMemoryUsage &max_used = g_RenderContext.Memory.MaxUsed;
-
-	max_used.Vertices            = kMax(max_used.Vertices, last_frame.Vertices);
-	max_used.Indices             = kMax(max_used.Indices, last_frame.Indices);
-	for (int i = 0; i < kTextureType_Count; ++i)
-		max_used.Textures[i] = kMax(max_used.Textures[i], last_frame.Textures[i]);
-	max_used.Rects    = kMax(max_used.Rects, last_frame.Rects);
-	max_used.Passes   = kMax(max_used.Passes, last_frame.Passes);
-	max_used.Commands = kMax(max_used.Commands, last_frame.Commands);
-
-	for (int i = 0; i < kTextureType_Count; ++i)
-		max_used.Stack.Textures[i] = kMax(max_used.Stack.Textures[i], last_frame.Stack.Textures[i]);
-	max_used.Stack.Transforms = kMax(max_used.Stack.Transforms, last_frame.Stack.Transforms);
-	max_used.Stack.Rects      = kMax(max_used.Stack.Rects, last_frame.Stack.Rects);
-	max_used.Stack.Blends     = kMax(max_used.Stack.Blends, last_frame.Stack.Blends);
-	max_used.Stack.Scratch    = kMax(max_used.Stack.Scratch, last_frame.Stack.Scratch);
-
-	kCalculateTotalMegaBytes(&max_used);
+	g_Memory.Used.MB          = 0;
+	g_Memory.Used.MB += (float)g_Memory.Used.VertexSize;
+	g_Memory.Used.MB += (float)g_Memory.Used.IndexSize;
+	g_Memory.Used.MB += (float)g_Memory.Used.CommandSize;
+	g_Memory.Used.MB += (float)g_Memory.Used.SceneSize;
+	g_Memory.Used.MB /= (1024 * 1024);
 }
 
 void kGetFrameData(kRenderFrame2D *frame)
 {
-	frame->Scenes   = g_RenderContext.Context2D.Scenes;
-	frame->Commands = g_RenderContext.Context2D.Commands;
+	frame->Scenes   = g_Render2D.Scenes;
+	frame->Commands = g_Render2D.Commands;
 	for (int i = 0; i < kTextureType_Count; ++i)
-		frame->Textures[i] = g_RenderContext.Context2D.Textures[i];
-	frame->Rects    = g_RenderContext.Context2D.Rects;
-	frame->Vertices = g_RenderContext.Context2D.Vertices;
-	frame->Indices  = g_RenderContext.Context2D.Indices;
+		frame->Textures[i] = g_Render2D.Textures[i];
+	frame->OutLineStyles = g_Render2D.OutLineStyles;
+	frame->Rects         = g_Render2D.Rects;
+	frame->Vertices      = g_Render2D.Vertices;
+	frame->Indices       = g_Render2D.Indices;
 
 	kUpdateMemoryStatictics();
 }
-
-const kRenderMemoryStatistics *kGetRenderMemoryStatistics(void) { return &g_RenderContext.Memory; }

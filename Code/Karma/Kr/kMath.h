@@ -906,7 +906,7 @@ Item kMapRange(Item in_a, Item in_b, Item out_a, Item out_b, Item v)
 template <typename Item>
 Item kMap01(Item in_a, Item in_b, Item v)
 {
-	return MapRange(in_a, in_b, Item(0), Item(1), v);
+	return kMapRange(in_a, in_b, Item(0), Item(1), v);
 }
 
 float   kMoveTowards(float from, float to, float factor);

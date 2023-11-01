@@ -1,9 +1,9 @@
 #include "kBlit.fx"
 
-Texture2D    TexImage : register(t0);
+Texture2D TexImage : register(t0);
 SamplerState Sampler : register(s0);
 
-float4 Main(kVertexOutput input) : SV_Target
+float4 Main(kVertexOutput In) : SV_Target
 {
-	return TexImage.Sample(Sampler, input.tex);
+	return TexImage.Sample(Sampler, In.TexCoord);
 }

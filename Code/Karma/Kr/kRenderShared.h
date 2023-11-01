@@ -29,8 +29,9 @@ enum kRenderDirtyFlags2D
 	kRenderDirty_Rect           = 0x4,
 	kRenderDirty_Blend          = 0x8,
 	kRenderDirty_TextureFilter  = 0x10,
+	kRenderDirty_OutLineStyle  = 0x20,
 	kRenderDirty_Everything     = kRenderDirty_TextureColor | kRenderDirty_TextureMaskSDF | kRenderDirty_Rect |
-	                          kRenderDirty_Blend | kRenderDirty_TextureFilter
+	                          kRenderDirty_Blend | kRenderDirty_TextureFilter | kRenderDirty_OutLineStyle
 };
 
 typedef struct kRenderCommand2D
@@ -40,8 +41,9 @@ typedef struct kRenderCommand2D
 	kBlendMode     BlendMode;
 	kTextureFilter TextureFilter;
 	u16            Rect;
-	u32            VertexOffset;
-	u32            IndexOffset;
+	u16            OutLineStyle;
+	u32            VertexCount;
+	u32            IndexCount;
 } kRenderCommand2D;
 
 typedef struct kCamera2D
@@ -67,6 +69,7 @@ typedef struct kRenderFrame2D
 	kSpan<kRenderCommand2D> Commands;
 	kSpan<kTexture *>       Textures[kTextureType_Count];
 	kSpan<kRect>            Rects;
+	kSpan<kVec4>            OutLineStyles;
 	kSpan<kVertex2D>        Vertices;
 	kSpan<kIndex2D>         Indices;
 } kRenderFrame2D;

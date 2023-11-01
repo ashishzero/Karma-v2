@@ -5,6 +5,6 @@ struct kVertexInput
 
 struct kVertexOutput
 {
-	float2 tex : TEXCOORD;
-	float4 pos : SV_Position;
+	float4 Position : SV_Position;
+	float2 TexCoord : TEXCOORD;
 };

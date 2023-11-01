@@ -7,14 +7,21 @@ template <typename T>
 struct kArray
 {
 	imem Count;
-	imem Allocated;
+	imem Capacity;
 	T   *Items;
 
-	kArray() : Count(0), Allocated(0), Items(nullptr) {}
+	kArray() : Count(0), Capacity(0), Items(nullptr)
+	{}
 
-	operator kSpan<T>() { return kSpan<T>(Items, Count); }
+	operator kSpan<T>()
+	{
+		return kSpan<T>(Items, Count);
+	}
 
-	operator const kSpan<T>() const { return kSpan<T>(Items, Count); }
+	operator const kSpan<T>() const
+	{
+		return kSpan<T>(Items, Count);
+	}
 
 	T &operator[](ptrdiff_t i)
 	{
@@ -28,17 +35,29 @@ struct kArray
 		return Items[i];
 	}
 
-	T       *begin() { return Items; }
-
-	T       *end() { return Items + Count; }
-
-	const T *begin() const { return Items; }
-
-	const T *end() const { return Items + Count; }
-
-	imem     NextCapacity(imem count)
+	T *begin()
 	{
-		imem new_cap = Allocated ? (Allocated << 1) : 8;
+		return Items;
+	}
+
+	T *end()
+	{
+		return Items + Count;
+	}
+
+	const T *begin() const
+	{
+		return Items;
+	}
+
+	const T *end() const
+	{
+		return Items + Count;
+	}
+
+	imem NextCapacity(imem count)
+	{
+		imem new_cap = Capacity ? (Capacity << 1) : 8;
 		return new_cap > count ? new_cap : count;
 	}
 
@@ -81,7 +100,10 @@ struct kArray
 		Count -= 1;
 	}
 
-	void Reset(void) { Count = 0; }
+	void Reset(void)
+	{
+		Count = 0;
+	}
 
 	void Remove(imem index)
 	{
@@ -99,13 +121,14 @@ struct kArray
 
 	bool Reserve(imem req_cap)
 	{
-		if (req_cap <= Allocated) return true;
+		if (req_cap <= Capacity)
+			return true;
 
-		void *mem = kRealloc(Items, Allocated * sizeof(T), req_cap * sizeof(T));
+		void *mem = kRealloc(Items, Capacity * sizeof(T), req_cap * sizeof(T));
 		if (mem)
 		{
-			Items      = (T *)mem;
-			Allocated = req_cap;
+			Items    = (T *)mem;
+			Capacity = req_cap;
 			return true;
 		}
 
@@ -141,7 +164,7 @@ struct kArray
 		imem req_count = Count + n;
 		imem cur_count = Count;
 
-		if (req_count < Allocated)
+		if (req_count < Capacity)
 		{
 			Count = req_count;
 			return &Items[cur_count];
@@ -158,20 +181,25 @@ struct kArray
 		return 0;
 	}
 
-	T   *Add(void) { return Extend(1); }
+	T *Add(void)
+	{
+		return Extend(1);
+	}
 
 	void Add(const T &src)
 	{
 		T *dst = Add();
-		if (dst) *dst = src;
+		if (dst)
+			*dst = src;
 	}
 
 	bool CopyBuffer(T *src, imem src_count)
 	{
-		if (Count + src_count > Allocated)
+		if (Count + src_count > Capacity)
 		{
-			imem new_cap = NextCapacity(Allocated + src_count);
-			if (!Reserve(new_cap)) return false;
+			imem new_cap = NextCapacity(Capacity + src_count);
+			if (!Reserve(new_cap))
+				return false;
 		}
 
 		memcpy(Items + Count, src, src_count * sizeof(T));
@@ -205,13 +233,13 @@ struct kArray
 
 	void Pack(void)
 	{
-		if (Count != Allocated)
+		if (Count != Capacity)
 		{
-			void *mem = kRealloc(Items, Allocated * sizeof(T), Count * sizeof(T));
+			void *mem = kRealloc(Items, Capacity * sizeof(T), Count * sizeof(T));
 			if (mem)
 			{
-				Items      = (T *)mem;
-				Allocated = Count;
+				Items    = (T *)mem;
+				Capacity = Count;
 			}
 		}
 	}
@@ -227,7 +255,7 @@ struct kArray
 template <typename T>
 void kFree(kArray<T> *arr)
 {
-	kFree(arr->Items, arr->Allocated * sizeof(T));
+	kFree(arr->Items, arr->Capacity * sizeof(T));
 }
 
 template <typename T>

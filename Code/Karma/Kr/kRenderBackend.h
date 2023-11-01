@@ -48,6 +48,7 @@ typedef struct kTextureSpec
 	u32     Height;
 	u32     Pitch;
 	u8     *Pixels;
+	kString Name;
 } kTextureSpec;
 
 extern bool           kEnableDebugLayer;

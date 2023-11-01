@@ -5,11 +5,11 @@ RWTexture2D<float3> Output : register(u0);
 [numthreads(32, 16, 1)]
 void Main(uint3 DTid : SV_DispatchThreadID)
 {
-	uint2 pos = DTid.xy;
-	uint w, h;
-	TexImage.GetDimensions(w, h);
-	if (pos.x < w && pos.y < h)
+	uint2 Pos = DTid.xy;
+	uint Width, Height;
+	TexImage.GetDimensions(Width, Height);
+	if (Pos.x < Width && Pos.y < Height)
 	{
-		Output[pos] = TexImage[pos].xyz;
+		Output[Pos] = TexImage[Pos].xyz;
 	}
 }
