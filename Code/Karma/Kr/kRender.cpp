@@ -12,7 +12,7 @@
 
 typedef struct kRenderStack2D
 {
-	kArray<kTexture *>     Textures[kTextureType_Count];
+	kArray<kTexture>       Textures[kTextureType_Count];
 	kArray<kMat3>          Transforms;
 	kArray<kRect>          Rects;
 	kArray<kBlendMode>     BlendModes;
@@ -27,7 +27,6 @@ typedef struct kRenderContext2D
 {
 	kArray<kVertex2D>        Vertices;
 	kArray<kIndex2D>         Indices;
-	kArray<kTexture *>       Textures[kTextureType_Count];
 	kArray<kVec4>            OutLineStyles;
 	kArray<kRect>            Rects;
 	kArray<kRenderScene2D>   Scenes;
@@ -37,8 +36,8 @@ typedef struct kRenderContext2D
 
 typedef struct kRenderContextBuiltin
 {
-	kTexture *Textures[kTextureType_Count];
-	kFont    *Font;
+	kTexture Textures[kTextureType_Count];
+	kFont *  Font;
 } kRenderContextBuiltin;
 
 struct kRenderMemoryStats
@@ -108,7 +107,7 @@ static void kPushRenderCommand(u32 dirty_flags)
 	kRenderCommand2D *cmd = g_Render2D.Commands.Add();
 	cmd->Flags            = dirty_flags;
 	for (int i = 0; i < kTextureType_Count; ++i)
-		cmd->Textures[i] = (u32)g_Render2D.Textures[i].Count - 1;
+		cmd->Textures[i] = g_Render2D.Stack.Textures[i].Last();
 	cmd->OutLineStyle  = (u32)g_Render2D.OutLineStyles.Count - 1;
 	cmd->Rect          = (u32)g_Render2D.Rects.Count - 1;
 	cmd->BlendMode     = g_Render2D.Stack.BlendModes.Last();
@@ -185,7 +184,7 @@ static void kHandleTextureFilterChange(void)
 
 static void kHandleRectChange(void)
 {
-	kRect            &rect = g_Render2D.Stack.Rects.Last();
+	kRect &           rect = g_Render2D.Stack.Rects.Last();
 	kRenderCommand2D &cmd  = g_Render2D.Commands.Last();
 
 	if (memcmp(&g_Render2D.Rects[cmd.Rect], &rect, sizeof(kRect)) == 0)
@@ -228,7 +227,7 @@ static void kHandleRectChange(void)
 
 static void kHandleOutLineStyleChange(void)
 {
-	kVec4            &style = g_Render2D.Stack.OutLineStyles.Last();
+	kVec4 &           style = g_Render2D.Stack.OutLineStyles.Last();
 	kRenderCommand2D &cmd   = g_Render2D.Commands.Last();
 
 	if (memcmp(&g_Render2D.OutLineStyles[cmd.OutLineStyle], &style, sizeof(kVec4)) == 0)
@@ -271,42 +270,32 @@ static void kHandleOutLineStyleChange(void)
 
 static void kHandleTextureChange(kTextureType type)
 {
-	kTexture         *texture = g_Render2D.Stack.Textures[type].Last();
+	kTexture          texture = g_Render2D.Stack.Textures[type].Last();
 	kRenderCommand2D &cmd     = g_Render2D.Commands.Last();
 	u32               bit     = type == kTextureType_Color ? kRenderDirty_TextureColor : kRenderDirty_TextureMaskSDF;
 
-	if (g_Render2D.Textures[type][cmd.Textures[type]] == texture)
+	if (cmd.Textures[type] == texture)
 		return;
 
 	if (cmd.IndexCount)
 	{
-		g_Render2D.Textures[type].Add(texture);
 		kPushRenderCommand(bit);
 		return;
 	}
 
-	if (g_Render2D.Commands.Count <= 1)
-	{
-		g_Render2D.Textures[type][0] = texture;
-		return;
-	}
+	cmd.Textures[type] = texture;
 
-	if (cmd.Flags & bit)
-	{
-		g_Render2D.Textures[type].Pop();
-	}
+	if (g_Render2D.Commands.Count <= 1)
+		return;
 
 	kRenderCommand2D &prev = g_Render2D.Commands[g_Render2D.Commands.Count - 2];
-	if (g_Render2D.Textures[type][prev.Textures[type]] != texture)
+	if (prev.Textures[type] != texture)
 	{
-		g_Render2D.Textures[type].Add(texture);
 		cmd.Flags |= bit;
-		cmd.Textures[type] = (u32)g_Render2D.Textures[type].Count - 1;
 		return;
 	}
 
 	cmd.Flags &= ~bit;
-	cmd.Textures[type] = (u32)g_Render2D.Textures[type].Count - 1;
 	if (!cmd.Flags)
 	{
 		g_Render2D.Commands.Pop();
@@ -324,8 +313,6 @@ void kBeginScene(const kCamera2D &camera, kRect region)
 	scene->Region         = region;
 	scene->Commands       = kRange<u32>((u32)g_Render2D.Commands.Count);
 
-	for (int i = 0; i < kTextureType_Count; ++i)
-		g_Render2D.Textures[i].Add(g_Render2D.Stack.Textures[i].Last());
 	g_Render2D.Rects.Add(g_Render2D.Stack.Rects.Last());
 	g_Render2D.OutLineStyles.Add(g_Render2D.Stack.OutLineStyles.Last());
 
@@ -360,12 +347,10 @@ void kEndScene(void)
 	if (!cmd.IndexCount)
 	{
 		u32 flags = cmd.Flags;
-		if (flags & kRenderDirty_TextureColor)
-			g_Render2D.Textures[kTextureType_Color].Pop();
-		if (flags & kRenderDirty_TextureMaskSDF)
-			g_Render2D.Textures[kTextureType_MaskSDF].Pop();
 		if (flags & kRenderDirty_Rect)
 			g_Render2D.Rects.Pop();
+		if (flags & kRenderDirty_OutLineStyle)
+			g_Render2D.OutLineStyles.Pop();
 		g_Render2D.Commands.Pop();
 	}
 
@@ -409,15 +394,15 @@ void kSetTextureFilter(kTextureFilter filter)
 	kHandleTextureFilterChange();
 }
 
-void kSetTexture(kTexture *texture, kTextureType idx)
+void kSetTexture(kTexture texture, kTextureType idx)
 {
 	g_Render2D.Stack.Textures[idx].Last() = texture;
 	kHandleTextureChange(idx);
 }
 
-void kPushTexture(kTexture *texture, kTextureType idx)
+void kPushTexture(kTexture texture, kTextureType idx)
 {
-	kTexture *last = g_Render2D.Stack.Textures[idx].Last();
+	kTexture last = g_Render2D.Stack.Textures[idx].Last();
 	g_Render2D.Stack.Textures[idx].Add(last);
 	kSetTexture(texture, idx);
 }
@@ -1411,63 +1396,63 @@ void kDrawPolygonOutline(const kVec2 *vertices, u32 count, kVec4 color)
 	kDrawPolygonOutline(vertices, count, 0, color);
 }
 
-void kDrawTexture(kTexture *texture, kVec3 pos, kVec2 dim, kVec4 color)
+void kDrawTexture(kTexture texture, kVec3 pos, kVec2 dim, kVec4 color)
 {
 	kPushTexture(texture, kTextureType_Color);
 	kDrawRect(pos, dim, color);
 	kPopTexture(kTextureType_Color);
 }
 
-void kDrawTexture(kTexture *texture, kVec2 pos, kVec2 dim, kVec4 color)
+void kDrawTexture(kTexture texture, kVec2 pos, kVec2 dim, kVec4 color)
 {
 	kPushTexture(texture, kTextureType_Color);
 	kDrawRect(pos, dim, color);
 	kPopTexture(kTextureType_Color);
 }
 
-void kDrawTextureCentered(kTexture *texture, kVec3 pos, kVec2 dim, kVec4 color)
+void kDrawTextureCentered(kTexture texture, kVec3 pos, kVec2 dim, kVec4 color)
 {
 	kPushTexture(texture, kTextureType_Color);
 	kDrawRectCentered(pos, dim, color);
 	kPopTexture(kTextureType_Color);
 }
 
-void kDrawTextureCentered(kTexture *texture, kVec2 pos, kVec2 dim, kVec4 color)
+void kDrawTextureCentered(kTexture texture, kVec2 pos, kVec2 dim, kVec4 color)
 {
 	kPushTexture(texture, kTextureType_Color);
 	kDrawRectCentered(pos, dim, color);
 	kPopTexture(kTextureType_Color);
 }
 
-void kDrawTexture(kTexture *texture, kVec3 pos, kVec2 dim, kRect rect, kVec4 color)
+void kDrawTexture(kTexture texture, kVec3 pos, kVec2 dim, kRect rect, kVec4 color)
 {
 	kPushTexture(texture, kTextureType_Color);
 	kDrawRect(pos, dim, rect, color);
 	kPopTexture(kTextureType_Color);
 }
 
-void kDrawTexture(kTexture *texture, kVec2 pos, kVec2 dim, kRect rect, kVec4 color)
+void kDrawTexture(kTexture texture, kVec2 pos, kVec2 dim, kRect rect, kVec4 color)
 {
 	kPushTexture(texture, kTextureType_Color);
 	kDrawRect(pos, dim, rect, color);
 	kPopTexture(kTextureType_Color);
 }
 
-void kDrawTextureCentered(kTexture *texture, kVec3 pos, kVec2 dim, kRect rect, kVec4 color)
+void kDrawTextureCentered(kTexture texture, kVec3 pos, kVec2 dim, kRect rect, kVec4 color)
 {
 	kPushTexture(texture, kTextureType_Color);
 	kDrawRectCentered(pos, dim, rect, color);
 	kPopTexture(kTextureType_Color);
 }
 
-void kDrawTextureCentered(kTexture *texture, kVec2 pos, kVec2 dim, kRect rect, kVec4 color)
+void kDrawTextureCentered(kTexture texture, kVec2 pos, kVec2 dim, kRect rect, kVec4 color)
 {
 	kPushTexture(texture, kTextureType_Color);
 	kDrawRectCentered(pos, dim, rect, color);
 	kPopTexture(kTextureType_Color);
 }
 
-void kDrawTextureMasked(kTexture *texture, kTexture *mask, kVec3 pos, kVec2 dim, kVec4 color)
+void kDrawTextureMasked(kTexture texture, kTexture mask, kVec3 pos, kVec2 dim, kVec4 color)
 {
 	kPushTexture(texture, kTextureType_Color);
 	kPushTexture(mask, kTextureType_MaskSDF);
@@ -1476,7 +1461,7 @@ void kDrawTextureMasked(kTexture *texture, kTexture *mask, kVec3 pos, kVec2 dim,
 	kPopTexture(kTextureType_Color);
 }
 
-void kDrawTextureCenteredMasked(kTexture *texture, kTexture *mask, kVec3 pos, kVec2 dim, kVec4 color)
+void kDrawTextureCenteredMasked(kTexture texture, kTexture mask, kVec3 pos, kVec2 dim, kVec4 color)
 {
 	kPushTexture(texture, kTextureType_Color);
 	kPushTexture(mask, kTextureType_MaskSDF);
@@ -1485,7 +1470,7 @@ void kDrawTextureCenteredMasked(kTexture *texture, kTexture *mask, kVec3 pos, kV
 	kPopTexture(kTextureType_Color);
 }
 
-void kDrawTextureMasked(kTexture *texture, kTexture *mask, kVec2 pos, kVec2 dim, kVec4 color)
+void kDrawTextureMasked(kTexture texture, kTexture mask, kVec2 pos, kVec2 dim, kVec4 color)
 {
 	kPushTexture(texture, kTextureType_Color);
 	kPushTexture(mask, kTextureType_MaskSDF);
@@ -1494,7 +1479,7 @@ void kDrawTextureMasked(kTexture *texture, kTexture *mask, kVec2 pos, kVec2 dim,
 	kPopTexture(kTextureType_Color);
 }
 
-void kDrawTextureCenteredMasked(kTexture *texture, kTexture *mask, kVec2 pos, kVec2 dim, kVec4 color)
+void kDrawTextureCenteredMasked(kTexture texture, kTexture mask, kVec2 pos, kVec2 dim, kVec4 color)
 {
 	kPushTexture(texture, kTextureType_Color);
 	kPushTexture(mask, kTextureType_MaskSDF);
@@ -1774,8 +1759,8 @@ void kDrawTextQuadCenteredRotated(u32 codepoint, kVec2 pos, float angle, kVec4 c
 kVec2 kCalculateText(kString text, const kFont *font, float scale)
 {
 	u32   codepoint;
-	u8   *ptr = text.begin();
-	u8   *end = text.end();
+	u8 *  ptr = text.begin();
+	u8 *  end = text.end();
 
 	kVec2 rpos;
 	kVec2 rsize;
@@ -1811,8 +1796,8 @@ void kDrawText(kString text, kVec3 pos, const kFont *font, kVec4 color, float sc
 	kPushTexture(font->Atlas, kTextureType_MaskSDF);
 
 	u32   codepoint;
-	u8   *ptr  = text.begin();
-	u8   *end  = text.end();
+	u8 *  ptr  = text.begin();
+	u8 *  end  = text.end();
 
 	kVec3 rpos = pos;
 	kVec2 rsize;
@@ -1856,7 +1841,7 @@ void kDrawText(kString text, kVec2 pos, kVec4 color, float scale)
 //
 //
 
-void kCreateRenderContext(const kRenderSpec &spec, kTexture *textures[kTextureType_Count], kFont *font)
+void kCreateRenderContext(const kRenderSpec &spec, kTexture textures[kTextureType_Count], kFont *font)
 {
 	for (u32 i = 0; i < K_MAX_CIRCLE_SEGMENTS; ++i)
 	{
@@ -1879,8 +1864,6 @@ void kCreateRenderContext(const kRenderSpec &spec, kTexture *textures[kTextureTy
 	g_Render2D.Commands.Reserve(spec.Commands);
 	g_Render2D.Scenes.Reserve(spec.Scenes);
 	g_Render2D.Rects.Reserve(spec.Commands);
-	for (u32 i = 0; i < kTextureType_Count; ++i)
-		g_Render2D.Textures[i].Reserve(spec.Commands);
 
 	g_Render2D.Stack.Rects.Reserve(64);
 	g_Render2D.Stack.Transforms.Reserve(64);
@@ -1908,8 +1891,6 @@ void kDestroyRenderContext(void)
 	kFree(&g_Render2D.Commands);
 	kFree(&g_Render2D.Scenes);
 	kFree(&g_Render2D.Rects);
-	for (u32 i = 0; i < kTextureType_Count; ++i)
-		kFree(&g_Render2D.Textures[i]);
 	kFree(&g_Render2D.OutLineStyles);
 
 	kFree(&g_Render2D.Stack.Rects);
@@ -1926,13 +1907,11 @@ void kDestroyRenderContext(void)
 
 void kResetFrame(void)
 {
-	g_Render2D.Vertices.Count = 0;
-	g_Render2D.Indices.Count  = 0;
-	g_Render2D.Commands.Count = 0;
-	g_Render2D.Scenes.Count   = 0;
-	g_Render2D.Rects.Count    = 0;
-	for (u32 i = 0; i < kTextureType_Count; ++i)
-		g_Render2D.Textures[i].Count = 0;
+	g_Render2D.Vertices.Count         = 0;
+	g_Render2D.Indices.Count          = 0;
+	g_Render2D.Commands.Count         = 0;
+	g_Render2D.Scenes.Count           = 0;
+	g_Render2D.Rects.Count            = 0;
 	g_Render2D.OutLineStyles.Count    = 0;
 
 	g_Render2D.Stack.Rects.Count      = 1;
@@ -1986,10 +1965,8 @@ static void kUpdateMemoryStatictics(void)
 
 void kGetFrameData(kRenderFrame2D *frame)
 {
-	frame->Scenes   = g_Render2D.Scenes;
-	frame->Commands = g_Render2D.Commands;
-	for (int i = 0; i < kTextureType_Count; ++i)
-		frame->Textures[i] = g_Render2D.Textures[i];
+	frame->Scenes        = g_Render2D.Scenes;
+	frame->Commands      = g_Render2D.Commands;
 	frame->OutLineStyles = g_Render2D.OutLineStyles;
 	frame->Rects         = g_Render2D.Rects;
 	frame->Vertices      = g_Render2D.Vertices;

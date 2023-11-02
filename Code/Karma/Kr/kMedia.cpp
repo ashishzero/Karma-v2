@@ -15,7 +15,7 @@ static const kGlyph FallbackGlyph      = {
 
 typedef struct kMediaBuiltin
 {
-	kTexture *Texture;
+	kTexture  Texture;
 	kFont     Font;
 } kMediaBuiltin;
 
@@ -377,7 +377,7 @@ static void kCreateBuiltinResources(void)
 
 		font->Atlas       = g_Media.Render.CreateTexture(spec);
 
-		if (!font->Atlas)
+		if (!font->Atlas.ID.Index)
 		{
 			font->Atlas        = g_Media.Builtin.Texture;
 			font->CodepointMap = nullptr;
@@ -413,7 +413,7 @@ static void kDestroyBuiltinResources(void)
 		g_Media.Render.DestroyTexture(g_Media.Builtin.Font.Atlas);
 	}
 
-	if (g_Media.Builtin.Texture)
+	if (g_Media.Builtin.Texture.ID.Index)
 	{
 		g_Media.Render.DestroyTexture(g_Media.Builtin.Texture);
 	}
@@ -455,7 +455,7 @@ int kEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user)
 
 	kCreateBuiltinResources();
 
-	kTexture *textures[kTextureType_Count];
+	kTexture textures[kTextureType_Count];
 	for (int i = 0; i < kTextureType_Count; ++i)
 		textures[i] = g_Media.Builtin.Texture;
 

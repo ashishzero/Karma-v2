@@ -1,6 +1,6 @@
 #pragma once
 #include "kCommon.h"
-#include "kRenderConfig.h"
+#include "kRenderShared.h"
 
 typedef enum kKey
 {
@@ -378,7 +378,7 @@ static const kRenderPipelineConfig kDefaultRenderPipeline = {.Msaa              
                                                              .Bloom             = kBloom_Enabled,
                                                              .Hdr               = kHighDynamicRange_AES,
                                                              .BloomFilterRadius = 0.005f,
-                                                             .BloomStrength     = 0.15f,
+                                                             .BloomStrength     = 0.05f,
                                                              .Intensity         = kVec3(1)};
 
 static const kMediaSpec            kDefaultSpec = {.Arena = kDefaultArena, .RenderPipeline = kDefaultRenderPipeline};

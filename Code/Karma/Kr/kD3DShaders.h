@@ -48,16 +48,16 @@ static const kString kComputeShaderStrings[] = {
 	"Blit", "Threshold", "BloomDownSample", "BloomDownSampleKarisAvg", "BlurUpSample", "UpSampleMix"};
 static_assert(kArrayCount(kComputeShaderStrings) == kComputeShader_Count, "");
 
-static const kString VertexShadersMap[] = {kString(kQuadVS), kString(kBlitVS)};
-static_assert(kArrayCount(VertexShadersMap) == kVertexShader_Count, "");
+static const kString kVertexShadersMap[] = {kString(kQuadVS), kString(kBlitVS)};
+static_assert(kArrayCount(kVertexShadersMap) == kVertexShader_Count, "");
 
-static const kString PixelShadersMap[] = {kString(kQuadPS), kString(kBlitPS), kString(kToneMapPS)};
-static_assert(kArrayCount(PixelShadersMap) == kPixelShader_Count, "");
+static const kString kPixelShadersMap[] = {kString(kQuadPS), kString(kBlitPS), kString(kToneMapPS)};
+static_assert(kArrayCount(kPixelShadersMap) == kPixelShader_Count, "");
 
-static const kString ComputeShadersMap[] = {kString(kBlitCS),
-                                            kString(kThresholdCS),
-                                            kString(kBloomDownSampleCS),
-                                            kString(kBloomDownSampleKarisAvgCS),
-                                            kString(kBloomBlurUpSampleCS),
-                                            kString(kBloomUpSampleMixCS)};
-static_assert(kArrayCount(ComputeShadersMap) == kComputeShader_Count, "");
+static const kString kComputeShadersMap[] = {kString(kBlitCS),
+                                             kString(kThresholdCS),
+                                             kString(kBloomDownSampleCS),
+                                             kString(kBloomDownSampleKarisAvgCS),
+                                             kString(kBloomBlurUpSampleCS),
+                                             kString(kBloomUpSampleMixCS)};
+static_assert(kArrayCount(kComputeShadersMap) == kComputeShader_Count, "");

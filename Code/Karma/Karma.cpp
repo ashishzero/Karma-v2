@@ -153,7 +153,7 @@ void                 Update(float dt)
 	kDrawRectCentered(kVec2(0, -30), kVec2(10), kVec4(1, 1, 1, 1));
 	kDrawRectCentered(kVec2(0, 30), kVec2(10), kVec4(1, 1, 1, 1));
 
-	kDrawLine(kVec2(0), kVec2(20, 20), kVec4(50, 50, 0, 1));
+	//kDrawLine(kVec2(0), kVec2(20, 20), kVec4(50, 50, 0, 1));
 
 	kEndScene();
 
@@ -165,7 +165,7 @@ void                 Update(float dt)
 	kDrawRect(kVec2(0), dd, kVec4(0, 0, 0, 0.75f));
 	kDrawText(pf, kVec2(0), kVec4(1, 0, 0, 1), 0.75f * yfactor);
 
-	kDrawRect(kVec2(0), kVec2(10), kVec4(1, 1, 0, 1));
+	//kDrawRect(kVec2(0), kVec2(10), kVec4(1, 1, 0, 1));
 
 	kPopOutLineStyle();
 

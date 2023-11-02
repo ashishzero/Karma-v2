@@ -18,10 +18,9 @@ void      kPresentFallback(void) {}
 void      kGetRenderPipelineConfigFallback(kRenderPipelineConfig *) {}
 void      kApplyRenderPipelineConfigFallback(const kRenderPipelineConfig &) {}
 
-kTexture *kCreateTextureFallback(const kTextureSpec &) { return (kTexture *)&kFallbackTexture; }
-void      kDestroyTextureFallback(kTexture *) {}
-kVec2u    kGetTextureSizeFallback(kTexture *) { return kVec2u(0); }
-void      kResizeTextureFallback(kTexture *, u32, u32) {}
+kTexture  kCreateTextureFallback(const kTextureSpec &) { return kTexture{}; }
+void      kDestroyTextureFallback(kTexture ) {}
+kVec2u    kGetTextureSizeFallback(kTexture ) { return kVec2u(0); }
 void      kExecuteFrameFallback(const kRenderFrame &) {}
 void      kNextFrameFallback(void) {}
 void      kFlushFallback(void) {}
@@ -44,7 +43,6 @@ void kFallbackRenderBackend(kRenderBackend *backend)
 	backend->CreateTexture             = kCreateTextureFallback;
 	backend->DestroyTexture            = kDestroyTextureFallback;
 	backend->GetTextureSize            = kGetTextureSizeFallback;
-	backend->ResizeTexture             = kResizeTextureFallback;
 
 	backend->ExecuteFrame              = kExecuteFrameFallback;
 	backend->NextFrame                 = kNextFrameFallback;
@@ -54,11 +52,9 @@ void kFallbackRenderBackend(kRenderBackend *backend)
 }
 
 extern bool kD3D11_CreateRenderBackend(kRenderBackend *backend);
-extern bool kD3D12_CreateRenderBackend(kRenderBackend *backend);
 
 void        kCreateRenderBackend(kRenderBackend *backend)
 {
 	if (kD3D11_CreateRenderBackend(backend)) return;
-	if (kD3D12_CreateRenderBackend(backend)) return;
 	kFallbackRenderBackend(backend);
 }
