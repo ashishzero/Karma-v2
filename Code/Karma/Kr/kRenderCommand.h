@@ -45,7 +45,7 @@ typedef struct kRenderCommand2D
 	u32            IndexCount;
 } kRenderCommand2D;
 
-typedef struct kCamera2D
+struct kOrthographicViewData
 {
 	float Left;
 	float Right;
@@ -53,18 +53,48 @@ typedef struct kCamera2D
 	float Bottom;
 	float Near;
 	float Far;
-} kCamera2D;
+};
 
-typedef struct kRenderScene2D
+struct kPerspectiveViewData
 {
-	kCamera2D   Camera;
-	kRect       Region;
+	float FieldOfView;
+	float AspectRatio;
+	float Near;
+	float Far;
+};
+
+typedef enum kCameraViewType
+{
+	kCameraView_Orthographic,
+	kCameraView_Perspective,
+} kCameraLensType;
+
+typedef struct kCameraView
+{
+	kCameraViewType Type;
+	union
+	{
+		kOrthographicViewData Orthographic;
+		kPerspectiveViewData  Perspective;
+	};
+} kCameraView;
+
+typedef struct kViewport
+{
+	int x, y;
+	int w, h;
+} kViewport;
+
+typedef struct kRenderScene
+{
+	kCameraView CameraView;
+	kViewport   Viewport;
 	kRange<u32> Commands;
-} kRenderScene2D;
+} kRenderScene;
 
 typedef struct kRenderFrame2D
 {
-	kSpan<kRenderScene2D>   Scenes;
+	kSpan<kRenderScene>     Scenes;
 	kSpan<kRenderCommand2D> Commands;
 	kSpan<kRect>            Rects;
 	kSpan<kVec4>            OutLineStyles;

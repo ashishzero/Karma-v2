@@ -29,7 +29,7 @@ typedef struct kRenderContext2D
 	kArray<kIndex2D>         Indices;
 	kArray<kVec4>            OutLineStyles;
 	kArray<kRect>            Rects;
-	kArray<kRenderScene2D>   Scenes;
+	kArray<kRenderScene>     Scenes;
 	kArray<kRenderCommand2D> Commands;
 	kRenderStack2D           Stack;
 } kRenderContext2D;
@@ -306,37 +306,46 @@ static void kHandleTextureChange(kTextureType type)
 //
 //
 
-void kBeginScene(const kCamera2D &camera, kRect region)
+kCameraView KOrthographicView(float left, float right, float top, float bottom, float near, float far)
 {
-	kRenderScene2D *scene = g_Render2D.Scenes.Add();
-	scene->Camera         = camera;
-	scene->Region         = region;
-	scene->Commands       = kRange<u32>((u32)g_Render2D.Commands.Count);
+	kCameraView view;
+	view.Type                = kCameraView_Orthographic;
+	view.Orthographic.Left   = left;
+	view.Orthographic.Right  = right;
+	view.Orthographic.Top    = top;
+	view.Orthographic.Bottom = bottom;
+	view.Orthographic.Near   = near;
+	view.Orthographic.Far    = far;
+	return view;
+}
+
+kCameraView kOrthographicView(float aspect_ratio, float height)
+{
+	float halfx = aspect_ratio * 0.5f * kAbsolute(height);
+	float halfy = 0.5f * height;
+	return KOrthographicView(-halfx, halfx, -halfy, halfy, -1.0f, 1.0f);
+}
+
+//
+//
+//
+
+void kBeginScene(const kCameraView &view, const kViewport &viewport)
+{
+	kRenderScene *scene = g_Render2D.Scenes.Add();
+	scene->CameraView   = view;
+	scene->Viewport     = viewport;
+	scene->Commands     = kRange<u32>((u32)g_Render2D.Commands.Count);
 
 	g_Render2D.Rects.Add(g_Render2D.Stack.Rects.Last());
 	g_Render2D.OutLineStyles.Add(g_Render2D.Stack.OutLineStyles.Last());
 
+	kRect rect;
+	rect.min = kVec2(0);
+	rect.max = kVec2((float)viewport.w, (float)viewport.h);
+
 	kPushRenderCommand(kRenderDirty_Everything);
-	kPushRect(region);
-}
-
-void kBeginScene(float left, float right, float top, float bottom, float near, float far, kRect region)
-{
-	kCamera2D camera;
-	camera.Left   = left;
-	camera.Right  = right;
-	camera.Top    = top;
-	camera.Bottom = bottom;
-	camera.Near   = near;
-	camera.Far    = far;
-	kBeginScene(camera, region);
-}
-
-void kBeginScene(float ar, float height, kRect region)
-{
-	float halfx = ar * 0.5f * kAbsolute(height);
-	float halfy = 0.5f * height;
-	kBeginScene(-halfx, halfx, -halfy, halfy, -1.0f, 1.0f, region);
+	kPushRect(rect);
 }
 
 void kEndScene(void)
@@ -354,8 +363,8 @@ void kEndScene(void)
 		g_Render2D.Commands.Pop();
 	}
 
-	kRenderScene2D *pass = &g_Render2D.Scenes.Last();
-	pass->Commands.End   = (u32)g_Render2D.Commands.Count;
+	kRenderScene *pass = &g_Render2D.Scenes.Last();
+	pass->Commands.End = (u32)g_Render2D.Commands.Count;
 
 	if (!pass->Commands.Length())
 	{
@@ -1941,7 +1950,7 @@ static void kUpdateMemoryStatictics(void)
 	g_Memory.Caps.VertexSize  = (u32)(g_Render2D.Vertices.Capacity * sizeof(kVertex2D));
 	g_Memory.Caps.IndexSize   = (u32)(g_Render2D.Indices.Capacity * sizeof(kIndex2D));
 	g_Memory.Caps.CommandSize = (u32)(g_Render2D.Commands.Capacity * sizeof(kRenderCommand2D));
-	g_Memory.Caps.SceneSize   = (u32)(g_Render2D.Scenes.Capacity * sizeof(kRenderScene2D));
+	g_Memory.Caps.SceneSize   = (u32)(g_Render2D.Scenes.Capacity * sizeof(kRenderScene));
 
 	g_Memory.Caps.MB          = 0;
 	g_Memory.Caps.MB += (float)g_Memory.Caps.VertexSize;
@@ -1953,7 +1962,7 @@ static void kUpdateMemoryStatictics(void)
 	g_Memory.Used.VertexSize  = (u32)(g_Render2D.Vertices.Count * sizeof(kVertex2D));
 	g_Memory.Used.IndexSize   = (u32)(g_Render2D.Indices.Count * sizeof(kIndex2D));
 	g_Memory.Used.CommandSize = (u32)(g_Render2D.Commands.Count * sizeof(kRenderCommand2D));
-	g_Memory.Used.SceneSize   = (u32)(g_Render2D.Scenes.Count * sizeof(kRenderScene2D));
+	g_Memory.Used.SceneSize   = (u32)(g_Render2D.Scenes.Count * sizeof(kRenderScene));
 
 	g_Memory.Used.MB          = 0;
 	g_Memory.Used.MB += (float)g_Memory.Used.VertexSize;

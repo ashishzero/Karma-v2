@@ -70,9 +70,14 @@ void kGetFrameData(kRenderFrame2D *frame);
 //
 //
 
-void kBeginScene(const kCamera2D &camera, kRect region);
-void kBeginScene(float left, float right, float top, float bottom, float near, float far, kRect region);
-void kBeginScene(float ar, float height, kRect region);
+kCameraView KOrthographicView(float left, float right, float top, float bottom, float near = -1.0f, float far = 1.0f);
+kCameraView kOrthographicView(float aspect_ratio, float height);
+
+//
+//
+//
+
+void kBeginScene(const kCameraView &view, const kViewport &viewport);
 void kEndScene(void);
 
 void kLineThickness(float thickness);

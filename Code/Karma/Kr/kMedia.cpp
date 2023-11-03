@@ -339,7 +339,6 @@ void kUpdateFrame(float dt)
 
 	g_Media.Render.ExecuteFrame(frame);
 	g_Media.Render.Present();
-	g_Media.Render.NextFrame();
 }
 
 //

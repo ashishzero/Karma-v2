@@ -68,6 +68,8 @@ typedef struct kTextureSpec
 	kString Name;
 } kTextureSpec;
 
+
+
 //
 //
 //

@@ -243,9 +243,9 @@ void kFallbackUserUpdateProc(float dt);
 //
 
 kSpan<kEvent> kGetEvents(void);
-kArena       *kGetFrameArena(void);
+kArena *      kGetFrameArena(void);
 
-void         *kGetUserEventData(void);
+void *        kGetUserEventData(void);
 void          kSetUserEventData(void *);
 void          kGetUserEvents(kMediaUserEvents *user);
 void          kSetUserEvents(const kMediaUserEvents &user);
@@ -377,6 +377,7 @@ static const kArenaSpec            kDefaultArena          = {.Alignment = sizeof
 static const kRenderPipelineConfig kDefaultRenderPipeline = {.Msaa              = kMultiSamplingAntiAliasing_8,
                                                              .Bloom             = kBloom_Enabled,
                                                              .Hdr               = kHighDynamicRange_AES,
+                                                             .Clear             = kVec4(0.1f, 0.1f, 0.1f, 1.0f),
                                                              .BloomFilterRadius = 0.005f,
                                                              .BloomStrength     = 0.05f,
                                                              .Intensity         = kVec3(1)};

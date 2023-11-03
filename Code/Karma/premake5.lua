@@ -12,10 +12,12 @@ project "Karma"
         ["Kr/Shaders"] = { "Kr/**.hlsl", "Kr/**.fx" },
         ["Kr/Basic"] = {
             "Kr/kArray.h", "Kr/kLinkedList.h", "Kr/kStrings.h", "Kr/kPoolAllocator.h",
+            "Kr/kImage.h", "Kr/kImage.cpp",
             "Kr/kCmdLine.h", "Kr/kCmdLine.cpp",
             "Kr/kCommon.h", "Kr/kCommon.cpp",
             "Kr/kContext.h", "Kr/kContext.cpp",
          },
+         ["Kr/Extern"] = { "Kr/stb_image.h", "Kr/stb_image_write.h" },
          ["Kr/Math"] = { "Kr/kMath.h", "Kr/kMath.cpp" },
          ["Kr/Platform"] = { "Kr/kPlatform.h", "Kr/kPlatform.cpp", "kMain.cpp" },
          ["Kr/Media"] = { "Kr/kMedia.h", "Kr/kMediaBackend.h", "Kr/kMedia.cpp" },

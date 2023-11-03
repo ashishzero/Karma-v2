@@ -22,7 +22,6 @@ kTexture  kCreateTextureFallback(const kTextureSpec &) { return kTexture{}; }
 void      kDestroyTextureFallback(kTexture ) {}
 kVec2u    kGetTextureSizeFallback(kTexture ) { return kVec2u(0); }
 void      kExecuteFrameFallback(const kRenderFrame &) {}
-void      kNextFrameFallback(void) {}
 void      kFlushFallback(void) {}
 void      kDestroyFallback(void) {}
 
@@ -45,7 +44,6 @@ void kFallbackRenderBackend(kRenderBackend *backend)
 	backend->GetTextureSize            = kGetTextureSizeFallback;
 
 	backend->ExecuteFrame              = kExecuteFrameFallback;
-	backend->NextFrame                 = kNextFrameFallback;
 	backend->Flush                     = kFlushFallback;
 
 	backend->Destroy                   = kDestroyFallback;
