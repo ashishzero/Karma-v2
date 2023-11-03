@@ -77,6 +77,9 @@ kCameraView kOrthographicView(float aspect_ratio, float height);
 //
 //
 
+void kBeginRenderPass(kRenderPass pass);
+void kEndRenderPass(void);
+
 void kBeginScene(const kCameraView &view, const kViewport &viewport);
 void kEndScene(void);
 

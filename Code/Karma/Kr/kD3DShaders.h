@@ -2,7 +2,7 @@
 
 #include "Shaders/Generated/kBlit.cs.hlsl.h"
 #include "Shaders/Generated/kBlit.vs.hlsl.h"
-#include "Shaders/Generated/kBlit.ps.hlsl.h"
+#include "Shaders/Generated/kMix.ps.hlsl.h"
 #include "Shaders/Generated/kQuad.vs.hlsl.h"
 #include "Shaders/Generated/kQuad.ps.hlsl.h"
 #include "Shaders/Generated/kToneMap.ps.hlsl.h"
@@ -25,12 +25,12 @@ static_assert(kArrayCount(kVertexShaderStrings) == kVertexShader_Count, "");
 enum kPixelShaderKind
 {
 	kPixelShader_Quad,
-	kPixelShader_Blit,
+	kPixelShader_Mix,
 	kPixelShader_Tonemap,
 	kPixelShader_Count
 };
 
-static const kString kPixelShaderStrings[] = {"Quad", "Blit", "Tonemap"};
+static const kString kPixelShaderStrings[] = {"Quad", "Mix", "Tonemap"};
 static_assert(kArrayCount(kPixelShaderStrings) == kPixelShader_Count, "");
 
 enum kComputeShaderKind
@@ -51,7 +51,7 @@ static_assert(kArrayCount(kComputeShaderStrings) == kComputeShader_Count, "");
 static const kString kVertexShadersMap[] = {kString(kQuadVS), kString(kBlitVS)};
 static_assert(kArrayCount(kVertexShadersMap) == kVertexShader_Count, "");
 
-static const kString kPixelShadersMap[] = {kString(kQuadPS), kString(kBlitPS), kString(kToneMapPS)};
+static const kString kPixelShadersMap[] = {kString(kQuadPS), kString(kMixPS), kString(kToneMapPS)};
 static_assert(kArrayCount(kPixelShadersMap) == kPixelShader_Count, "");
 
 static const kString kComputeShadersMap[] = {kString(kBlitCS),

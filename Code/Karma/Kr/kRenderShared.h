@@ -64,11 +64,16 @@ typedef struct kTextureSpec
 	u32     Width;
 	u32     Height;
 	u32     Pitch;
-	u8 *    Pixels;
+	u8     *Pixels;
 	kString Name;
 } kTextureSpec;
 
-
+typedef enum kRenderPass
+{
+	kRenderPass_Default,
+	kRenderPass_HUD,
+	kRenderPass_Count
+} kRenderPass;
 
 //
 //

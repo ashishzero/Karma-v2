@@ -90,6 +90,7 @@ typedef struct kRenderScene
 	kCameraView CameraView;
 	kViewport   Viewport;
 	kRange<u32> Commands;
+	kRenderPass TargetPass;
 } kRenderScene;
 
 typedef struct kRenderFrame2D

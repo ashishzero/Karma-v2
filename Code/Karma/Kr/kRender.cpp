@@ -12,6 +12,7 @@
 
 typedef struct kRenderStack2D
 {
+	kArray<kRenderPass>    RenderPass;
 	kArray<kTexture>       Textures[kTextureType_Count];
 	kArray<kMat3>          Transforms;
 	kArray<kRect>          Rects;
@@ -37,7 +38,7 @@ typedef struct kRenderContext2D
 typedef struct kRenderContextBuiltin
 {
 	kTexture Textures[kTextureType_Count];
-	kFont *  Font;
+	kFont   *Font;
 } kRenderContextBuiltin;
 
 struct kRenderMemoryStats
@@ -184,7 +185,7 @@ static void kHandleTextureFilterChange(void)
 
 static void kHandleRectChange(void)
 {
-	kRect &           rect = g_Render2D.Stack.Rects.Last();
+	kRect            &rect = g_Render2D.Stack.Rects.Last();
 	kRenderCommand2D &cmd  = g_Render2D.Commands.Last();
 
 	if (memcmp(&g_Render2D.Rects[cmd.Rect], &rect, sizeof(kRect)) == 0)
@@ -227,7 +228,7 @@ static void kHandleRectChange(void)
 
 static void kHandleOutLineStyleChange(void)
 {
-	kVec4 &           style = g_Render2D.Stack.OutLineStyles.Last();
+	kVec4            &style = g_Render2D.Stack.OutLineStyles.Last();
 	kRenderCommand2D &cmd   = g_Render2D.Commands.Last();
 
 	if (memcmp(&g_Render2D.OutLineStyles[cmd.OutLineStyle], &style, sizeof(kVec4)) == 0)
@@ -330,12 +331,24 @@ kCameraView kOrthographicView(float aspect_ratio, float height)
 //
 //
 
+void kBeginRenderPass(kRenderPass pass)
+{
+	g_Render2D.Stack.RenderPass.Add(pass);
+}
+
+void kEndRenderPass(void)
+{
+	kAssert(g_Render2D.Stack.RenderPass.Count > 1);
+	g_Render2D.Stack.RenderPass.Pop();
+}
+
 void kBeginScene(const kCameraView &view, const kViewport &viewport)
 {
 	kRenderScene *scene = g_Render2D.Scenes.Add();
 	scene->CameraView   = view;
 	scene->Viewport     = viewport;
 	scene->Commands     = kRange<u32>((u32)g_Render2D.Commands.Count);
+	scene->TargetPass   = g_Render2D.Stack.RenderPass.Last();
 
 	g_Render2D.Rects.Add(g_Render2D.Stack.Rects.Last());
 	g_Render2D.OutLineStyles.Add(g_Render2D.Stack.OutLineStyles.Last());
@@ -1768,8 +1781,8 @@ void kDrawTextQuadCenteredRotated(u32 codepoint, kVec2 pos, float angle, kVec4 c
 kVec2 kCalculateText(kString text, const kFont *font, float scale)
 {
 	u32   codepoint;
-	u8 *  ptr = text.begin();
-	u8 *  end = text.end();
+	u8   *ptr = text.begin();
+	u8   *end = text.end();
 
 	kVec2 rpos;
 	kVec2 rsize;
@@ -1805,8 +1818,8 @@ void kDrawText(kString text, kVec3 pos, const kFont *font, kVec4 color, float sc
 	kPushTexture(font->Atlas, kTextureType_MaskSDF);
 
 	u32   codepoint;
-	u8 *  ptr  = text.begin();
-	u8 *  end  = text.end();
+	u8   *ptr  = text.begin();
+	u8   *end  = text.end();
 
 	kVec3 rpos = pos;
 	kVec2 rsize;
@@ -1874,6 +1887,7 @@ void kCreateRenderContext(const kRenderSpec &spec, kTexture textures[kTextureTyp
 	g_Render2D.Scenes.Reserve(spec.Scenes);
 	g_Render2D.Rects.Reserve(spec.Commands);
 
+	g_Render2D.Stack.RenderPass.Reserve(64);
 	g_Render2D.Stack.Rects.Reserve(64);
 	g_Render2D.Stack.Transforms.Reserve(64);
 	for (u32 i = 0; i < kTextureType_Count; ++i)
@@ -1882,6 +1896,7 @@ void kCreateRenderContext(const kRenderSpec &spec, kTexture textures[kTextureTyp
 	g_Render2D.Stack.Normals.Reserve(4096);
 	g_Render2D.Stack.BlendModes.Reserve(32);
 
+	g_Render2D.Stack.RenderPass.Add(kRenderPass_Default);
 	g_Render2D.Stack.Rects.Add(kRect{});
 	g_Render2D.Stack.Transforms.Add(kIdentity3x3());
 	for (u32 i = 0; i < kTextureType_Count; ++i)
@@ -1902,6 +1917,7 @@ void kDestroyRenderContext(void)
 	kFree(&g_Render2D.Rects);
 	kFree(&g_Render2D.OutLineStyles);
 
+	kFree(&g_Render2D.Stack.RenderPass);
 	kFree(&g_Render2D.Stack.Rects);
 	kFree(&g_Render2D.Stack.Transforms);
 	for (u32 i = 0; i < kTextureType_Count; ++i)
@@ -1923,6 +1939,7 @@ void kResetFrame(void)
 	g_Render2D.Rects.Count            = 0;
 	g_Render2D.OutLineStyles.Count    = 0;
 
+	g_Render2D.Stack.RenderPass.Count = 1;
 	g_Render2D.Stack.Rects.Count      = 1;
 	g_Render2D.Stack.Transforms.Count = 1;
 	for (u32 i = 0; i < kTextureType_Count; ++i)
