@@ -3,36 +3,93 @@
 
 #include <math.h>
 
-#define kVec2Arg(v) (v).x, (v).y
-#define kVec3Arg(v) (v).x, (v).y, (v).z
+#define kVec2Arg(v)   (v).x, (v).y
+#define kVec3Arg(v)   (v).x, (v).y, (v).z
 #define kBivec3Arg(v) (v).xy, (v).xz, (v).yz
-#define kVec4Arg(v) (v).x, (v).y, (v).z, (v).w
-#define kQuatArg(q) (q).x, (q).y, (q).z, (q).w
+#define kVec4Arg(v)   (v).x, (v).y, (v).z, (v).w
+#define kQuatArg(q)   (q).x, (q).y, (q).z, (q).w
 
-#define kMat2Arg(m) kVec2Arg((m).rows[0]), kVec2Arg((m).rows[1])
-#define kMat3Arg(m) kVec3Arg((m).rows[0]), kVec3Arg((m).rows[1]), kVec3Arg((m).rows[2])
-#define kMat4Arg(m) kVec4Arg((m).rows[0]), kVec4Arg((m).rows[1]), kVec4Arg((m).rows[2]), kVec4Arg((m).rows[3])
+#define kMat2Arg(m)   kVec2Arg((m).rows[0]), kVec2Arg((m).rows[1])
+#define kMat3Arg(m)   kVec3Arg((m).rows[0]), kVec3Arg((m).rows[1]), kVec3Arg((m).rows[2])
+#define kMat4Arg(m)   kVec4Arg((m).rows[0]), kVec4Arg((m).rows[1]), kVec4Arg((m).rows[2]), kVec4Arg((m).rows[3])
 
-inproc float kSgn(float val) { return (float)((float(0) < val) - (val < float(0))); }
-inproc kVec2 kSgn(kVec2 v) { return kVec2(kSgn(v.x), kSgn(v.y)); }
-inproc kVec3 kSgn(kVec3 v) { return kVec3(kSgn(v.x), kSgn(v.y), kSgn(v.z)); }
-inproc kVec4 kSgn(kVec4 v) { return kVec4(kSgn(v.x), kSgn(v.y), kSgn(v.z), kSgn(v.w)); }
+inproc float kSgn(float val)
+{
+	return (float)((float(0) < val) - (val < float(0)));
+}
+inproc kVec2 kSgn(kVec2 v)
+{
+	return kVec2(kSgn(v.x), kSgn(v.y));
+}
+inproc kVec3 kSgn(kVec3 v)
+{
+	return kVec3(kSgn(v.x), kSgn(v.y), kSgn(v.z));
+}
+inproc kVec4 kSgn(kVec4 v)
+{
+	return kVec4(kSgn(v.x), kSgn(v.y), kSgn(v.z), kSgn(v.w));
+}
 
-inproc float kAbsolute(float x) { return fabsf(x); }
-inproc float kSin(float x) { return sinf(kTurnToRad * (x)); }
-inproc float kCos(float x) { return cosf(kTurnToRad * (x)); }
-inproc float kTan(float x) { return tanf(kTurnToRad * (x)); }
-inproc float kArcSin(float x) { return kRadToTurn * (asinf(x)); }
-inproc float kArcCos(float x) { return kRadToTurn * (acosf(x)); }
-inproc float kArcTan2(float y, float x) { return kRadToTurn * (atan2f(y, x)); }
-inproc float kSquareRoot(float x) { return sqrtf(x); }
-inproc float kPow(float x, float y) { return powf(x, y); }
-inproc float kCopySign(float x, float y) { return copysignf(x, y); }
-inproc float kMod(float x, float y) { return fmodf(x, y); }
-inproc float kSquare(float x) { return (x * x); }
-inproc float kFloor(float x) { return floorf(x); }
-inproc float kRound(float x) { return roundf(x); }
-inproc float kCeil(float x) { return ceilf(x); }
+inproc float kAbsolute(float x)
+{
+	return fabsf(x);
+}
+inproc float kSin(float x)
+{
+	return sinf(kTurnToRad * (x));
+}
+inproc float kCos(float x)
+{
+	return cosf(kTurnToRad * (x));
+}
+inproc float kTan(float x)
+{
+	return tanf(kTurnToRad * (x));
+}
+inproc float kArcSin(float x)
+{
+	return kRadToTurn * (asinf(x));
+}
+inproc float kArcCos(float x)
+{
+	return kRadToTurn * (acosf(x));
+}
+inproc float kArcTan2(float y, float x)
+{
+	return kRadToTurn * (atan2f(y, x));
+}
+inproc float kSquareRoot(float x)
+{
+	return sqrtf(x);
+}
+inproc float kPow(float x, float y)
+{
+	return powf(x, y);
+}
+inproc float kCopySign(float x, float y)
+{
+	return copysignf(x, y);
+}
+inproc float kMod(float x, float y)
+{
+	return fmodf(x, y);
+}
+inproc float kSquare(float x)
+{
+	return (x * x);
+}
+inproc float kFloor(float x)
+{
+	return floorf(x);
+}
+inproc float kRound(float x)
+{
+	return roundf(x);
+}
+inproc float kCeil(float x)
+{
+	return ceilf(x);
+}
 
 //
 //
@@ -89,10 +146,22 @@ bool operator!=(kVec4T<Item> a, kVec4T<Item> b)
 	return a.x != b.x || a.y != b.y && a.z != b.z || a.w != b.w;
 }
 
-inproc kVec2   kRound(kVec2 v) { return kVec2(kRound(v.x), kRound(v.y)); }
-inproc kVec3   kRound(kVec3 v) { return kVec3(kRound(v.x), kRound(v.y), kRound(v.z)); }
-inproc kVec4   kRound(kVec4 v) { return kVec4(kRound(v.x), kRound(v.y), kRound(v.z), kRound(v.w)); }
-inproc kBivec3 kRound(kBivec3 v) { return kBivec3(kRound(v.yz), kRound(v.zx), kRound(v.xy)); }
+inproc kVec2 kRound(kVec2 v)
+{
+	return kVec2(kRound(v.x), kRound(v.y));
+}
+inproc kVec3 kRound(kVec3 v)
+{
+	return kVec3(kRound(v.x), kRound(v.y), kRound(v.z));
+}
+inproc kVec4 kRound(kVec4 v)
+{
+	return kVec4(kRound(v.x), kRound(v.y), kRound(v.z), kRound(v.w));
+}
+inproc kBivec3 kRound(kBivec3 v)
+{
+	return kBivec3(kRound(v.yz), kRound(v.zx), kRound(v.xy));
+}
 
 template <typename Item>
 kVec2T<Item> kMin(kVec2T<Item> a, kVec2T<Item> b)
@@ -539,7 +608,8 @@ kVec3T<Item> kOrthoNormalBasisRH(kVec3T<Item> *a, kVec3T<Item> *b)
 {
 	*a             = kNormalizeZ(*a);
 	kVec3T<Item> c = kCrossProduct(*a, *b);
-	if (kLengthSq(c) == 0.0f) return;
+	if (kLengthSq(c) == 0.0f)
+		return;
 	c  = kNormalizeZ(c);
 	*b = kCrossProduct(c, *a);
 	return c;
@@ -550,7 +620,8 @@ kVec3T<Item> kOrthoNormalBasisLH(kVec3T<Item> *a, kVec3T<Item> *b)
 {
 	*a             = kNormalizeZ(*a);
 	kVec3T<Item> c = kCrossProduct(*b, *a);
-	if (kLengthSq(c) == 0.0f) return;
+	if (kLengthSq(c) == 0.0f)
+		return;
 	c  = kNormalizeZ(c);
 	*b = kCrossProduct(*a, c);
 	return c;
@@ -929,7 +1000,10 @@ constexpr void kUnpackRGBA(u32 c, u8 channels[4])
 	channels[3] = (c >> 0) & 0xff;
 }
 
-constexpr u32 kPackRGBA(u8 r, u8 g, u8 b, u8 a) { return ((u32)r << 24) | ((u32)g << 16) | ((u32)b << 8) | (u32)a; }
+constexpr u32 kPackRGBA(u8 r, u8 g, u8 b, u8 a)
+{
+	return ((u32)r << 24) | ((u32)g << 16) | ((u32)b << 8) | (u32)a;
+}
 
 constexpr u32 kColor4ToUint(kVec4 v)
 {

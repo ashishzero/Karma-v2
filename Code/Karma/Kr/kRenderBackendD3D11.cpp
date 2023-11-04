@@ -907,6 +907,23 @@ static ID3D11ShaderResourceView *kD3D11_GetTextureSRV(kTexture texture)
 	return g_Textures.Data[0].SRV;
 }
 
+static void kD3D11_BeginRenderPass(kD3D11_RenderTarget &rt)
+{
+	g_DeviceContext->ClearRenderTargetView(rt.RTV, rt.Clear.m);
+	if (rt.DSV)
+	{
+		g_DeviceContext->ClearDepthStencilView(rt.DSV, D3D11_CLEAR_DEPTH, 1.0f, 0);
+	}
+}
+
+static void kD3D11_EndRenderPass(kD3D11_RenderTarget &rt)
+{
+	if (rt.Resolved)
+	{
+		g_DeviceContext->ResolveSubresource(rt.Resolved, 0, rt.Resource, 0, rt.Format);
+	}
+}
+
 static void kD3D11_RenderFrame2D(const kRenderFrame2D &render)
 {
 	ID3D11Buffer *xform  = g_Buffers[kD3D11_Buffer_Transform2D];
@@ -934,86 +951,92 @@ static void kD3D11_RenderFrame2D(const kRenderFrame2D &render)
 	i32 vtx_offset = 0;
 	u32 idx_offset = 0;
 
-	for (const kRenderScene &scene : render.Scenes)
+	for (int pass = 0; pass < kRenderPass_Count; ++pass)
 	{
-		kD3D11_RenderTarget &rt = g_RenderPipeline.RenderTargets[scene.TargetPass];
+		kD3D11_RenderTarget &rt = g_RenderPipeline.RenderTargets[pass];
+		kD3D11_BeginRenderPass(rt);
 
-		g_DeviceContext->OMSetRenderTargets(1, &rt.RTV, rt.DSV);
-
-		D3D11_VIEWPORT viewport;
-		viewport.TopLeftX = (float)scene.Viewport.x;
-		viewport.TopLeftY = (float)scene.Viewport.y;
-		viewport.Width    = (float)scene.Viewport.w;
-		viewport.Height   = (float)scene.Viewport.h;
-		viewport.MinDepth = 0.0f;
-		viewport.MaxDepth = 1.0f;
-
-		g_DeviceContext->RSSetViewports(1, &viewport);
-
-		kMat4 proj;
-
-		if (scene.CameraView.Type == kCameraView_Orthographic)
+		for (const kRenderScene &scene : render.Scenes[pass])
 		{
-			auto &view = scene.CameraView.Orthographic;
-			proj       = kOrthographicLH(view.Left, view.Right, view.Top, view.Bottom, view.Near, view.Far);
+			g_DeviceContext->OMSetRenderTargets(1, &rt.RTV, rt.DSV);
+
+			D3D11_VIEWPORT viewport;
+			viewport.TopLeftX = (float)scene.Viewport.x;
+			viewport.TopLeftY = (float)scene.Viewport.y;
+			viewport.Width    = (float)scene.Viewport.w;
+			viewport.Height   = (float)scene.Viewport.h;
+			viewport.MinDepth = 0.0f;
+			viewport.MaxDepth = 1.0f;
+
+			g_DeviceContext->RSSetViewports(1, &viewport);
+
+			kMat4 proj;
+
+			if (scene.CameraView.Type == kCameraView_Orthographic)
+			{
+				auto &view = scene.CameraView.Orthographic;
+				proj       = kOrthographicLH(view.Left, view.Right, view.Top, view.Bottom, view.Near, view.Far);
+			}
+			else
+			{
+				auto &view = scene.CameraView.Perspective;
+				proj       = kPerspectiveLH(view.FieldOfView, view.AspectRatio, view.Near, view.Far);
+			}
+
+			if (!kD3D11_UploadTransform2D(proj))
+				return;
+
+			for (u32 index = scene.Commands.Beg; index < scene.Commands.End; ++index)
+			{
+				const kRenderCommand2D &cmd = render.Commands[index];
+
+				if (cmd.Flags & kRenderDirty_OutLineStyle)
+				{
+					kVec4 param = render.OutLineStyles[cmd.OutLineStyle];
+					if (!kD3D11_UploadOutLineStyle2D(param))
+						continue;
+				}
+
+				if (cmd.Flags & kRenderDirty_Blend)
+				{
+					g_DeviceContext->OMSetBlendState(g_BlendStates[cmd.BlendMode], 0, 0xffffffff);
+				}
+
+				if (cmd.Flags & kRenderDirty_TextureFilter)
+				{
+					g_DeviceContext->PSSetSamplers(0, 1, &g_SamplerStates[cmd.TextureFilter]);
+				}
+
+				if (cmd.Flags & kRenderDirty_Rect)
+				{
+					D3D11_RECT rect;
+					kRect      krect = render.Rects[cmd.Rect];
+					rect.left        = (LONG)(krect.min.x);
+					rect.top         = (LONG)(krect.min.y);
+					rect.right       = (LONG)(krect.max.x);
+					rect.bottom      = (LONG)(krect.max.y);
+					g_DeviceContext->RSSetScissorRects(1, &rect);
+				}
+
+				if (cmd.Flags & kRenderDirty_TextureColor)
+				{
+					ID3D11ShaderResourceView *r = kD3D11_GetTextureSRV(cmd.Textures[kTextureType_Color]);
+					g_DeviceContext->PSSetShaderResources(kTextureType_Color, 1, &r);
+				}
+
+				if (cmd.Flags & kRenderDirty_TextureMaskSDF)
+				{
+					ID3D11ShaderResourceView *r = kD3D11_GetTextureSRV(cmd.Textures[kTextureType_MaskSDF]);
+					g_DeviceContext->PSSetShaderResources(kTextureType_MaskSDF, 1, &r);
+				}
+
+				g_DeviceContext->DrawIndexed(cmd.IndexCount, idx_offset, vtx_offset);
+				vtx_offset += cmd.VertexCount;
+				idx_offset += cmd.IndexCount;
+			}
 		}
-		else
-		{
-			auto &view = scene.CameraView.Perspective;
-			proj       = kPerspectiveLH(view.FieldOfView, view.AspectRatio, view.Near, view.Far);
-		}
 
-		if (!kD3D11_UploadTransform2D(proj))
-			return;
-
-		for (u32 index = scene.Commands.Beg; index < scene.Commands.End; ++index)
-		{
-			const kRenderCommand2D &cmd = render.Commands[index];
-
-			if (cmd.Flags & kRenderDirty_OutLineStyle)
-			{
-				kVec4 param = render.OutLineStyles[cmd.OutLineStyle];
-				if (!kD3D11_UploadOutLineStyle2D(param))
-					continue;
-			}
-
-			if (cmd.Flags & kRenderDirty_Blend)
-			{
-				g_DeviceContext->OMSetBlendState(g_BlendStates[cmd.BlendMode], 0, 0xffffffff);
-			}
-
-			if (cmd.Flags & kRenderDirty_TextureFilter)
-			{
-				g_DeviceContext->PSSetSamplers(0, 1, &g_SamplerStates[cmd.TextureFilter]);
-			}
-
-			if (cmd.Flags & kRenderDirty_Rect)
-			{
-				D3D11_RECT rect;
-				kRect      krect = render.Rects[cmd.Rect];
-				rect.left        = (LONG)(krect.min.x);
-				rect.top         = (LONG)(krect.min.y);
-				rect.right       = (LONG)(krect.max.x);
-				rect.bottom      = (LONG)(krect.max.y);
-				g_DeviceContext->RSSetScissorRects(1, &rect);
-			}
-
-			if (cmd.Flags & kRenderDirty_TextureColor)
-			{
-				ID3D11ShaderResourceView *r = kD3D11_GetTextureSRV(cmd.Textures[kTextureType_Color]);
-				g_DeviceContext->PSSetShaderResources(kTextureType_Color, 1, &r);
-			}
-
-			if (cmd.Flags & kRenderDirty_TextureMaskSDF)
-			{
-				ID3D11ShaderResourceView *r = kD3D11_GetTextureSRV(cmd.Textures[kTextureType_MaskSDF]);
-				g_DeviceContext->PSSetShaderResources(kTextureType_MaskSDF, 1, &r);
-			}
-
-			g_DeviceContext->DrawIndexed(cmd.IndexCount, idx_offset, vtx_offset);
-			vtx_offset += cmd.VertexCount;
-			idx_offset += cmd.IndexCount;
-		}
+		kD3D11_EndRenderPass(rt);
 	}
 }
 
@@ -1032,30 +1055,7 @@ static void kD3D11_ExecuteGeometryPass(const kRenderFrame &frame)
 		idx_uploaded = kD3D11_UploadIndices2D(frame.Frame2D.Indices);
 	}
 
-	for (int iter = 0; iter < kRenderPass_Count; ++iter)
-	{
-		kD3D11_RenderTarget &rt = g_RenderPipeline.RenderTargets[iter];
-		g_DeviceContext->ClearRenderTargetView(rt.RTV, rt.Clear.m);
-		if (rt.DSV)
-		{
-			g_DeviceContext->ClearDepthStencilView(rt.DSV, D3D11_CLEAR_DEPTH, 1.0f, 0);
-		}
-	}
-
-	if (vtx_uploaded && idx_uploaded)
-	{
-		kD3D11_RenderFrame2D(frame.Frame2D);
-	}
-
-	for (int iter = 0; iter < kRenderPass_Count; ++iter)
-	{
-		kD3D11_RenderTarget &rt = g_RenderPipeline.RenderTargets[iter];
-		if (rt.Resolved)
-		{
-			g_DeviceContext->ResolveSubresource(rt.Resolved, 0, rt.Resource, 0, rt.Format);
-		}
-	}
-
+	kD3D11_RenderFrame2D(frame.Frame2D);
 	g_DeviceContext->ClearState();
 }
 

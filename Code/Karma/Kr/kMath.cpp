@@ -8,8 +8,14 @@ float kWrap(float min, float a, float max)
 	return result;
 }
 
-kVec2 kArm(float angle) { return kVec2(kCos(angle), kSin(angle)); }
-kVec2 kArmInverse(float angle) { return kVec2(kSin(angle), kCos(angle)); }
+kVec2 kArm(float angle)
+{
+	return kVec2(kCos(angle), kSin(angle));
+}
+kVec2 kArmInverse(float angle)
+{
+	return kVec2(kSin(angle), kCos(angle));
+}
 
 // https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
 bool kAlmostEqual(float a, float b, float delta)
@@ -20,7 +26,8 @@ bool kAlmostEqual(float a, float b, float delta)
 
 	float larger = (b > a) ? b : a;
 
-	if (diff <= larger * delta) return true;
+	if (diff <= larger * delta)
+		return true;
 	return false;
 }
 
@@ -45,21 +52,49 @@ bool kAlmostEqual(kBivec3 a, kBivec3 b, float delta)
 	return kAlmostEqual(a.yz, b.yz, delta) && kAlmostEqual(a.zx, b.zx, delta) && kAlmostEqual(a.xy, b.xy, delta);
 }
 
-bool  kIsNull(float a) { return kAlmostEqual(a, 0.0f); }
-bool  kIsNull(kVec2 a) { return kAlmostEqual(a, kVec2(0.0f)); }
-bool  kIsNull(kVec3 a) { return kAlmostEqual(a, kVec3(0.0f)); }
-bool  kIsNull(kVec4 a) { return kAlmostEqual(a, kVec4(0.0f)); }
-bool  kIsNull(kBivec3 a) { return kAlmostEqual(a, kBivec3(0.0f)); }
-bool  kIsNull(int32_t a) { return a == 0; }
-bool  kIsNull(kVec2i a) { return a.x == 0 && a.y == 0; }
-bool  kIsNull(kVec3i a) { return a.x == 0 && a.y == 0 && a.z == 0; }
-bool  kIsNull(kVec4i a) { return a.x == 0 && a.y == 0 && a.z == 0 && a.w == 0; }
+bool kIsNull(float a)
+{
+	return kAlmostEqual(a, 0.0f);
+}
+bool kIsNull(kVec2 a)
+{
+	return kAlmostEqual(a, kVec2(0.0f));
+}
+bool kIsNull(kVec3 a)
+{
+	return kAlmostEqual(a, kVec3(0.0f));
+}
+bool kIsNull(kVec4 a)
+{
+	return kAlmostEqual(a, kVec4(0.0f));
+}
+bool kIsNull(kBivec3 a)
+{
+	return kAlmostEqual(a, kBivec3(0.0f));
+}
+bool kIsNull(int32_t a)
+{
+	return a == 0;
+}
+bool kIsNull(kVec2i a)
+{
+	return a.x == 0 && a.y == 0;
+}
+bool kIsNull(kVec3i a)
+{
+	return a.x == 0 && a.y == 0 && a.z == 0;
+}
+bool kIsNull(kVec4i a)
+{
+	return a.x == 0 && a.y == 0 && a.z == 0 && a.w == 0;
+}
 
 kVec2 kNormalizeZ(kVec2 v)
 {
 	kVec2 res(0);
 	float len = kLength(v);
-	if (len != 0) res = v / len;
+	if (len != 0)
+		res = v / len;
 	return res;
 }
 
@@ -67,7 +102,8 @@ kVec3 kNormalizeZ(kVec3 v)
 {
 	kVec3 res(0);
 	float len = kLength(v);
-	if (len != 0) res = v / len;
+	if (len != 0)
+		res = v / len;
 	return res;
 }
 
@@ -75,7 +111,8 @@ kVec4 kNormalizeZ(kVec4 v)
 {
 	kVec4 res(0);
 	float len = kLength(v);
-	if (len != 0) res = v * (1.0f / len);
+	if (len != 0)
+		res = v * (1.0f / len);
 	return res;
 }
 
@@ -183,7 +220,10 @@ float kSignedAngleBetweenNormalized(kVec3 a, kVec3 b, kVec3 n)
 	return kSignedAngleBetween(a, b, n);
 }
 
-float kDeterminant(const kMat2 &mat) { return mat.m2[0][0] * mat.m2[1][1] - mat.m2[0][1] * mat.m2[1][0]; }
+float kDeterminant(const kMat2 &mat)
+{
+	return mat.m2[0][0] * mat.m2[1][1] - mat.m2[0][1] * mat.m2[1][0];
+}
 
 kMat2 kInverse(const kMat2 &mat)
 {
@@ -569,11 +609,26 @@ kMat4 &operator*=(kMat4 &t, kMat4 &o)
 	return t;
 }
 
-kRotor3  operator-(kRotor3 q) { return kRotor3(-q.s, -q.b); }
-kRotor3  operator-(kRotor3 r1, kRotor3 r2) { return kRotor3(r1.s - r2.s, r1.b - r2.b); }
-kRotor3  operator+(kRotor3 r1, kRotor3 r2) { return kRotor3(r1.s + r2.s, r1.b + r2.b); }
-kRotor3  operator*(kRotor3 q, float s) { return kRotor3(q.s * s, q.b * s); }
-kRotor3  operator*(float s, kRotor3 q) { return kRotor3(q.s * s, q.b * s); }
+kRotor3 operator-(kRotor3 q)
+{
+	return kRotor3(-q.s, -q.b);
+}
+kRotor3 operator-(kRotor3 r1, kRotor3 r2)
+{
+	return kRotor3(r1.s - r2.s, r1.b - r2.b);
+}
+kRotor3 operator+(kRotor3 r1, kRotor3 r2)
+{
+	return kRotor3(r1.s + r2.s, r1.b + r2.b);
+}
+kRotor3 operator*(kRotor3 q, float s)
+{
+	return kRotor3(q.s * s, q.b * s);
+}
+kRotor3 operator*(float s, kRotor3 q)
+{
+	return kRotor3(q.s * s, q.b * s);
+}
 
 kRotor3 &operator-=(kRotor3 &q, kRotor3 other)
 {
@@ -591,7 +646,10 @@ float kDotProduct(kRotor3 q1, kRotor3 q2)
 	return q1.s * q2.s + q1.b.xy * q2.b.xy + q1.b.yz * q2.b.yz + q1.b.zx * q2.b.zx;
 }
 
-float   kLength(kRotor3 q) { return kSquareRoot(kDotProduct(q, q)); }
+float kLength(kRotor3 q)
+{
+	return kSquareRoot(kDotProduct(q, q));
+}
 
 kRotor3 kNormalize(kRotor3 q)
 {
@@ -600,7 +658,10 @@ kRotor3 kNormalize(kRotor3 q)
 	return q * (1.0f / len);
 }
 
-kRotor3 kReverse(kRotor3 q) { return kRotor3(q.s, -q.b); }
+kRotor3 kReverse(kRotor3 q)
+{
+	return kRotor3(q.s, -q.b);
+}
 
 kRotor3 operator*(kRotor3 p, kRotor3 q)
 {
@@ -628,7 +689,10 @@ kVec3 operator*(kRotor3 p, kVec3 x)
 	return r;
 }
 
-kVec3 kRotate(kRotor3 q, kVec3 v) { return q * v; }
+kVec3 kRotate(kRotor3 q, kVec3 v)
+{
+	return q * v;
+}
 
 //
 //
@@ -816,8 +880,14 @@ kVec3 kRotor3ToEulerAngles(kRotor3 q)
 	return angles;
 }
 
-kRotor3 kQuaternionToRotor3(float x, float y, float z, float w) { return kRotor3(w, x, y, z); }
-kRotor3 kQuaternionToRotor3(kVec4 vec) { return kRotor3(vec.w, vec.x, vec.y, vec.z); }
+kRotor3 kQuaternionToRotor3(float x, float y, float z, float w)
+{
+	return kRotor3(w, x, y, z);
+}
+kRotor3 kQuaternionToRotor3(kVec4 vec)
+{
+	return kRotor3(vec.w, vec.x, vec.y, vec.z);
+}
 
 kRotor3 kPlaneToRotor3(kBivec3 plane, float angle)
 {
@@ -840,8 +910,14 @@ kRotor3 kAngleAxisToRotor3(kVec3 axis, float angle)
 	return kRotor3(r, i, j, k);
 }
 
-kRotor3 kPlaneNormalizedToRotor3(kBivec3 plane, float angle) { return kPlaneToRotor3(kNormalize(plane), angle); }
-kRotor3 kAngleAxisNormalizedToRotor3(kVec3 axis, float angle) { return kAngleAxisToRotor3(kNormalize(axis), angle); }
+kRotor3 kPlaneNormalizedToRotor3(kBivec3 plane, float angle)
+{
+	return kPlaneToRotor3(kNormalize(plane), angle);
+}
+kRotor3 kAngleAxisNormalizedToRotor3(kVec3 axis, float angle)
+{
+	return kAngleAxisToRotor3(kNormalize(axis), angle);
+}
 
 kRotor3 kMat4ToRotor3(const kMat4 &m)
 {
@@ -912,13 +988,19 @@ kRotor3 kEulerAnglesToRotor3(float pitch, float yaw, float roll)
 	return q;
 }
 
-kRotor3 kEulerAnglesToRotor3(kVec3 euler) { return kEulerAnglesToRotor3(euler.x, euler.y, euler.z); }
+kRotor3 kEulerAnglesToRotor3(kVec3 euler)
+{
+	return kEulerAnglesToRotor3(euler.x, euler.y, euler.z);
+}
 
 //
 //
 //
 
-kMat2 kIdentity2x2() { return kMat2(1); }
+kMat2 kIdentity2x2()
+{
+	return kMat2(1);
+}
 
 kMat2 kDiagonal2x2(float x, float y)
 {
@@ -936,7 +1018,10 @@ kMat2 kDiagonal2x2(kVec2 s)
 	return m;
 }
 
-kMat3 kIdentity3x3() { return kMat3(1); }
+kMat3 kIdentity3x3()
+{
+	return kMat3(1);
+}
 
 kMat2 kRotation2x2(kVec2 arm)
 {
@@ -969,11 +1054,20 @@ kMat3 kDiagonal3x3(float S_1, float S_2, float S_3)
 	return m;
 }
 
-kMat3 kDiagonal3x3(kVec3 s) { return kDiagonal3x3(s.x, s.y, s.z); }
+kMat3 kDiagonal3x3(kVec3 s)
+{
+	return kDiagonal3x3(s.x, s.y, s.z);
+}
 
-kMat3 kScale3x3(float x, float y) { return kDiagonal3x3(x, y, 1.0f); }
+kMat3 kScale3x3(float x, float y)
+{
+	return kDiagonal3x3(x, y, 1.0f);
+}
 
-kMat3 kScale3x3(kVec2 s) { return kDiagonal3x3(s.x, s.y, 1.0f); }
+kMat3 kScale3x3(kVec2 s)
+{
+	return kDiagonal3x3(s.x, s.y, 1.0f);
+}
 
 kMat3 kTranslation3x3(float T_x, float T_y)
 {
@@ -984,7 +1078,10 @@ kMat3 kTranslation3x3(float T_x, float T_y)
 	return m;
 }
 
-kMat3 kTranslation3x3(kVec2 t) { return kTranslation3x3(t.x, t.y); }
+kMat3 kTranslation3x3(kVec2 t)
+{
+	return kTranslation3x3(t.x, t.y);
+}
 
 kMat3 kRotation3x3(kVec2 arm)
 {
@@ -1023,7 +1120,10 @@ kMat3 kLookAt3x3(kVec2 from, kVec2 to, kVec2 forward)
 	return m;
 }
 
-kMat4 kIdentity() { return kMat4(1); }
+kMat4 kIdentity()
+{
+	return kMat4(1);
+}
 
 kMat4 kDiagonal(float x, float y, float z, float w)
 {
@@ -1035,9 +1135,15 @@ kMat4 kDiagonal(float x, float y, float z, float w)
 	return m;
 }
 
-kMat4 kScale(float S_1, float S_2, float S_3) { return kDiagonal(S_1, S_2, S_3, 1.0f); }
+kMat4 kScale(float S_1, float S_2, float S_3)
+{
+	return kDiagonal(S_1, S_2, S_3, 1.0f);
+}
 
-kMat4 kScale(kVec3 s) { return kDiagonal(s.x, s.y, s.z, 1.0f); }
+kMat4 kScale(kVec3 s)
+{
+	return kDiagonal(s.x, s.y, s.z, 1.0f);
+}
 
 kMat4 kTranslation(float T_x, float T_y, float T_z)
 {
@@ -1049,7 +1155,10 @@ kMat4 kTranslation(float T_x, float T_y, float T_z)
 	return m;
 }
 
-kMat4 kTranslation(kVec3 t) { return kTranslation(t.x, t.y, t.z); }
+kMat4 kTranslation(kVec3 t)
+{
+	return kTranslation(t.x, t.y, t.z);
+}
 
 kMat4 kRotationX(float c, float s)
 {
@@ -1119,11 +1228,20 @@ kMat4 kRotation(float x, float y, float z, kVec2 arm)
 	return m;
 }
 
-kMat4 kRotation(float x, float y, float z, float angle) { return kRotation(x, y, z, kArm(angle)); }
+kMat4 kRotation(float x, float y, float z, float angle)
+{
+	return kRotation(x, y, z, kArm(angle));
+}
 
-kMat4 kRotation(kVec3 axis, kVec2 arm) { return kRotation(axis.x, axis.y, axis.z, arm); }
+kMat4 kRotation(kVec3 axis, kVec2 arm)
+{
+	return kRotation(axis.x, axis.y, axis.z, arm);
+}
 
-kMat4 kRotation(kVec3 axis, float angle) { return kRotation(axis.x, axis.y, axis.z, angle); }
+kMat4 kRotation(kVec3 axis, float angle)
+{
+	return kRotation(axis.x, axis.y, axis.z, angle);
+}
 
 kMat4 kLookAt(kVec3 from, kVec3 to, kVec3 world_up)
 {
@@ -1249,26 +1367,74 @@ kRotor3 kRotor3LookAt(kVec3 from, kVec3 to, kVec3 world_forward)
 // https://easings.net/
 //
 
-float kEaseInSine(float x) { return 1.0f - kCos(x * 0.25f); }
-float kEaseOutSine(float x) { return kSin(x * 0.25f); }
-float kEaseInOutSine(float x) { return -(kCos(0.5f * x) - 1.0f) * 0.5f; }
-float kEaseInQuad(float x) { return x * x; }
-float kEaseOutQuad(float x) { return 1.0f - (1.0f - x) * (1.0f - x); }
-float kEaseInOutQuad(float x) { return x < 0.5f ? 2.0f * x * x : 1.0f - kPow(-2.0f * x + 2.0f, 2.0f) / 2.0f; }
-float kEaseInCubic(float x) { return x * x * x; }
-float kEaseOutCubic(float x) { return 1.0f - kPow(1.0f - x, 3.0f); }
-float kEaseInOutCubic(float x) { return x < 0.5f ? 4.0f * x * x * x : 1.0f - kPow(-2.0f * x + 2.0f, 3.0f) / 2.0f; }
-float kEaseInQuart(float x) { return x * x * x * x; }
-float kEaseOutQuart(float x) { return 1.0f - kPow(1.0f - x, 4.0f); }
-float kEaseInOutQuart(float x) { return x < 0.5f ? 8.0f * x * x * x * x : 1.0f - kPow(-2.0f * x + 2.0f, 4.0f) / 2.0f; }
-float kEaseInQuint(float x) { return x * x * x * x * x; }
-float kEaseOutQuint(float x) { return 1.0f - kPow(1.0f - x, 5.0f); }
+float kEaseInSine(float x)
+{
+	return 1.0f - kCos(x * 0.25f);
+}
+float kEaseOutSine(float x)
+{
+	return kSin(x * 0.25f);
+}
+float kEaseInOutSine(float x)
+{
+	return -(kCos(0.5f * x) - 1.0f) * 0.5f;
+}
+float kEaseInQuad(float x)
+{
+	return x * x;
+}
+float kEaseOutQuad(float x)
+{
+	return 1.0f - (1.0f - x) * (1.0f - x);
+}
+float kEaseInOutQuad(float x)
+{
+	return x < 0.5f ? 2.0f * x * x : 1.0f - kPow(-2.0f * x + 2.0f, 2.0f) / 2.0f;
+}
+float kEaseInCubic(float x)
+{
+	return x * x * x;
+}
+float kEaseOutCubic(float x)
+{
+	return 1.0f - kPow(1.0f - x, 3.0f);
+}
+float kEaseInOutCubic(float x)
+{
+	return x < 0.5f ? 4.0f * x * x * x : 1.0f - kPow(-2.0f * x + 2.0f, 3.0f) / 2.0f;
+}
+float kEaseInQuart(float x)
+{
+	return x * x * x * x;
+}
+float kEaseOutQuart(float x)
+{
+	return 1.0f - kPow(1.0f - x, 4.0f);
+}
+float kEaseInOutQuart(float x)
+{
+	return x < 0.5f ? 8.0f * x * x * x * x : 1.0f - kPow(-2.0f * x + 2.0f, 4.0f) / 2.0f;
+}
+float kEaseInQuint(float x)
+{
+	return x * x * x * x * x;
+}
+float kEaseOutQuint(float x)
+{
+	return 1.0f - kPow(1.0f - x, 5.0f);
+}
 float kEaseInOutQuint(float x)
 {
 	return x < 0.5f ? 16.0f * x * x * x * x * x : 1.0f - kPow(-2.0f * x + 2.0f, 5.0f) / 2.0f;
 }
-float kEaseInExpo(float x) { return x == 0.0f ? 0.0f : kPow(2.0f, 10.0f * x - 10.0f); }
-float kEaseOutExpo(float x) { return x == 1.0f ? 1.0f : 1.0f - kPow(2.0f, -10.0f * x); }
+float kEaseInExpo(float x)
+{
+	return x == 0.0f ? 0.0f : kPow(2.0f, 10.0f * x - 10.0f);
+}
+float kEaseOutExpo(float x)
+{
+	return x == 1.0f ? 1.0f : 1.0f - kPow(2.0f, -10.0f * x);
+}
 float kEaseInOutExpo(float x)
 {
 	return x == 0.0f   ? 0.0f
@@ -1276,8 +1442,14 @@ float kEaseInOutExpo(float x)
 	       : x < 0.5f  ? kPow(2.0f, 20.0f * x - 10.0f) / 2.0f
 	                   : (2.0f - kPow(2.0f, -20.0f * x + 10.0f)) / 2.0f;
 }
-float kEaseInCirc(float x) { return 1.0f - kSquareRoot(1.0f - kPow(x, 2.0f)); }
-float kEaseOutCirc(float x) { return kSquareRoot(1.0f - kPow(x - 1.0f, 2.0f)); }
+float kEaseInCirc(float x)
+{
+	return 1.0f - kSquareRoot(1.0f - kPow(x, 2.0f));
+}
+float kEaseOutCirc(float x)
+{
+	return kSquareRoot(1.0f - kPow(x - 1.0f, 2.0f));
+}
 float kEaseInOutCirc(float x)
 {
 	return x < 0.5f ? (1.0f - kSquareRoot(1.0f - kPow(2.0f * x, 2.0f))) / 2.0f
@@ -1320,7 +1492,10 @@ float kEaseInOutElastic(float x)
 	       : x < 0.5f  ? -(kPow(2.0f, 20.0f * x - 10.0f) * kSin((20.0f * x - 11.125f) * c5)) / 2.0f
 	                   : (kPow(2.0f, -20.0f * x + 10.0f) * kSin((20.0f * x - 11.125f) * c5)) / 2.0f + 1.0f;
 }
-float kEaseInBounce(float x) { return 1.0f - kEaseOutBounce(1.0f - x); }
+float kEaseInBounce(float x)
+{
+	return 1.0f - kEaseOutBounce(1.0f - x);
+}
 float kEaseOutBounce(float x)
 {
 	const float n1 = 7.5625f;
@@ -1351,8 +1526,14 @@ float kEaseInOutBounce(float x)
 //
 //
 
-kVec2 kSlerp(kVec2 from, kVec2 to, float t) { return kSlerp(from, to, kAngleBetween(from, to), t); }
-kVec3 kSlerp(kVec3 from, kVec3 to, float t) { return kSlerp(from, to, kAngleBetween(from, to), t); }
+kVec2 kSlerp(kVec2 from, kVec2 to, float t)
+{
+	return kSlerp(from, to, kAngleBetween(from, to), t);
+}
+kVec3 kSlerp(kVec3 from, kVec3 to, float t)
+{
+	return kSlerp(from, to, kAngleBetween(from, to), t);
+}
 
 kRotor3 kSlerp(kRotor3 from, kRotor3 to, float t)
 {
@@ -1382,7 +1563,10 @@ kRotor3 kSlerp(kRotor3 from, kRotor3 to, float t)
 	return (s0 * from) + (s1 * to);
 }
 
-float kStep(float edge, float val) { return val < edge ? 0.0f : 1.0f; }
+float kStep(float edge, float val)
+{
+	return val < edge ? 0.0f : 1.0f;
+}
 
 kVec2 kStep(kVec2 edge, kVec2 val)
 {
@@ -1421,7 +1605,10 @@ kRotor3 kStep(kRotor3 edge, kRotor3 val)
 	return res;
 }
 
-float kInverseSmoothStep(float x) { return 0.5f - kSin(kArcSin(1.0f - 2.0f * x) / 3.0f); }
+float kInverseSmoothStep(float x)
+{
+	return 0.5f - kSin(kArcSin(1.0f - 2.0f * x) / 3.0f);
+}
 
 float kMoveTowards(float from, float to, float factor)
 {
@@ -1653,13 +1840,25 @@ kVec3 kHsvToRgb(kVec3 col)
 
 	switch (i)
 	{
-		case 0: res = kVec3(v, t, p); break;
-		case 1: res = kVec3(q, v, p); break;
-		case 2: res = kVec3(p, v, t); break;
-		case 3: res = kVec3(p, q, v); break;
-		case 4: res = kVec3(t, p, v); break;
+		case 0:
+			res = kVec3(v, t, p);
+			break;
+		case 1:
+			res = kVec3(q, v, p);
+			break;
+		case 2:
+			res = kVec3(p, v, t);
+			break;
+		case 3:
+			res = kVec3(p, q, v);
+			break;
+		case 4:
+			res = kVec3(t, p, v);
+			break;
 		case 5:
-		default: res = kVec3(v, p, q); break;
+		default:
+			res = kVec3(v, p, q);
+			break;
 	}
 
 	return res;
@@ -1696,6 +1895,12 @@ kVec3 kRgbToHsv(kVec3 c)
 	return res;
 }
 
-kVec4 kHsvToRgb(kVec4 c) { return kVec4(kHsvToRgb(c.xyz), c.w); }
+kVec4 kHsvToRgb(kVec4 c)
+{
+	return kVec4(kHsvToRgb(c.xyz), c.w);
+}
 
-kVec4 kRgbToHsv(kVec4 c) { return kVec4(kRgbToHsv(c.xyz), c.w); }
+kVec4 kRgbToHsv(kVec4 c)
+{
+	return kVec4(kRgbToHsv(c.xyz), c.w);
+}

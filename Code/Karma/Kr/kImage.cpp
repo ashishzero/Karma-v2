@@ -3,20 +3,20 @@
 
 #define STBI_NO_HDR
 #define STBI_NO_GIF
-#define STBI_ASSERT(x) kAssert(x)
-#define STBI_MALLOC(sz) kAlloc(sz)
-#define STBI_REALLOC(p, newsz) kRealloc(p, newsz, 0)
-#define STBI_FREE(p) kFree(p, 0)
+#define STBI_ASSERT(x)         kAssert(x)
+#define STBI_MALLOC(sz)        kAlloc(sz)
+#define STBI_REALLOC(p, newsz) kRealloc(p, 0, newsz)
+#define STBI_FREE(p)           kFree(p, 0)
 
 #define STBI_NO_STDIO
 #define STB_IMAGE_STATIC
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
-#define STBIW_ASSERT(x) kAssert(x)
-#define STBIW_MALLOC(sz) kAlloc(sz)
-#define STBIW_REALLOC(p, newsz) kRealloc(p, newsz, 0)
-#define STBIW_FREE(p) kFree(p, 0)
+#define STBIW_ASSERT(x)         kAssert(x)
+#define STBIW_MALLOC(sz)        kAlloc(sz)
+#define STBIW_REALLOC(p, newsz) kRealloc(p, 0, newsz)
+#define STBIW_FREE(p)           kFree(p, 0)
 
 #define STBI_WRITE_NO_STDIO
 #define STB_IMAGE_WRITE_STATIC
@@ -57,4 +57,9 @@ bool kWriteImage(const kImage &image, kImageFormat format, kImageDataWriterProc 
 			kNoDefaultCase();
 	}
 	return res != 0;
+}
+
+void kFreeImage(const kImage &image)
+{
+	kFree(image.Pixels, image.Width * image.Height * image.Channels);
 }

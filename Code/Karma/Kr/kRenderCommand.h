@@ -90,12 +90,11 @@ typedef struct kRenderScene
 	kCameraView CameraView;
 	kViewport   Viewport;
 	kRange<u32> Commands;
-	kRenderPass TargetPass;
 } kRenderScene;
 
 typedef struct kRenderFrame2D
 {
-	kSpan<kRenderScene>     Scenes;
+	kSpan<kRenderScene>     Scenes[kRenderPass_Count];
 	kSpan<kRenderCommand2D> Commands;
 	kSpan<kRect>            Rects;
 	kSpan<kVec4>            OutLineStyles;

@@ -36,7 +36,8 @@ struct kStringBuilder
 			if (Tail->Written == N)
 			{
 				kStringsBucket<N> *new_buk = (kStringsBucket<N> *)kAlloc(sizeof(kStringsBucket<N>));
-				if (!new_buk) break;
+				if (!new_buk)
+					break;
 
 				new_buk->Next    = 0;
 				new_buk->Written = 0;
@@ -59,9 +60,15 @@ struct kStringBuilder
 		return rc;
 	}
 
-	imem Write(kString string) { return Write(string.Items, string.Count); }
+	imem Write(kString string)
+	{
+		return Write(string.Items, string.Count);
+	}
 
-	imem Write(char value) { return Write((u8 *)&value, 1); }
+	imem Write(char value)
+	{
+		return Write((u8 *)&value, 1);
+	}
 
 	imem Write(u8 value, const char *fmt = "%u")
 	{
@@ -114,13 +121,15 @@ struct kStringBuilder
 
 	kString ToString(kAllocator *allocator = nullptr)
 	{
-		if (Written == 0) return kString("");
+		if (Written == 0)
+			return kString("");
 
 		kString string;
 		string.Items = allocator ? (uint8_t *)kAlloc(allocator, Written + 1) : (uint8_t *)kAlloc(Written + 1);
 		string.Count = 0;
 
-		if (!string.Items) return string;
+		if (!string.Items)
+			return string;
 
 		for (kStringsBucket<N> *bucket = &Head; bucket; bucket = bucket->Next)
 		{

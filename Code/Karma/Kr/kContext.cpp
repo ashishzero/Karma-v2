@@ -32,24 +32,66 @@ void kHandleAssertion(const char *file, int line, const char *proc, const char *
 //
 //
 
-kContext   *kGetContext(void) { return &Context; }
-kAllocator *kGetContextAllocator(void) { return &Context.Allocator; }
-void       *kAlloc(umem size) { return kAlloc(&Context.Allocator, size); }
-void       *kRealloc(void *ptr, umem prev, umem size) { return kRealloc(&Context.Allocator, ptr, prev, size); }
-void        kFree(void *ptr, umem size) { kFree(&Context.Allocator, ptr, size); }
+kContext *kGetContext(void)
+{
+	return &Context;
+}
+kAllocator *kGetContextAllocator(void)
+{
+	return &Context.Allocator;
+}
+void *kAlloc(umem size)
+{
+	return kAlloc(&Context.Allocator, size);
+}
+void *kRealloc(void *ptr, umem prev, umem size)
+{
+	return kRealloc(&Context.Allocator, ptr, prev, size);
+}
+void kFree(void *ptr, umem size)
+{
+	kFree(&Context.Allocator, ptr, size);
+}
 
-u32         kRandom(void) { return kRandom(&Context.Random); }
-u32         kRandomBound(u32 bound) { return kRandomBound(&Context.Random, bound); }
-u32         kRandomRange(u32 min, u32 max) { return kRandomRange(&Context.Random, min, max); }
-float       kRandomFloat01(void) { return kRandomFloat01(&Context.Random); }
-float       kRandomFloatBound(float bound) { return kRandomFloatBound(&Context.Random, bound); }
-float       kRandomFloatRange(float min, float max) { return kRandomFloatRange(&Context.Random, min, max); }
-float       kRandomFloat(void) { return kRandomFloat(&Context.Random); }
-void        kRandomSourceSeed(u64 state, u64 seq) { kRandomSourceSeed(&Context.Random, state, seq); }
+u32 kRandom(void)
+{
+	return kRandom(&Context.Random);
+}
+u32 kRandomBound(u32 bound)
+{
+	return kRandomBound(&Context.Random, bound);
+}
+u32 kRandomRange(u32 min, u32 max)
+{
+	return kRandomRange(&Context.Random, min, max);
+}
+float kRandomFloat01(void)
+{
+	return kRandomFloat01(&Context.Random);
+}
+float kRandomFloatBound(float bound)
+{
+	return kRandomFloatBound(&Context.Random, bound);
+}
+float kRandomFloatRange(float min, float max)
+{
+	return kRandomFloatRange(&Context.Random, min, max);
+}
+float kRandomFloat(void)
+{
+	return kRandomFloat(&Context.Random);
+}
+void kRandomSourceSeed(u64 state, u64 seq)
+{
+	kRandomSourceSeed(&Context.Random, state, seq);
+}
 
-void        kSetLogLevel(kLogLevel level) { Context.Logger.Level = level; }
+void kSetLogLevel(kLogLevel level)
+{
+	Context.Logger.Level = level;
+}
 
-void        kLogPrintV(kLogLevel level, const char *src, const char *fmt, va_list list)
+void kLogPrintV(kLogLevel level, const char *src, const char *fmt, va_list list)
 {
 	if (level >= Context.Logger.Level)
 	{
@@ -59,15 +101,39 @@ void        kLogPrintV(kLogLevel level, const char *src, const char *fmt, va_lis
 	}
 }
 
-void kLogTraceExV(const char *src, const char *fmt, va_list list) { kLogPrintV(kLogLevel_Trace, src, fmt, list); }
-void kLogInfoExV(const char *src, const char *fmt, va_list list) { kLogPrintV(kLogLevel_Info, src, fmt, list); }
-void kLogWarningExV(const char *src, const char *fmt, va_list list) { kLogPrintV(kLogLevel_Warning, src, fmt, list); }
-void kLogErrorExV(const char *src, const char *fmt, va_list list) { kLogPrintV(kLogLevel_Error, src, fmt, list); }
+void kLogTraceExV(const char *src, const char *fmt, va_list list)
+{
+	kLogPrintV(kLogLevel_Trace, src, fmt, list);
+}
+void kLogInfoExV(const char *src, const char *fmt, va_list list)
+{
+	kLogPrintV(kLogLevel_Info, src, fmt, list);
+}
+void kLogWarningExV(const char *src, const char *fmt, va_list list)
+{
+	kLogPrintV(kLogLevel_Warning, src, fmt, list);
+}
+void kLogErrorExV(const char *src, const char *fmt, va_list list)
+{
+	kLogPrintV(kLogLevel_Error, src, fmt, list);
+}
 
-void kLogTraceV(const char *fmt, va_list list) { kLogTraceExV("", fmt, list); }
-void kLogInfoV(const char *fmt, va_list list) { kLogInfoExV("", fmt, list); }
-void kLogWarningV(const char *fmt, va_list list) { kLogWarningExV("", fmt, list); }
-void kLogErrorV(const char *fmt, va_list list) { kLogErrorExV("", fmt, list); }
+void kLogTraceV(const char *fmt, va_list list)
+{
+	kLogTraceExV("", fmt, list);
+}
+void kLogInfoV(const char *fmt, va_list list)
+{
+	kLogInfoExV("", fmt, list);
+}
+void kLogWarningV(const char *fmt, va_list list)
+{
+	kLogWarningExV("", fmt, list);
+}
+void kLogErrorV(const char *fmt, va_list list)
+{
+	kLogErrorExV("", fmt, list);
+}
 
 void kLogPrint(kLogLevel level, const char *src, const char *fmt, ...)
 {
@@ -141,7 +207,10 @@ void kLogError(const char *fmt, ...)
 	va_end(args);
 }
 
-void kFatalError(const char *msg) { Context.Fatal(msg); }
+void kFatalError(const char *msg)
+{
+	Context.Fatal(msg);
+}
 
 //
 //
@@ -213,7 +282,8 @@ void kDefaultHandleLog(void *data, kLogLevel level, const char *src, const u8 *m
 	fwprintf(out, L"%s", MessageBufferWide);
 #endif
 
-	if (IsDebuggerPresent()) OutputDebugStringW(MessageBufferWide);
+	if (IsDebuggerPresent())
+		OutputDebugStringW(MessageBufferWide);
 
 	kAtomicUnlock(&Guard);
 }
@@ -222,10 +292,10 @@ void *kDefaultHeapAllocator(kAllocatorMode mode, void *ptr, umem prev, umem size
 {
 	HANDLE heap = GetProcessHeap();
 	if (mode == kAllocatorMode_Alloc)
-		return HeapAlloc(heap, 0, size);
+		return size ? HeapAlloc(heap, 0, size) : 0;
 	else if (mode == kAllocatorMode_Realloc)
 		return ptr ? HeapReAlloc(heap, 0, ptr, size) : HeapAlloc(heap, 0, size);
-	else
+	else if (ptr)
 		HeapFree(heap, 0, ptr);
 	return 0;
 }

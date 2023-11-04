@@ -55,12 +55,12 @@ void        kLogWarning(const char *fmt, ...);
 void        kLogError(const char *fmt, ...);
 
 #if defined(K_BUILD_DEBUG) || defined(K_BUILD_DEVELOPER)
-#define kDebugTraceVEx(src, fmt, list) kLogTraceExV(src, fmt, list)
-#define kDebugTraceEx(src, fmt, ...) kLogTraceEx(src, fmt, __VA_ARGS__)
+#define kDebugTraceVEx(src, fmt, list)   kLogTraceExV(src, fmt, list)
+#define kDebugTraceEx(src, fmt, ...)     kLogTraceEx(src, fmt, __VA_ARGS__)
 #define kDebugWarningVEx(src, fmt, list) kLogWarningExV(src, fmt, list)
-#define kDebugWarningEx(src, fmt, ...) kLogWarningEx(src, fmt, __VA_ARGS__)
-#define kDebugErrorVEx(src, fmt, list) kLogErrorExV(src, fmt, list)
-#define kDebugErrorEx(src, fmt, ...) kLogErrorEx(src, fmt, __VA_ARGS__)
+#define kDebugWarningEx(src, fmt, ...)   kLogWarningEx(src, fmt, __VA_ARGS__)
+#define kDebugErrorVEx(src, fmt, list)   kLogErrorExV(src, fmt, list)
+#define kDebugErrorEx(src, fmt, ...)     kLogErrorEx(src, fmt, __VA_ARGS__)
 #endif
 
 void  kFatalError(const char *msg);

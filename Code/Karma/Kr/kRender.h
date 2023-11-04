@@ -12,9 +12,9 @@ typedef struct kGlyph
 typedef struct kFont
 {
 	kTexture Atlas;
-	u16 *    CodepointMap;
-	kGlyph * Glyphs;
-	kGlyph * Fallback;
+	u16     *CodepointMap;
+	kGlyph  *Glyphs;
+	kGlyph  *Fallback;
 	u32      MinCodepoint;
 	u32      MaxCodepoint;
 	u32      GlyphsCount;

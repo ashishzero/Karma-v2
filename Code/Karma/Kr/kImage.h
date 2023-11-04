@@ -18,3 +18,7 @@ typedef enum kImageFormat
 } kImageFormat;
 
 typedef void (*kImageDataWriterProc)(void *ctx, void *data, int);
+
+bool kReadImage(kString buffer, kImage *image, int req_channels);
+bool kWriteImage(const kImage &image, kImageFormat format, kImageDataWriterProc proc, void *context);
+void kFreeImage(const kImage &image);

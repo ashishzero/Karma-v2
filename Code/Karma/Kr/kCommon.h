@@ -35,22 +35,22 @@
 
 #if defined(__ANDROID__) || defined(__ANDROID_API__)
 #define K_PLATFORM_ANDROID 1
-#define __PLATFORM__ "Andriod"
+#define __PLATFORM__       "Andriod"
 #elif defined(__gnu_linux__) || defined(__linux__) || defined(linux) || defined(__linux)
 #define K_PLATFORM_LINUX 1
-#define __PLATFORM__ "linux"
+#define __PLATFORM__     "linux"
 #elif defined(macintosh) || defined(Macintosh)
 #define K_PLATFORM_MAC 1
-#define __PLATFORM__ "Mac"
+#define __PLATFORM__   "Mac"
 #elif defined(__APPLE__) && defined(__MACH__)
 #define K_PLATFORM_MAC 1
-#define __PLATFORM__ "Mac"
+#define __PLATFORM__   "Mac"
 #elif defined(__APPLE__)
 #define K_PLATFORM_IOS 1
-#define __PLATFORM__ "iOS"
+#define __PLATFORM__   "iOS"
 #elif defined(_WIN64) || defined(_WIN32)
 #define K_PLATFORM_WINDOWS 1
-#define __PLATFORM__ "Windows"
+#define __PLATFORM__       "Windows"
 #elif defined(K_PLATFORM_WASM)
 #define __PLATFORM__ "WebAssembly"
 #else
@@ -199,11 +199,16 @@
 	__assume(false);
 }
 #else // ???
-inproc void kUnreachable() { kTriggerBreakpoint(); }
+inproc void kUnreachable()
+{
+	kTriggerBreakpoint();
+}
 #endif
 
 #define kNoDefaultCase()                                                                                               \
-	default: kUnreachable(); break
+	default:                                                                                                           \
+		kUnreachable();                                                                                                \
+		break
 
 [[noreturn]] inproc void kUnimplemented()
 {
@@ -215,15 +220,19 @@ inproc void kUnreachable() { kTriggerBreakpoint(); }
 //
 //
 
-#define kConcatRaw(x, y) x##y
+#define kConcatRaw(x, y)  x##y
 #define kConcatRaw2(x, y) kConcatRaw(x, y)
 
 template <typename Item>
 struct kExitScope
 {
 	Item lambda;
-	kExitScope(Item lambda) : lambda(lambda) {}
-	~kExitScope() { lambda(); }
+	kExitScope(Item lambda) : lambda(lambda)
+	{}
+	~kExitScope()
+	{
+		lambda();
+	}
 };
 struct kExitScope2
 {
@@ -256,17 +265,17 @@ typedef double    r64;
 typedef size_t    umem;
 typedef ptrdiff_t imem;
 
-#define REAL32_MIN FLT_MIN
-#define REAL32_MAX FLT_MAX
-#define REAL64_MIN DBL_MIN
-#define REAL64_MAX DBL_MAX
-#define REAL_MIN REAL32_MIN
-#define REAL_MAX REAL32_MAX
-#define REAL_EPSILON FLT_EPSILON
+#define REAL32_MIN     FLT_MIN
+#define REAL32_MAX     FLT_MAX
+#define REAL64_MIN     DBL_MIN
+#define REAL64_MAX     DBL_MAX
+#define REAL_MIN       REAL32_MIN
+#define REAL_MAX       REAL32_MAX
+#define REAL_EPSILON   FLT_EPSILON
 
-#define K_PI (3.1415926535f)
-#define K_PI_INVERSE (1.0f / K_PI)
-#define K_TAU (K_PI / 2)
+#define K_PI           (3.1415926535f)
+#define K_PI_INVERSE   (1.0f / K_PI)
+#define K_TAU          (K_PI / 2)
 
 #define kArrayCount(a) (sizeof(a) / sizeof((a)[0]))
 
@@ -325,7 +334,8 @@ constexpr Item kIPower(Item v, U p)
 template <typename Item>
 constexpr static Item kNextPowerOf2(Item n)
 {
-	if (kIsPower2(n)) return n;
+	if (kIsPower2(n))
+		return n;
 	Item count = 0;
 	while (n != 0)
 	{
@@ -335,7 +345,10 @@ constexpr static Item kNextPowerOf2(Item n)
 	return (Item)1 << (Item)count;
 }
 
-inproc u16 constexpr kBSwap16(u16 a) { return ((((a)&0x00FF) << 8) | (((a)&0xFF00) >> 8)); }
+inproc u16 constexpr kBSwap16(u16 a)
+{
+	return ((((a)&0x00FF) << 8) | (((a)&0xFF00) >> 8));
+}
 
 inproc u32 constexpr kBSwap32(u32 a)
 {
@@ -372,7 +385,8 @@ void kHandleAssertion(const char *file, int line, const char *proc, const char *
 #define kAssert(x)                                                                                                     \
 	do                                                                                                                 \
 	{                                                                                                                  \
-		if (!(x)) kHandleAssertion(__FILE__, __LINE__, __PROCEDURE__, #x);                                             \
+		if (!(x))                                                                                                      \
+			kHandleAssertion(__FILE__, __LINE__, __PROCEDURE__, #x);                                                   \
 	} while (0)
 #else
 #define kDebugTriggerbreakpoint()
@@ -399,9 +413,12 @@ struct kVec2T
 		T m[2];
 	};
 
-	constexpr kVec2T() : x(0), y(0) {}
-	explicit constexpr kVec2T(T a) : x(a), y(a) {}
-	explicit constexpr kVec2T(T a, T b) : x(a), y(b) {}
+	constexpr kVec2T() : x(0), y(0)
+	{}
+	explicit constexpr kVec2T(T a) : x(a), y(a)
+	{}
+	explicit constexpr kVec2T(T a, T b) : x(a), y(b)
+	{}
 };
 
 template <typename T>
@@ -426,11 +443,16 @@ struct kVec3T
 		};
 	};
 
-	constexpr kVec3T() : x(0), y(0), z(0) {}
-	explicit constexpr kVec3T(T a) : x(a), y(a), z(a) {}
-	explicit constexpr kVec3T(T a, T b, T c) : x(a), y(b), z(c) {}
-	explicit constexpr kVec3T(kVec2T<T> ab, T c) : x(ab.x), y(ab.y), z(c) {}
-	explicit constexpr kVec3T(T a, kVec2T<T> cd) : x(a), y(cd.x), z(cd.y) {}
+	constexpr kVec3T() : x(0), y(0), z(0)
+	{}
+	explicit constexpr kVec3T(T a) : x(a), y(a), z(a)
+	{}
+	explicit constexpr kVec3T(T a, T b, T c) : x(a), y(b), z(c)
+	{}
+	explicit constexpr kVec3T(kVec2T<T> ab, T c) : x(ab.x), y(ab.y), z(c)
+	{}
+	explicit constexpr kVec3T(T a, kVec2T<T> cd) : x(a), y(cd.x), z(cd.y)
+	{}
 };
 
 template <typename T>
@@ -440,9 +462,12 @@ struct kBivec3T
 	float zx;
 	float xy;
 
-	constexpr kBivec3T() : yz(0), zx(0), xy(0) {}
-	explicit constexpr kBivec3T(T a) : yz(a), zx(a), xy(a) {}
-	explicit constexpr kBivec3T(T a, T b, T c) : yz(a), zx(b), xy(c) {}
+	constexpr kBivec3T() : yz(0), zx(0), xy(0)
+	{}
+	explicit constexpr kBivec3T(T a) : yz(a), zx(a), xy(a)
+	{}
+	explicit constexpr kBivec3T(T a, T b, T c) : yz(a), zx(b), xy(c)
+	{}
 };
 
 template <typename T>
@@ -472,13 +497,20 @@ struct kVec4T
 		};
 	};
 
-	constexpr kVec4T() : x(0), y(0), z(0), w(0) {}
-	explicit constexpr kVec4T(T a) : x(a), y(a), z(a), w(a) {}
-	explicit constexpr kVec4T(T a, T b, T c, T d) : x(a), y(b), z(c), w(d) {}
-	explicit constexpr kVec4T(kVec2T<T> ab, kVec2T<T> cd) : x(ab.x), y(ab.y), z(cd.x), w(cd.y) {}
-	explicit constexpr kVec4T(kVec2T<T> ab, T c, T d) : x(ab.x), y(ab.y), z(c), w(d) {}
-	explicit constexpr kVec4T(kVec3T<T> abc, T d) : x(abc.x), y(abc.y), z(abc.z), w(d) {}
-	explicit constexpr kVec4T(T a, kVec3T<T> bcd) : x(a), y(bcd.x), z(bcd.y), w(bcd.z) {}
+	constexpr kVec4T() : x(0), y(0), z(0), w(0)
+	{}
+	explicit constexpr kVec4T(T a) : x(a), y(a), z(a), w(a)
+	{}
+	explicit constexpr kVec4T(T a, T b, T c, T d) : x(a), y(b), z(c), w(d)
+	{}
+	explicit constexpr kVec4T(kVec2T<T> ab, kVec2T<T> cd) : x(ab.x), y(ab.y), z(cd.x), w(cd.y)
+	{}
+	explicit constexpr kVec4T(kVec2T<T> ab, T c, T d) : x(ab.x), y(ab.y), z(c), w(d)
+	{}
+	explicit constexpr kVec4T(kVec3T<T> abc, T d) : x(abc.x), y(abc.y), z(abc.z), w(d)
+	{}
+	explicit constexpr kVec4T(T a, kVec3T<T> bcd) : x(a), y(bcd.x), z(bcd.y), w(bcd.z)
+	{}
 };
 
 using kVec2    = kVec2T<float>;
@@ -500,8 +532,10 @@ typedef union kMat2
 	float m[4];
 	float m2[2][2];
 
-	inline kMat2() {}
-	explicit inline kMat2(kVec2 a, kVec2 b) : rows{a, b} {}
+	inline kMat2()
+	{}
+	explicit inline kMat2(kVec2 a, kVec2 b) : rows{a, b}
+	{}
 	explicit inline kMat2(float a)
 	{
 		rows[0] = kVec2(a, 0);
@@ -522,8 +556,10 @@ typedef union kMat3
 	float m[9];
 	float m2[3][3];
 
-	inline kMat3() {}
-	explicit inline kMat3(kVec3 a, kVec3 b, kVec3 c) : rows{a, b, c} {}
+	inline kMat3()
+	{}
+	explicit inline kMat3(kVec3 a, kVec3 b, kVec3 c) : rows{a, b, c}
+	{}
 	explicit inline kMat3(float a)
 	{
 		rows[0] = kVec3(a, 0, 0);
@@ -538,8 +574,10 @@ typedef union kMat4
 	float m[16];
 	float m2[4][4];
 
-	inline kMat4() {}
-	explicit inline kMat4(kVec4 a, kVec4 b, kVec4 c, kVec4 d) : rows{a, b, c, d} {}
+	inline kMat4()
+	{}
+	explicit inline kMat4(kVec4 a, kVec4 b, kVec4 c, kVec4 d) : rows{a, b, c, d}
+	{}
 	explicit inline kMat4(float a)
 	{
 		rows[0] = kVec4(a, 0, 0, 0);
@@ -554,9 +592,12 @@ typedef struct kRotor3
 	float   s;
 	kBivec3 b;
 
-	kRotor3() : s(1), b(0) {}
-	kRotor3(float a, float b01, float b02, float b12) : s(a), b(b01, b02, b12) {}
-	kRotor3(float a, kBivec3 bv) : s(a), b(bv) {}
+	kRotor3() : s(1), b(0)
+	{}
+	kRotor3(float a, float b01, float b02, float b12) : s(a), b(b01, b02, b12)
+	{}
+	kRotor3(float a, kBivec3 bv) : s(a), b(bv)
+	{}
 } kRotor3;
 
 typedef struct kRect
@@ -564,7 +605,8 @@ typedef struct kRect
 	kVec2 min;
 	kVec2 max;
 
-	kRect() {}
+	kRect()
+	{}
 
 	kRect(float minx, float miny, float maxx, float maxy)
 	{
@@ -589,10 +631,16 @@ struct kRange
 	T Beg;
 	T End;
 
-	inline kRange() : Beg(0), End(0) {}
-	inline kRange(T r) : Beg(r), End(r) {}
-	inline kRange(T b, T e) : Beg(b), End(e) {}
-	inline T Length(void) { return End - Beg; }
+	inline kRange() : Beg(0), End(0)
+	{}
+	inline kRange(T r) : Beg(r), End(r)
+	{}
+	inline kRange(T b, T e) : Beg(b), End(e)
+	{}
+	inline T Length(void)
+	{
+		return End - Beg;
+	}
 };
 
 template <typename Item>
@@ -601,8 +649,10 @@ struct kSpan
 	imem  Count;
 	Item *Items;
 
-	inline kSpan() : Count(0), Items(nullptr) {}
-	inline kSpan(const Item *p, imem n) : Count(n), Items((Item *)p) {}
+	inline kSpan() : Count(0), Items(nullptr)
+	{}
+	inline kSpan(const Item *p, imem n) : Count(n), Items((Item *)p)
+	{}
 	template <imem _Count>
 	constexpr kSpan(const Item (&a)[_Count]) : Count(_Count), Items((Item *)a)
 	{}
@@ -611,12 +661,24 @@ struct kSpan
 		kAssert(index < Count);
 		return Items[index];
 	}
-	inline Item       *begin() { return Items; }
-	inline Item       *end() { return Items + Count; }
-	inline const Item *begin() const { return Items; }
-	inline const Item *end() const { return Items + Count; }
+	inline Item *begin()
+	{
+		return Items;
+	}
+	inline Item *end()
+	{
+		return Items + Count;
+	}
+	inline const Item *begin() const
+	{
+		return Items;
+	}
+	inline const Item *end() const
+	{
+		return Items + Count;
+	}
 
-	Item              &First(void)
+	Item &First(void)
 	{
 		kAssert(Count);
 		return Items[0];
@@ -637,12 +699,15 @@ struct kSpan
 		return Items[Count - 1];
 	}
 
-	umem Size(void) const { return Count * sizeof(Item); }
+	umem Size(void) const
+	{
+		return Count * sizeof(Item);
+	}
 };
 
-#define kStrFmt "%.*s"
+#define kStrFmt    "%.*s"
 #define kStrArg(x) (int)((x).Count), ((x).Items)
-#define kArrFmt "{ %zd, %p }"
+#define kArrFmt    "{ %zd, %p }"
 #define kArrArg(x) ((x).Count), ((x).Items)
 
 //
@@ -654,14 +719,19 @@ struct kString
 	imem Count;
 	u8  *Items;
 
-	kString() : Count(0), Items(0) {}
-	kString(kSpan<u8> av) : Count(av.Count), Items(av.Items) {}
-	kString(kSpan<char> av) : Count(av.Count), Items((u8 *)av.Items) {}
+	kString() : Count(0), Items(0)
+	{}
+	kString(kSpan<u8> av) : Count(av.Count), Items(av.Items)
+	{}
+	kString(kSpan<char> av) : Count(av.Count), Items((u8 *)av.Items)
+	{}
 	template <imem _Length>
 	constexpr kString(const char (&a)[_Length]) : Count(_Length - 1), Items((u8 *)a)
 	{}
-	kString(const u8 *_Data, imem _Length) : Count(_Length), Items((u8 *)_Data) {}
-	kString(const char *_Data, imem _Length) : Count(_Length), Items((u8 *)_Data) {}
+	kString(const u8 *_Data, imem _Length) : Count(_Length), Items((u8 *)_Data)
+	{}
+	kString(const char *_Data, imem _Length) : Count(_Length), Items((u8 *)_Data)
+	{}
 	const u8 &operator[](const imem index) const
 	{
 		kAssert(index < Count);
@@ -672,11 +742,26 @@ struct kString
 		kAssert(index < Count);
 		return Items[index];
 	}
-	inline u8       *begin() { return Items; }
-	inline u8       *end() { return Items + Count; }
-	inline const u8 *begin() const { return Items; }
-	inline const u8 *end() const { return Items + Count; }
-	operator kSpan<u8>() { return kSpan<u8>(Items, Count); }
+	inline u8 *begin()
+	{
+		return Items;
+	}
+	inline u8 *end()
+	{
+		return Items + Count;
+	}
+	inline const u8 *begin() const
+	{
+		return Items;
+	}
+	inline const u8 *end() const
+	{
+		return Items + Count;
+	}
+	operator kSpan<u8>()
+	{
+		return kSpan<u8>(Items, Count);
+	}
 };
 
 //
@@ -777,7 +862,10 @@ typedef struct kLogger
 //
 //
 
-inproc void *kFallbackAllocatorProc(kAllocatorMode mode, void *ptr, umem prev, umem nsize, void *data) { return ptr; }
+inproc void *kFallbackAllocatorProc(kAllocatorMode mode, void *ptr, umem prev, umem nsize, void *data)
+{
+	return ptr;
+}
 
 static const kAllocator kFallbackAllocator = {kFallbackAllocatorProc};
 static const kArena     kFallbackArena     = {};

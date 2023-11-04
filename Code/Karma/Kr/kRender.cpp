@@ -30,8 +30,9 @@ typedef struct kRenderContext2D
 	kArray<kIndex2D>         Indices;
 	kArray<kVec4>            OutLineStyles;
 	kArray<kRect>            Rects;
-	kArray<kRenderScene>     Scenes;
 	kArray<kRenderCommand2D> Commands;
+	kArray<kRenderScene>     Scenes[kRenderPass_Count];
+	kRenderPass              RenderPass;
 	kRenderStack2D           Stack;
 } kRenderContext2D;
 
@@ -344,11 +345,12 @@ void kEndRenderPass(void)
 
 void kBeginScene(const kCameraView &view, const kViewport &viewport)
 {
-	kRenderScene *scene = g_Render2D.Scenes.Add();
-	scene->CameraView   = view;
-	scene->Viewport     = viewport;
-	scene->Commands     = kRange<u32>((u32)g_Render2D.Commands.Count);
-	scene->TargetPass   = g_Render2D.Stack.RenderPass.Last();
+	g_Render2D.RenderPass = g_Render2D.Stack.RenderPass.Last();
+
+	kRenderScene *scene   = g_Render2D.Scenes[g_Render2D.RenderPass].Add();
+	scene->CameraView     = view;
+	scene->Viewport       = viewport;
+	scene->Commands       = kRange<u32>((u32)g_Render2D.Commands.Count);
 
 	g_Render2D.Rects.Add(g_Render2D.Stack.Rects.Last());
 	g_Render2D.OutLineStyles.Add(g_Render2D.Stack.OutLineStyles.Last());
@@ -363,6 +365,8 @@ void kBeginScene(const kCameraView &view, const kViewport &viewport)
 
 void kEndScene(void)
 {
+	kAssert(g_Render2D.RenderPass == g_Render2D.Stack.RenderPass.Last());
+
 	kPopRect();
 
 	kRenderCommand2D &cmd = g_Render2D.Commands.Last();
@@ -376,12 +380,12 @@ void kEndScene(void)
 		g_Render2D.Commands.Pop();
 	}
 
-	kRenderScene *pass = &g_Render2D.Scenes.Last();
-	pass->Commands.End = (u32)g_Render2D.Commands.Count;
+	kRenderScene *scene = &g_Render2D.Scenes[g_Render2D.RenderPass].Last();
+	scene->Commands.End = (u32)g_Render2D.Commands.Count;
 
-	if (!pass->Commands.Length())
+	if (!scene->Commands.Length())
 	{
-		g_Render2D.Scenes.Pop();
+		g_Render2D.Scenes[g_Render2D.RenderPass].Pop();
 	}
 }
 
@@ -1884,7 +1888,8 @@ void kCreateRenderContext(const kRenderSpec &spec, kTexture textures[kTextureTyp
 	g_Render2D.Vertices.Reserve(spec.Vertices);
 	g_Render2D.Indices.Reserve(spec.Indices);
 	g_Render2D.Commands.Reserve(spec.Commands);
-	g_Render2D.Scenes.Reserve(spec.Scenes);
+	for (int i = 0; i < kRenderPass_Count; ++i)
+		g_Render2D.Scenes[i].Reserve(spec.Scenes);
 	g_Render2D.Rects.Reserve(spec.Commands);
 
 	g_Render2D.Stack.RenderPass.Reserve(64);
@@ -1913,7 +1918,8 @@ void kDestroyRenderContext(void)
 	kFree(&g_Render2D.Vertices);
 	kFree(&g_Render2D.Indices);
 	kFree(&g_Render2D.Commands);
-	kFree(&g_Render2D.Scenes);
+	for (int i = 0; i < kRenderPass_Count; ++i)
+		kFree(&g_Render2D.Scenes[i]);
 	kFree(&g_Render2D.Rects);
 	kFree(&g_Render2D.OutLineStyles);
 
@@ -1932,10 +1938,11 @@ void kDestroyRenderContext(void)
 
 void kResetFrame(void)
 {
-	g_Render2D.Vertices.Count         = 0;
-	g_Render2D.Indices.Count          = 0;
-	g_Render2D.Commands.Count         = 0;
-	g_Render2D.Scenes.Count           = 0;
+	g_Render2D.Vertices.Count = 0;
+	g_Render2D.Indices.Count  = 0;
+	g_Render2D.Commands.Count = 0;
+	for (int i = 0; i < kRenderPass_Count; ++i)
+		g_Render2D.Scenes[i].Count = 0;
 	g_Render2D.Rects.Count            = 0;
 	g_Render2D.OutLineStyles.Count    = 0;
 
@@ -1967,9 +1974,10 @@ static void kUpdateMemoryStatictics(void)
 	g_Memory.Caps.VertexSize  = (u32)(g_Render2D.Vertices.Capacity * sizeof(kVertex2D));
 	g_Memory.Caps.IndexSize   = (u32)(g_Render2D.Indices.Capacity * sizeof(kIndex2D));
 	g_Memory.Caps.CommandSize = (u32)(g_Render2D.Commands.Capacity * sizeof(kRenderCommand2D));
-	g_Memory.Caps.SceneSize   = (u32)(g_Render2D.Scenes.Capacity * sizeof(kRenderScene));
+	for (int i = 0; i < kRenderPass_Count; ++i)
+		g_Memory.Caps.SceneSize = (u32)(g_Render2D.Scenes[i].Capacity * sizeof(kRenderScene));
 
-	g_Memory.Caps.MB          = 0;
+	g_Memory.Caps.MB = 0;
 	g_Memory.Caps.MB += (float)g_Memory.Caps.VertexSize;
 	g_Memory.Caps.MB += (float)g_Memory.Caps.IndexSize;
 	g_Memory.Caps.MB += (float)g_Memory.Caps.CommandSize;
@@ -1979,9 +1987,10 @@ static void kUpdateMemoryStatictics(void)
 	g_Memory.Used.VertexSize  = (u32)(g_Render2D.Vertices.Count * sizeof(kVertex2D));
 	g_Memory.Used.IndexSize   = (u32)(g_Render2D.Indices.Count * sizeof(kIndex2D));
 	g_Memory.Used.CommandSize = (u32)(g_Render2D.Commands.Count * sizeof(kRenderCommand2D));
-	g_Memory.Used.SceneSize   = (u32)(g_Render2D.Scenes.Count * sizeof(kRenderScene));
+	for (int i = 0; i < kRenderPass_Count; ++i)
+		g_Memory.Used.SceneSize = (u32)(g_Render2D.Scenes[i].Count * sizeof(kRenderScene));
 
-	g_Memory.Used.MB          = 0;
+	g_Memory.Used.MB = 0;
 	g_Memory.Used.MB += (float)g_Memory.Used.VertexSize;
 	g_Memory.Used.MB += (float)g_Memory.Used.IndexSize;
 	g_Memory.Used.MB += (float)g_Memory.Used.CommandSize;
@@ -1991,7 +2000,8 @@ static void kUpdateMemoryStatictics(void)
 
 void kGetFrameData(kRenderFrame2D *frame)
 {
-	frame->Scenes        = g_Render2D.Scenes;
+	for (int i = 0; i < kRenderPass_Count; ++i)
+		frame->Scenes[i] = g_Render2D.Scenes[i];
 	frame->Commands      = g_Render2D.Commands;
 	frame->OutLineStyles = g_Render2D.OutLineStyles;
 	frame->Rects         = g_Render2D.Rects;

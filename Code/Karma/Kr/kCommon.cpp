@@ -16,13 +16,15 @@ static void *kArenaAllocatorProc(kAllocatorMode mode, void *ptr, umem prev, umem
 
 		if (prev >= size)
 		{
-			if (mem + arena->Pos == ((u8 *)ptr + prev)) kPopSize(arena, prev - size, 0);
+			if (mem + arena->Pos == ((u8 *)ptr + prev))
+				kPopSize(arena, prev - size, 0);
 			return ptr;
 		}
 
 		if (mem + arena->Pos == ((u8 *)ptr + prev))
 		{
-			if (kPushSize(arena, size - prev, 0)) return ptr;
+			if (kPushSize(arena, size - prev, 0))
+				return ptr;
 			return 0;
 		}
 
@@ -82,7 +84,8 @@ kArena *kAllocArena(const kArenaSpec &spec, kAllocator *allocator)
 	umem max_size = kAlignUp(spec.Capacity, 4 * 1024);
 	u8  *mem      = (u8 *)kAlloc(allocator, max_size);
 
-	if (!mem) return (kArena *)&kFallbackArena;
+	if (!mem)
+		return (kArena *)&kFallbackArena;
 
 	kArena  stub  = {.Ptr = mem, .Pos = 0, .Cap = max_size, .Alignment = spec.Alignment, .Flags = spec.Flags};
 
@@ -99,22 +102,36 @@ kArena *kAllocArena(const kArenaSpec &spec, kAllocator *allocator)
 	return arena;
 }
 
-void        kFreeArena(kArena *arena, kAllocator *allocator) { kFree(allocator, arena->Ptr, arena->Cap); }
+void kFreeArena(kArena *arena, kAllocator *allocator)
+{
+	kFree(allocator, arena->Ptr, arena->Cap);
+}
 
-void        kResetArena(kArena *arena) { arena->Pos = sizeof(kArena); }
+void kResetArena(kArena *arena)
+{
+	arena->Pos = sizeof(kArena);
+}
 
-void        kLockArena(kArena *arena) { kAtomicLock(&arena->Lock); }
+void kLockArena(kArena *arena)
+{
+	kAtomicLock(&arena->Lock);
+}
 
-void        kUnlockArena(kArena *arena) { kAtomicUnlock(&arena->Lock); }
+void kUnlockArena(kArena *arena)
+{
+	kAtomicUnlock(&arena->Lock);
+}
 
 static void LockSyncFlaggedArena(kArena *arena, uint flags)
 {
-	if ((arena->Flags | flags) & kArena_Sync) kAtomicLock(&arena->Lock);
+	if ((arena->Flags | flags) & kArena_Sync)
+		kAtomicLock(&arena->Lock);
 }
 
 static void UnlockSyncFlaggedArena(kArena *arena, uint flags)
 {
-	if ((arena->Flags | flags) & kArena_Sync) kAtomicUnlock(&arena->Lock);
+	if ((arena->Flags | flags) & kArena_Sync)
+		kAtomicUnlock(&arena->Lock);
 }
 
 bool kSetPosition(kArena *arena, umem pos, uint flags)
@@ -161,7 +178,8 @@ void *kPushSize(kArena *arena, umem size, uint flags)
 		umem pos = arena->Pos + size;
 		if (kSetPosition(arena, pos, flags))
 		{
-			if ((arena->Flags | flags) & kArena_Zero) memset(mem, 0, size);
+			if ((arena->Flags | flags) & kArena_Zero)
+				memset(mem, 0, size);
 			UnlockSyncFlaggedArena(arena, flags);
 			return mem;
 		}
@@ -247,24 +265,37 @@ u32 kRandomBound(kRandomSource *random, u32 bound)
 	for (;;)
 	{
 		u32 r = kRandom(random);
-		if (r >= threshold) return r % bound;
+		if (r >= threshold)
+			return r % bound;
 	}
 }
 
-u32   kRandomRange(kRandomSource *random, u32 min, u32 max) { return min + kRandomBound(random, max - min); }
+u32 kRandomRange(kRandomSource *random, u32 min, u32 max)
+{
+	return min + kRandomBound(random, max - min);
+}
 
-float kRandomFloat01(kRandomSource *random) { return (float)ldexpf((float)kRandom(random), -32); }
+float kRandomFloat01(kRandomSource *random)
+{
+	return (float)ldexpf((float)kRandom(random), -32);
+}
 
-float kRandomFloatBound(kRandomSource *random, float bound) { return kRandomFloat01(random) * bound; }
+float kRandomFloatBound(kRandomSource *random, float bound)
+{
+	return kRandomFloat01(random) * bound;
+}
 
 float kRandomFloatRange(kRandomSource *random, float min, float max)
 {
 	return min + kRandomFloat01(random) * (max - min);
 }
 
-float kRandomFloat(kRandomSource *random) { return kRandomFloatRange(random, -1, 1); }
+float kRandomFloat(kRandomSource *random)
+{
+	return kRandomFloatRange(random, -1, 1);
+}
 
-void  kRandomSourceSeed(kRandomSource *random, u64 state, u64 seq)
+void kRandomSourceSeed(kRandomSource *random, u64 state, u64 seq)
 {
 	random->State = 0U;
 	random->Inc   = (seq << 1u) | 1u;
@@ -391,7 +422,10 @@ char *kStringToCstr(kString string, kAllocator *allocator)
 	return (char *)data;
 }
 
-bool kIsWhitespace(u32 ch) { return ch == ' ' || ch == '\f' || ch == '\n' || ch == '\r' || ch == '\t' || ch == '\v'; }
+bool kIsWhitespace(u32 ch)
+{
+	return ch == ' ' || ch == '\f' || ch == '\n' || ch == '\r' || ch == '\t' || ch == '\v';
+}
 
 kString kTrimString(kString str)
 {
@@ -423,7 +457,10 @@ kString kSubString(const kString str, imem index, imem count)
 	return sub;
 }
 
-kString kSubLeft(const kString str, imem count) { return kSubString(str, 0, count); }
+kString kSubLeft(const kString str, imem count)
+{
+	return kSubString(str, 0, count);
+}
 
 kString kSubRight(const kString str, imem index)
 {
@@ -435,20 +472,23 @@ kString kSubRight(const kString str, imem index)
 
 bool kStringEquals(kString a, kString b)
 {
-	if (a.Count != b.Count) return false;
+	if (a.Count != b.Count)
+		return false;
 	return memcmp(a.Items, b.Items, a.Count) == 0;
 }
 
 bool kStartsWith(kString str, kString sub)
 {
-	if (str.Count < sub.Count) return false;
+	if (str.Count < sub.Count)
+		return false;
 	kString left = kString(str.Items, sub.Count);
 	return kStringEquals(left, sub);
 }
 
 bool kEndsWith(kString str, kString sub)
 {
-	if (str.Count < sub.Count) return false;
+	if (str.Count < sub.Count)
+		return false;
 	kString left = kString(str.Items + str.Count - sub.Count, sub.Count);
 	return kStringEquals(left, sub);
 }
@@ -497,7 +537,8 @@ imem kInvFindString(kString str, kString key, imem pos)
 	while (index >= 0)
 	{
 		kString sub = kString(str.Items + index, key.Count);
-		if (kStringEquals(sub, key)) return index;
+		if (kStringEquals(sub, key))
+			return index;
 		index -= 1;
 	}
 	return -1;
@@ -522,9 +563,15 @@ bool kSplitString(kString str, kString substr, kString *left, kString *right)
 	return false;
 }
 
-bool operator==(const kString a, const kString b) { return kStringEquals(a, b); }
+bool operator==(const kString a, const kString b)
+{
+	return kStringEquals(a, b);
+}
 
-bool operator!=(const kString a, const kString b) { return !kStringEquals(a, b); }
+bool operator!=(const kString a, const kString b)
+{
+	return !kStringEquals(a, b);
+}
 
 //
 //
@@ -536,17 +583,32 @@ bool operator!=(const kString a, const kString b) { return !kStringEquals(a, b);
 
 static_assert(sizeof(int) == sizeof(long), "");
 
-int  kAtomicLoad(kAtomic *atomic) { return _InterlockedOr((volatile long *)&atomic->Value, 0); }
+int kAtomicLoad(kAtomic *atomic)
+{
+	return _InterlockedOr((volatile long *)&atomic->Value, 0);
+}
 
-void kAtomicStore(kAtomic *atomic, int value) { _InterlockedExchange((volatile long *)&atomic->Value, value); }
+void kAtomicStore(kAtomic *atomic, int value)
+{
+	_InterlockedExchange((volatile long *)&atomic->Value, value);
+}
 
-int  kAtomicInc(kAtomic *dst) { return _InterlockedIncrement((volatile long *)&dst->Value); }
+int kAtomicInc(kAtomic *dst)
+{
+	return _InterlockedIncrement((volatile long *)&dst->Value);
+}
 
-int  kAtomicDec(kAtomic *dst) { return _InterlockedDecrement((volatile long *)&dst->Value); }
+int kAtomicDec(kAtomic *dst)
+{
+	return _InterlockedDecrement((volatile long *)&dst->Value);
+}
 
-int  kAtomicAdd(kAtomic *dst, int val) { return _interlockedadd((volatile long *)&dst->Value, val); }
+int kAtomicAdd(kAtomic *dst, int val)
+{
+	return _interlockedadd((volatile long *)&dst->Value, val);
+}
 
-int  kAtomicCmpExg(kAtomic *dst, int exchange, int compare)
+int kAtomicCmpExg(kAtomic *dst, int exchange, int compare)
 {
 	return _InterlockedCompareExchange((volatile long *)&dst->Value, exchange, compare);
 }
@@ -556,21 +618,39 @@ void *kAtomicCmpExgPtr(void *volatile *dst, void *exchange, void *compare)
 	return _InterlockedCompareExchangePointer(dst, exchange, compare);
 }
 
-int kAtomicExg(kAtomic *dst, int val) { return _InterlockedExchange((volatile long *)&dst->Value, val); }
+int kAtomicExg(kAtomic *dst, int val)
+{
+	return _InterlockedExchange((volatile long *)&dst->Value, val);
+}
 #endif
 
 #if K_COMPILER_CLANG == 1 || K_COMPILER_GCC == 1
-int  kAtomicLoad(kAtomic *atomic) { return __atomic_load_n(&atomic->value, __ATOMIC_SEQ_CST); }
+int kAtomicLoad(kAtomic *atomic)
+{
+	return __atomic_load_n(&atomic->value, __ATOMIC_SEQ_CST);
+}
 
-void kAtomicStore(kAtomic *atomic, int value) { __atomic_store_n(&atomic->value, value, __ATOMIC_SEQ_CST); }
+void kAtomicStore(kAtomic *atomic, int value)
+{
+	__atomic_store_n(&atomic->value, value, __ATOMIC_SEQ_CST);
+}
 
-int  kAtomicInc(kAtomic *dst) { return __atomic_add_fetch(&dst->value, 1, __ATOMIC_SEQ_CST); }
+int kAtomicInc(kAtomic *dst)
+{
+	return __atomic_add_fetch(&dst->value, 1, __ATOMIC_SEQ_CST);
+}
 
-int  kAtomicDec(kAtomic *dst) { return __atomic_add_fetch(&dst->value, -1, __ATOMIC_SEQ_CST); }
+int kAtomicDec(kAtomic *dst)
+{
+	return __atomic_add_fetch(&dst->value, -1, __ATOMIC_SEQ_CST);
+}
 
-int  kAtomicAdd(kAtomic *dst, int val) { return __atomic_fetch_add(&dst->value, val, __ATOMIC_SEQ_CST); }
+int kAtomicAdd(kAtomic *dst, int val)
+{
+	return __atomic_fetch_add(&dst->value, val, __ATOMIC_SEQ_CST);
+}
 
-int  kAtomicCmpExg(kAtomic *dst, int exchange, int compare)
+int kAtomicCmpExg(kAtomic *dst, int exchange, int compare)
 {
 	__atomic_compare_exchange_n(&dst->value, &compare, exchange, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
 	return compare;
@@ -582,7 +662,10 @@ void *kAtomicCmpExgPtr(void *volatile *dst, void *exchange, void *compare)
 	return compare;
 }
 
-int kAtomicExg(kAtomic *dst, int val) { return __atomic_exchange_n(&dst->value, val, __ATOMIC_SEQ_CST); }
+int kAtomicExg(kAtomic *dst, int val)
+{
+	return __atomic_exchange_n(&dst->value, val, __ATOMIC_SEQ_CST);
+}
 #endif
 
 void kAtomicLock(kAtomic *lock)
@@ -592,7 +675,10 @@ void kAtomicLock(kAtomic *lock)
 	}
 }
 
-void kAtomicUnlock(kAtomic *lock) { kAtomicExg(lock, 0); }
+void kAtomicUnlock(kAtomic *lock)
+{
+	kAtomicExg(lock, 0);
+}
 
 //
 //

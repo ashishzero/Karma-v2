@@ -10,20 +10,36 @@ bool kEnableDebugLayer = false;
 //
 //
 
-void      kCreateSwapChainFallback(void *, const kRenderPipelineConfig &) {}
-void      kDestroySwapChainFallback(void) {}
-void      kResizeSwapChainFallback(uint, uint) {}
-void      kPresentFallback(void) {}
+void kCreateSwapChainFallback(void *, const kRenderPipelineConfig &)
+{}
+void kDestroySwapChainFallback(void)
+{}
+void kResizeSwapChainFallback(uint, uint)
+{}
+void kPresentFallback(void)
+{}
 
-void      kGetRenderPipelineConfigFallback(kRenderPipelineConfig *) {}
-void      kApplyRenderPipelineConfigFallback(const kRenderPipelineConfig &) {}
+void kGetRenderPipelineConfigFallback(kRenderPipelineConfig *)
+{}
+void kApplyRenderPipelineConfigFallback(const kRenderPipelineConfig &)
+{}
 
-kTexture  kCreateTextureFallback(const kTextureSpec &) { return kTexture{}; }
-void      kDestroyTextureFallback(kTexture ) {}
-kVec2u    kGetTextureSizeFallback(kTexture ) { return kVec2u(0); }
-void      kExecuteFrameFallback(const kRenderFrame &) {}
-void      kFlushFallback(void) {}
-void      kDestroyFallback(void) {}
+kTexture kCreateTextureFallback(const kTextureSpec &)
+{
+	return kTexture{};
+}
+void kDestroyTextureFallback(kTexture)
+{}
+kVec2u kGetTextureSizeFallback(kTexture)
+{
+	return kVec2u(0);
+}
+void kExecuteFrameFallback(const kRenderFrame &)
+{}
+void kFlushFallback(void)
+{}
+void kDestroyFallback(void)
+{}
 
 //
 //
@@ -53,6 +69,7 @@ extern bool kD3D11_CreateRenderBackend(kRenderBackend *backend);
 
 void        kCreateRenderBackend(kRenderBackend *backend)
 {
-	if (kD3D11_CreateRenderBackend(backend)) return;
+	if (kD3D11_CreateRenderBackend(backend))
+		return;
 	kFallbackRenderBackend(backend);
 }

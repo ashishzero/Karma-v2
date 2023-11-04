@@ -34,10 +34,10 @@
 
 #ifndef DWMWA_WINDOW_CORNER_PREFERENCE
 #define DWMWA_WINDOW_CORNER_PREFERENCE 33
-#define DWMWCP_DEFAULT 0
-#define DWMWCP_DONOTROUND 1
-#define DWMWCP_ROUND 2
-#define DWMWCP_ROUNDSMALL 3
+#define DWMWCP_DEFAULT                 0
+#define DWMWCP_DONOTROUND              1
+#define DWMWCP_ROUND                   2
+#define DWMWCP_ROUNDSMALL              3
 #endif
 
 #pragma comment(lib, "Avrt.lib")   // AvSetMmThreadCharacteristicsW
@@ -175,17 +175,22 @@ static void kWin32_ForceCaptureCursor(kWin32Window *window)
 
 static void kWin32_ReleaseCursor(kWin32Window *window)
 {
-	if (!kIsCursorCaptured()) return;
+	if (!kIsCursorCaptured())
+		return;
 	kWin32_ForceReleaseCursor(window);
 }
 
 static void kWin32_CaptureCursor(kWin32Window *window)
 {
-	if (kIsCursorCaptured()) return;
+	if (kIsCursorCaptured())
+		return;
 	kWin32_ForceCaptureCursor(window);
 }
 
-static int  kWin32_GetWindowCaptionSize(kWin32Window *window) { return window->Border.top; }
+static int kWin32_GetWindowCaptionSize(kWin32Window *window)
+{
+	return window->Border.top;
+}
 
 static void kWin32_MaximizeWindow(kWin32Window *window)
 {
@@ -215,7 +220,7 @@ static void kWin32_CloseWindow(kWin32Window *window)
 // https://github.com/cmuratori/dtc/blob/main/dtc.cpp
 //
 
-#define K_HWND_MSG_CREATE (WM_USER + 0x1337)
+#define K_HWND_MSG_CREATE  (WM_USER + 0x1337)
 #define K_HWND_MSG_DESTROY (WM_USER + 0x1338)
 
 struct kWindowServer
@@ -341,7 +346,8 @@ static LRESULT CALLBACK kWin32_ServerWndProc(HWND wnd, UINT msg, WPARAM wparam, 
 
 	if (window && window->Captions)
 	{
-		if (kWin32_CustomCaptionsWndProc(window, msg, wparam, lparam, &res)) return res;
+		if (kWin32_CustomCaptionsWndProc(window, msg, wparam, lparam, &res))
+			return res;
 	}
 
 	switch (msg)
@@ -392,7 +398,8 @@ static LRESULT CALLBACK kWin32_ServerWndProc(HWND wnd, UINT msg, WPARAM wparam, 
 			LONG  width   = scissor->right - scissor->left;
 			LONG  height  = scissor->bottom - scissor->top;
 			SetWindowPos(wnd, 0, left, top, width, height, SWP_NOZORDER | SWP_NOACTIVATE);
-			if (window) window->DpiChanged = true;
+			if (window)
+				window->DpiChanged = true;
 		}
 		break;
 
@@ -681,12 +688,18 @@ static void  kWin32_MapVirutalKeys(void)
 static u32 kWin32_GetKeyModFlags(void)
 {
 	u32 mods = 0;
-	if (GetKeyState(VK_LSHIFT) & 0x8000) mods |= kKeyMod_LeftShift;
-	if (GetKeyState(VK_RSHIFT) & 0x8000) mods |= kKeyMod_RightShift;
-	if (GetKeyState(VK_LCONTROL) & 0x8000) mods |= kKeyMod_LeftCtrl;
-	if (GetKeyState(VK_RCONTROL) & 0x8000) mods |= kKeyMod_RightCtrl;
-	if (GetKeyState(VK_LMENU) & 0x8000) mods |= kKeyMod_LeftAlt;
-	if (GetKeyState(VK_RMENU) & 0x8000) mods |= kKeyMod_RightAlt;
+	if (GetKeyState(VK_LSHIFT) & 0x8000)
+		mods |= kKeyMod_LeftShift;
+	if (GetKeyState(VK_RSHIFT) & 0x8000)
+		mods |= kKeyMod_RightShift;
+	if (GetKeyState(VK_LCONTROL) & 0x8000)
+		mods |= kKeyMod_LeftCtrl;
+	if (GetKeyState(VK_RCONTROL) & 0x8000)
+		mods |= kKeyMod_RightCtrl;
+	if (GetKeyState(VK_LMENU) & 0x8000)
+		mods |= kKeyMod_LeftAlt;
+	if (GetKeyState(VK_RMENU) & 0x8000)
+		mods |= kKeyMod_RightAlt;
 	return mods;
 }
 
@@ -779,11 +792,14 @@ static LRESULT kWin32_ClientWndProc(HWND wnd, UINT msg, WPARAM wparam, LPARAM lp
 			GetRawInputData(hri, RID_INPUT, 0, &rid_size, sizeof(RAWINPUTHEADER));
 
 			RAWINPUT *input = rid_size ? (RAWINPUT *)_alloca(rid_size) : nullptr;
-			if (!input) break;
+			if (!input)
+				break;
 
-			if (GetRawInputData(hri, RID_INPUT, input, &rid_size, sizeof(RAWINPUTHEADER) != rid_size)) break;
+			if (GetRawInputData(hri, RID_INPUT, input, &rid_size, sizeof(RAWINPUTHEADER) != rid_size))
+				break;
 
-			if (input->header.dwType != RIM_TYPEMOUSE) break;
+			if (input->header.dwType != RIM_TYPEMOUSE)
+				break;
 
 			RAWMOUSE *mouse = &input->data.mouse;
 			UINT      dpi   = GetDpiForWindow(wnd);
@@ -1140,15 +1156,42 @@ static int kWin32_EventLoop(void)
 //
 //
 
-static void kWin32_ResizeWindowImpl(u32 w, u32 h) { kWin32_ResizeWindow(&g_Win32.Window, w, h); }
-static void kWin32_ToggleWindowFullscreenImpl(void) { kWin32_ToggleWindowFullscreen(&g_Win32.Window); }
-static void kWin32_ReleaseCursorImpl(void) { kWin32_ReleaseCursor(&g_Win32.Window); }
-static void kWin32_CaptureCursorImpl(void) { kWin32_CaptureCursor(&g_Win32.Window); }
-static int  kWin32_GetWindowCaptionSizeImpl(void) { return kWin32_GetWindowCaptionSize(&g_Win32.Window); }
-static void kWin32_MaximizeWindowImpl(void) { kWin32_MaximizeWindow(&g_Win32.Window); }
-static void kWin32_RestoreWindowImpl(void) { kWin32_RestoreWindow(&g_Win32.Window); }
-static void kWin32_MinimizeWindowImpl(void) { kWin32_MinimizeWindow(&g_Win32.Window); }
-static void kWin32_CloseWindowImpl(void) { kWin32_CloseWindow(&g_Win32.Window); }
+static void kWin32_ResizeWindowImpl(u32 w, u32 h)
+{
+	kWin32_ResizeWindow(&g_Win32.Window, w, h);
+}
+static void kWin32_ToggleWindowFullscreenImpl(void)
+{
+	kWin32_ToggleWindowFullscreen(&g_Win32.Window);
+}
+static void kWin32_ReleaseCursorImpl(void)
+{
+	kWin32_ReleaseCursor(&g_Win32.Window);
+}
+static void kWin32_CaptureCursorImpl(void)
+{
+	kWin32_CaptureCursor(&g_Win32.Window);
+}
+static int kWin32_GetWindowCaptionSizeImpl(void)
+{
+	return kWin32_GetWindowCaptionSize(&g_Win32.Window);
+}
+static void kWin32_MaximizeWindowImpl(void)
+{
+	kWin32_MaximizeWindow(&g_Win32.Window);
+}
+static void kWin32_RestoreWindowImpl(void)
+{
+	kWin32_RestoreWindow(&g_Win32.Window);
+}
+static void kWin32_MinimizeWindowImpl(void)
+{
+	kWin32_MinimizeWindow(&g_Win32.Window);
+}
+static void kWin32_CloseWindowImpl(void)
+{
+	kWin32_CloseWindow(&g_Win32.Window);
+}
 
 //
 //
@@ -1162,12 +1205,18 @@ static void kWin32_LoadKeyboardState(kKeyboardState *keyboard)
 	}
 
 	u32 mods = 0;
-	if (GetAsyncKeyState(VK_LSHIFT) & 0x8000) mods |= kKeyMod_LeftShift;
-	if (GetAsyncKeyState(VK_RSHIFT) & 0x8000) mods |= kKeyMod_RightShift;
-	if (GetAsyncKeyState(VK_LCONTROL) & 0x8000) mods |= kKeyMod_LeftCtrl;
-	if (GetAsyncKeyState(VK_RCONTROL) & 0x8000) mods |= kKeyMod_RightCtrl;
-	if (GetAsyncKeyState(VK_LMENU) & 0x8000) mods |= kKeyMod_LeftAlt;
-	if (GetAsyncKeyState(VK_RMENU) & 0x8000) mods |= kKeyMod_RightAlt;
+	if (GetAsyncKeyState(VK_LSHIFT) & 0x8000)
+		mods |= kKeyMod_LeftShift;
+	if (GetAsyncKeyState(VK_RSHIFT) & 0x8000)
+		mods |= kKeyMod_RightShift;
+	if (GetAsyncKeyState(VK_LCONTROL) & 0x8000)
+		mods |= kKeyMod_LeftCtrl;
+	if (GetAsyncKeyState(VK_RCONTROL) & 0x8000)
+		mods |= kKeyMod_RightCtrl;
+	if (GetAsyncKeyState(VK_LMENU) & 0x8000)
+		mods |= kKeyMod_LeftAlt;
+	if (GetAsyncKeyState(VK_RMENU) & 0x8000)
+		mods |= kKeyMod_RightAlt;
 
 	keyboard->Mods = mods;
 }
@@ -1188,11 +1237,15 @@ static void kWin32_LoadMouseState(kMouseState *mouse)
 //
 //
 
-static void kWin32_BreakLoop(int status) { PostQuitMessage(status); }
-
-void        kWin32_DestroyBackend(void)
+static void kWin32_BreakLoop(int status)
 {
-	if (g_Win32.AvrtHandle) AvRevertMmThreadCharacteristics(g_Win32.AvrtHandle);
+	PostQuitMessage(status);
+}
+
+void kWin32_DestroyBackend(void)
+{
+	if (g_Win32.AvrtHandle)
+		AvRevertMmThreadCharacteristics(g_Win32.AvrtHandle);
 	kWin32_StopWindowServer();
 	memset(&g_Win32, 0, sizeof(g_Win32));
 }
@@ -1228,4 +1281,7 @@ void kWin32_CreateBackend(kMediaBackend *backend)
 
 #endif
 
-void kCreateMediaBackend(kMediaBackend *backend) { kWin32_CreateBackend(backend); }
+void kCreateMediaBackend(kMediaBackend *backend)
+{
+	kWin32_CreateBackend(backend);
+}
