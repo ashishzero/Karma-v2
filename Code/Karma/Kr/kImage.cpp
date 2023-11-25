@@ -11,7 +11,7 @@
 #define STBI_NO_STDIO
 #define STB_IMAGE_STATIC
 #define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+#include "Image/stb_image.h"
 
 #define STBIW_ASSERT(x)         kAssert(x)
 #define STBIW_MALLOC(sz)        kAlloc(sz)
@@ -21,7 +21,7 @@
 #define STBI_WRITE_NO_STDIO
 #define STB_IMAGE_WRITE_STATIC
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
+#include "Image/stb_image_write.h"
 
 bool kReadImage(kString buffer, kImage *image, int req_channels)
 {

@@ -11,6 +11,7 @@
 #include <avrt.h>
 
 #include "kResource.h"
+#include "ImGui/imgui_impl_win32.h"
 
 #ifdef near
 #undef near
@@ -61,6 +62,8 @@ typedef struct kWin32Window
 	DWORD           Style;
 	WINDOWPLACEMENT Placement;
 } kWin32Window;
+
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 //
 //
@@ -214,291 +217,6 @@ static void kWin32_CloseWindow(kWin32Window *window)
 {
 	kDebugTraceEx("Windows", "Closing window.\n");
 	PostMessageW(window->Wnd, WM_CLOSE, 0, 0);
-}
-
-//
-// https://github.com/cmuratori/dtc/blob/main/dtc.cpp
-//
-
-#define K_HWND_MSG_CREATE  (WM_USER + 0x1337)
-#define K_HWND_MSG_DESTROY (WM_USER + 0x1338)
-
-struct kWindowServer
-{
-	DWORD  client;
-	HANDLE ready;
-	HANDLE thread;
-	HWND   window;
-};
-
-static kWindowServer    g_WinServer;
-
-static LRESULT CALLBACK kWin32_ServerServiceWndProc(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam)
-{
-	LRESULT res = 0;
-
-	switch (msg)
-	{
-		case K_HWND_MSG_CREATE:
-		{
-			CREATESTRUCTW *cs = (CREATESTRUCTW *)wparam;
-			res = (LRESULT)CreateWindowExW(cs->dwExStyle, cs->lpszClass, cs->lpszName, cs->style, cs->x, cs->y, cs->cx,
-			                               cs->cy, cs->hwndParent, cs->hMenu, cs->hInstance, cs->lpCreateParams);
-			SetFocus((HWND)res);
-		}
-		break;
-
-		case K_HWND_MSG_DESTROY:
-		{
-			DestroyWindow((HWND)wparam);
-		}
-		break;
-
-		default:
-		{
-			res = DefWindowProcW(wnd, msg, wparam, lparam);
-		}
-		break;
-	}
-
-	return res;
-}
-
-static LRESULT kWin32_HitTestNonClientArea(kWin32Window *window, WPARAM wparam, LPARAM lparam)
-{
-	POINT cursor = {.x = GET_X_LPARAM(lparam), .y = GET_Y_LPARAM(lparam)};
-
-	UINT  dpi    = GetDpiForWindow(window->Wnd);
-
-	RECT  rc;
-	GetWindowRect(window->Wnd, &rc);
-
-	RECT frame = {0};
-	AdjustWindowRectExForDpi(&frame, WS_OVERLAPPEDWINDOW & ~WS_CAPTION, FALSE, 0, dpi);
-
-	USHORT row           = 1;
-	USHORT col           = 1;
-	bool   border_resize = false;
-
-	if (cursor.y >= rc.top && cursor.y < rc.top + window->Border.top)
-	{
-		border_resize = (cursor.y < (rc.top - frame.top));
-		row           = 0;
-	}
-	else if (cursor.y < rc.bottom && cursor.y >= rc.bottom - window->Border.bottom)
-	{
-		row = 2;
-	}
-
-	if (cursor.x >= rc.left && cursor.x < rc.left + window->Border.left)
-	{
-		col = 0;
-	}
-	else if (cursor.x < rc.right && cursor.x >= rc.right - window->Border.right)
-	{
-		col = 2;
-	}
-
-	LRESULT hit_tests[3][3] = {
-		{HTTOPLEFT, border_resize ? HTTOP : HTCAPTION, HTTOPRIGHT},
-		{HTLEFT, HTNOWHERE, HTRIGHT},
-		{HTBOTTOMLEFT, HTBOTTOM, HTBOTTOMRIGHT},
-	};
-
-	return hit_tests[row][col];
-}
-
-static bool kWin32_CustomCaptionsWndProc(kWin32Window *window, UINT msg, WPARAM wparam, LPARAM lparam, LRESULT *result)
-{
-	*result      = 0;
-	bool handled = DwmDefWindowProc(window->Wnd, msg, wparam, lparam, result);
-
-	if (msg == WM_ACTIVATE)
-	{
-		MARGINS margins = {0};
-		DwmExtendFrameIntoClientArea(window->Wnd, &margins);
-		return false;
-	}
-
-	if ((msg == WM_NCCALCSIZE) && (wparam == TRUE))
-	{
-		*result = 0;
-		return true;
-	}
-
-	if ((msg == WM_NCHITTEST) && (*result == 0))
-	{
-		*result = kWin32_HitTestNonClientArea(window, wparam, lparam);
-		if (*result != HTNOWHERE)
-		{
-			return true;
-		}
-	}
-
-	return handled;
-}
-
-static LRESULT CALLBACK kWin32_ServerWndProc(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam)
-{
-	LRESULT       res    = 0;
-
-	kWin32Window *window = (kWin32Window *)GetWindowLongPtrW(wnd, GWLP_USERDATA);
-
-	if (window && window->Captions)
-	{
-		if (kWin32_CustomCaptionsWndProc(window, msg, wparam, lparam, &res))
-			return res;
-	}
-
-	switch (msg)
-	{
-		case WM_CLOSE:
-		{
-			PostThreadMessageW(g_WinServer.client, msg, (WPARAM)wnd, lparam);
-		}
-		break;
-
-		case WM_ACTIVATE:
-		case WM_SYSKEYUP:
-		case WM_SYSKEYDOWN:
-		{
-			PostThreadMessageW(g_WinServer.client, msg, wparam, lparam);
-			res = DefWindowProcW(wnd, msg, wparam, lparam);
-		}
-		break;
-
-		case WM_SIZE:
-		case WM_MOUSELEAVE:
-		case WM_MOUSEMOVE:
-		case WM_INPUT:
-		case WM_LBUTTONUP:
-		case WM_LBUTTONDOWN:
-		case WM_RBUTTONUP:
-		case WM_RBUTTONDOWN:
-		case WM_MBUTTONUP:
-		case WM_MBUTTONDOWN:
-		case WM_LBUTTONDBLCLK:
-		case WM_RBUTTONDBLCLK:
-		case WM_MBUTTONDBLCLK:
-		case WM_MOUSEWHEEL:
-		case WM_MOUSEHWHEEL:
-		case WM_KEYUP:
-		case WM_KEYDOWN:
-		case WM_CHAR:
-		{
-			PostThreadMessageW(g_WinServer.client, msg, wparam, lparam);
-		}
-		break;
-
-		case WM_DPICHANGED:
-		{
-			RECT *scissor = (RECT *)lparam;
-			LONG  left    = scissor->left;
-			LONG  top     = scissor->top;
-			LONG  width   = scissor->right - scissor->left;
-			LONG  height  = scissor->bottom - scissor->top;
-			SetWindowPos(wnd, 0, left, top, width, height, SWP_NOZORDER | SWP_NOACTIVATE);
-			if (window)
-				window->DpiChanged = true;
-		}
-		break;
-
-		default:
-		{
-			res = DefWindowProcW(wnd, msg, wparam, lparam);
-		}
-		break;
-	}
-
-	return res;
-}
-
-static DWORD WINAPI kWin32_WindowServerThread(LPVOID param)
-{
-	HINSTANCE instance = GetModuleHandleW(0);
-
-	{
-		WNDCLASSEXW wnd_class   = {0};
-		HICON       icon        = (HICON)LoadImageW(instance, MAKEINTRESOURCEW(IDI_KICON), IMAGE_ICON, 0, 0, LR_SHARED);
-		HICON       icon_sm     = (HICON)LoadImageW(instance, MAKEINTRESOURCEW(IDI_KICON), IMAGE_ICON, 0, 0, LR_SHARED);
-		HICON       win_icon    = (HICON)LoadImageW(0, IDI_APPLICATION, IMAGE_ICON, 0, 0, LR_SHARED);
-
-		wnd_class.cbSize        = sizeof(wnd_class);
-		wnd_class.style         = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
-		wnd_class.lpfnWndProc   = kWin32_ServerWndProc;
-		wnd_class.hInstance     = instance;
-		wnd_class.hIcon         = icon ? icon : win_icon;
-		wnd_class.hIconSm       = icon_sm ? icon_sm : win_icon;
-		wnd_class.hCursor       = (HCURSOR)LoadImageW(0, IDC_ARROW, IMAGE_CURSOR, 0, 0, LR_SHARED);
-		wnd_class.hbrBackground = (HBRUSH)(COLOR_BACKGROUND + 1);
-		wnd_class.lpszClassName = L"kWindowClientClass";
-		RegisterClassExW(&wnd_class);
-	}
-
-	WNDCLASSEXW wnd_class   = {};
-	wnd_class.cbSize        = sizeof(wnd_class);
-	wnd_class.lpfnWndProc   = kWin32_ServerServiceWndProc;
-	wnd_class.hInstance     = instance;
-	wnd_class.hIcon         = LoadIconW(NULL, IDI_APPLICATION);
-	wnd_class.hCursor       = LoadCursorW(NULL, IDC_ARROW);
-	wnd_class.hbrBackground = (HBRUSH)(COLOR_BACKGROUND + 1);
-	wnd_class.lpszClassName = L"kWindowServerClass";
-	RegisterClassExW(&wnd_class);
-
-	g_WinServer.window = CreateWindowExW(0, wnd_class.lpszClassName, 0, 0, 0, 0, 0, 0, 0, 0, wnd_class.hInstance, 0);
-	SetEvent(g_WinServer.ready);
-
-	while (1)
-	{
-		MSG msg;
-		GetMessageW(&msg, 0, 0, 0);
-		TranslateMessage(&msg);
-		DispatchMessageW(&msg);
-	}
-
-	return 0;
-}
-
-static void kWin32_StartWindowServer(void)
-{
-	g_WinServer.client = GetCurrentThreadId();
-	g_WinServer.ready  = CreateEventW(0, TRUE, 0, 0);
-	g_WinServer.thread = CreateThread(0, 0, kWin32_WindowServerThread, 0, 0, 0);
-	WaitForSingleObject(g_WinServer.ready, INFINITE);
-}
-
-static void kWin32_StopWindowServer(void)
-{
-	DestroyWindow(g_WinServer.window);
-	TerminateThread(g_WinServer.thread, 0);
-	CloseHandle(g_WinServer.thread);
-	CloseHandle(g_WinServer.ready);
-	memset(&g_WinServer, 0, sizeof(g_WinServer));
-}
-
-static HWND kWin32_RequestCreateWindow(DWORD ex_style, LPCWSTR name, DWORD style, int x, int y, int cx, int cy,
-                                       HWND parent, HMENU menu, HINSTANCE instance, LPVOID param)
-{
-	CREATESTRUCTW cs  = {};
-	cs.dwExStyle      = ex_style;
-	cs.lpszClass      = L"kWindowClientClass";
-	cs.lpszName       = name;
-	cs.style          = style;
-	cs.x              = x;
-	cs.y              = y;
-	cs.cx             = cx;
-	cs.cy             = cy;
-	cs.hwndParent     = parent;
-	cs.hMenu          = menu;
-	cs.hInstance      = instance;
-	cs.lpCreateParams = param;
-	HWND wnd          = (HWND)SendMessageW(g_WinServer.window, K_HWND_MSG_CREATE, (WPARAM)&cs, 0);
-	return wnd;
-}
-
-static void kWin32_RequestDestroyWindow(HWND hwnd)
-{
-	SendMessageW(g_WinServer.window, K_HWND_MSG_DESTROY, (WPARAM)hwnd, 0);
 }
 
 //
@@ -703,9 +421,95 @@ static u32 kWin32_GetKeyModFlags(void)
 	return mods;
 }
 
-static LRESULT kWin32_ClientWndProc(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam)
+static LRESULT kWin32_HitTestNonClientArea(kWin32Window *window, WPARAM wparam, LPARAM lparam)
 {
+	POINT cursor = {.x = GET_X_LPARAM(lparam), .y = GET_Y_LPARAM(lparam)};
+
+	UINT  dpi    = GetDpiForWindow(window->Wnd);
+
+	RECT  rc;
+	GetWindowRect(window->Wnd, &rc);
+
+	RECT frame = {0};
+	AdjustWindowRectExForDpi(&frame, WS_OVERLAPPEDWINDOW & ~WS_CAPTION, FALSE, 0, dpi);
+
+	USHORT row           = 1;
+	USHORT col           = 1;
+	bool   border_resize = false;
+
+	if (cursor.y >= rc.top && cursor.y < rc.top + window->Border.top)
+	{
+		border_resize = (cursor.y < (rc.top - frame.top));
+		row           = 0;
+	}
+	else if (cursor.y < rc.bottom && cursor.y >= rc.bottom - window->Border.bottom)
+	{
+		row = 2;
+	}
+
+	if (cursor.x >= rc.left && cursor.x < rc.left + window->Border.left)
+	{
+		col = 0;
+	}
+	else if (cursor.x < rc.right && cursor.x >= rc.right - window->Border.right)
+	{
+		col = 2;
+	}
+
+	LRESULT hit_tests[3][3] = {
+		{HTTOPLEFT, border_resize ? HTTOP : HTCAPTION, HTTOPRIGHT},
+		{HTLEFT, HTNOWHERE, HTRIGHT},
+		{HTBOTTOMLEFT, HTBOTTOM, HTBOTTOMRIGHT},
+	};
+
+	return hit_tests[row][col];
+}
+
+static bool kWin32_CustomCaptionsWndProc(kWin32Window *window, UINT msg, WPARAM wparam, LPARAM lparam, LRESULT *result)
+{
+	*result      = 0;
+	bool handled = DwmDefWindowProc(window->Wnd, msg, wparam, lparam, result);
+
+	if (msg == WM_ACTIVATE)
+	{
+		MARGINS margins = {0};
+		DwmExtendFrameIntoClientArea(window->Wnd, &margins);
+		return false;
+	}
+
+	if ((msg == WM_NCCALCSIZE) && (wparam == TRUE))
+	{
+		*result = 0;
+		return true;
+	}
+
+	if ((msg == WM_NCHITTEST) && (*result == 0))
+	{
+		*result = kWin32_HitTestNonClientArea(window, wparam, lparam);
+		if (*result != HTNOWHERE)
+		{
+			return true;
+		}
+	}
+
+	return handled;
+}
+
+static LRESULT kWin32_WndProc(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam)
+{
+#ifndef IMGUI_DISABLE
+	if (ImGui_ImplWin32_WndProcHandler(wnd, msg, wparam, lparam))
+		return 0;
+#endif
+
 	kWin32Window *window = (kWin32Window *)GetWindowLongPtrW(wnd, GWLP_USERDATA);
+
+	if (window && window->Captions)
+	{
+		LRESULT res = 0;
+		if (kWin32_CustomCaptionsWndProc(window, msg, wparam, lparam, &res))
+			return res;
+	}
 
 	switch (msg)
 	{
@@ -729,7 +533,7 @@ static LRESULT kWin32_ClientWndProc(HWND wnd, UINT msg, WPARAM wparam, LPARAM lp
 
 			kDebugTraceEx("Windows", "Window focus %s.\n", focused ? "gained" : "lost");
 
-			return 0;
+			return DefWindowProcW(wnd, msg, wparam, lparam);
 		}
 
 		case WM_CLOSE:
@@ -902,7 +706,7 @@ static LRESULT kWin32_ClientWndProc(HWND wnd, UINT msg, WPARAM wparam, LPARAM lp
 				bool down   = (msg == WM_KEYDOWN);
 				kAddKeyEvent(kKey_F10, down, repeat);
 			}
-			return 0;
+			return DefWindowProcW(wnd, msg, wparam, lparam);
 		}
 
 		case WM_CHAR:
@@ -934,6 +738,24 @@ static LRESULT kWin32_ClientWndProc(HWND wnd, UINT msg, WPARAM wparam, LPARAM lp
 			}
 			return 0;
 		}
+
+		case WM_DPICHANGED:
+		{
+			RECT *scissor = (RECT *)lparam;
+			LONG  left    = scissor->left;
+			LONG  top     = scissor->top;
+			LONG  width   = scissor->right - scissor->left;
+			LONG  height  = scissor->bottom - scissor->top;
+			SetWindowPos(wnd, 0, left, top, width, height, SWP_NOZORDER | SWP_NOACTIVATE);
+			if (window)
+				window->DpiChanged = true;
+			return 0;
+		}
+
+		default:
+		{
+			return DefWindowProcW(wnd, msg, wparam, lparam);
+		}
 	}
 
 	return 0;
@@ -958,13 +780,34 @@ static kWin32Backend g_Win32;
 static void kWin32_DestroyWindow(void)
 {
 	kLogInfoEx("Windows", "Destroying window.\n");
-	kWin32_RequestDestroyWindow(g_Win32.Window.Wnd);
+
+#ifndef IMGUI_DISABLE
+	ImGui_ImplWin32_Shutdown();
+#endif
+
+	DestroyWindow(g_Win32.Window.Wnd);
 	memset(&g_Win32.Window, 0, sizeof(g_Win32.Window));
 }
 
 static void *kWin32_CreateWindow(kWindowState *ws, const kWindowSpec &spec)
 {
-	HMODULE instance    = GetModuleHandleW(0);
+	HMODULE     instance    = GetModuleHandleW(0);
+
+	WNDCLASSEXW wnd_class   = {0};
+	HICON       icon        = (HICON)LoadImageW(instance, MAKEINTRESOURCEW(IDI_KICON), IMAGE_ICON, 0, 0, LR_SHARED);
+	HICON       icon_sm     = (HICON)LoadImageW(instance, MAKEINTRESOURCEW(IDI_KICON), IMAGE_ICON, 0, 0, LR_SHARED);
+	HICON       win_icon    = (HICON)LoadImageW(0, IDI_APPLICATION, IMAGE_ICON, 0, 0, LR_SHARED);
+
+	wnd_class.cbSize        = sizeof(wnd_class);
+	wnd_class.style         = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
+	wnd_class.lpfnWndProc   = kWin32_WndProc;
+	wnd_class.hInstance     = instance;
+	wnd_class.hIcon         = icon ? icon : win_icon;
+	wnd_class.hIconSm       = icon_sm ? icon_sm : win_icon;
+	wnd_class.hCursor       = (HCURSOR)LoadImageW(0, IDC_ARROW, IMAGE_CURSOR, 0, 0, LR_SHARED);
+	wnd_class.hbrBackground = (HBRUSH)(COLOR_BACKGROUND + 1);
+	wnd_class.lpszClassName = L"kWindowClass";
+	RegisterClassExW(&wnd_class);
 
 	wchar_t title[2048] = L"kWindow | Windows";
 
@@ -1007,8 +850,8 @@ static void *kWin32_CreateWindow(kWindowState *ws, const kWindowSpec &spec)
 	g_Win32.Window.Style    = style;
 	g_Win32.Window.Captions = (spec.Flags & kWindowStyle_DisableCaptions);
 
-	g_Win32.Window.Wnd = kWin32_RequestCreateWindow(WS_EX_APPWINDOW, title, style, CW_USEDEFAULT, CW_USEDEFAULT, width,
-	                                                height, 0, 0, instance, 0);
+	g_Win32.Window.Wnd      = CreateWindowExW(WS_EX_APPWINDOW, wnd_class.lpszClassName, title, style, CW_USEDEFAULT,
+	                                          CW_USEDEFAULT, width, height, 0, 0, instance, 0);
 
 	if (!g_Win32.Window.Wnd)
 	{
@@ -1042,6 +885,10 @@ static void *kWin32_CreateWindow(kWindowState *ws, const kWindowSpec &spec)
 	{
 		kWin32_ToggleWindowFullscreen(&g_Win32.Window);
 	}
+
+#ifndef IMGUI_DISABLE
+	ImGui_ImplWin32_Init(g_Win32.Window.Wnd);
+#endif
 
 	//
 	//
@@ -1109,7 +956,8 @@ static int kWin32_EventLoop(void)
 				status = (int)msg.wParam;
 				return status;
 			}
-			kWin32_ClientWndProc(g_Win32.Window.Wnd, msg.message, msg.wParam, msg.lParam);
+			TranslateMessage(&msg);
+			DispatchMessageW(&msg);
 		}
 
 		if (g_Win32.Window.DpiChanged)
@@ -1140,6 +988,10 @@ static int kWin32_EventLoop(void)
 
 		u32 mods = kWin32_GetKeyModFlags();
 		kSetKeyModFlags(mods);
+
+#ifndef IMGUI_DISABLE
+		ImGui_ImplWin32_NewFrame();
+#endif
 
 		kUpdateFrame(dt);
 
@@ -1246,7 +1098,6 @@ void kWin32_DestroyBackend(void)
 {
 	if (g_Win32.AvrtHandle)
 		AvRevertMmThreadCharacteristics(g_Win32.AvrtHandle);
-	kWin32_StopWindowServer();
 	memset(&g_Win32, 0, sizeof(g_Win32));
 }
 
@@ -1256,7 +1107,6 @@ void kWin32_CreateBackend(kMediaBackend *backend)
 	g_Win32.AvrtHandle = AvSetMmThreadCharacteristicsW(L"Games", &task_index);
 
 	kWin32_MapVirutalKeys();
-	kWin32_StartWindowServer();
 
 	backend->CreateWindow           = kWin32_CreateWindow;
 	backend->DestroyWindow          = kWin32_DestroyWindow;

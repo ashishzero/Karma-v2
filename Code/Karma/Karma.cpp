@@ -6,6 +6,7 @@
 #include "kArray.h"
 #include "kContext.h"
 #include "kPlatform.h"
+#include "kImGui.h"
 
 static kTexture texture;
 
@@ -71,6 +72,8 @@ void Update(float dt)
 	kPopOutLineStyle();
 	kEndScene();
 	kEndRenderPass();
+
+	ImGui::ShowDemoWindow();
 }
 
 void Main(int argc, const char **argv)

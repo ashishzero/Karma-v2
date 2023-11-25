@@ -23,6 +23,7 @@
 #endif
 
 #include "kD3DShaders.h"
+#include "ImGui/imgui_impl_dx11.h"
 
 constexpr uint K_BACK_BUFFER_COUNT            = 3;
 constexpr uint K_MAX_BLOOM_BLUR_MIPS          = 16;
@@ -377,6 +378,10 @@ static IDXGIAdapter1              *kD3D11_FindAdapter(IDXGIFactory2 *factory, UI
 
 static void kD3D11_DestroyGraphicsDevice(void)
 {
+#ifndef IMGUI_DISABLE
+	ImGui_ImplDX11_Shutdown();
+#endif
+
 	kD3D11_DestroyTexturePool();
 
 	kLogInfoEx("D3D11", "Destroying graphics devices.\n");
@@ -773,6 +778,11 @@ static bool kD3D11_CreateGraphicsDevice(void)
 		kD3D11_DestroyGraphicsDevice();
 		return false;
 	}
+
+#ifndef IMGUI_DISABLE
+	ImGui_ImplDX11_Init(g_Device, g_DeviceContext);
+#endif
+
 	return true;
 }
 
@@ -1690,6 +1700,13 @@ static void kD3D11_ApplyRenderPipelineConfig(const kRenderPipelineConfig &config
 	kD3D11_UpdateRenderPipelineParameters();
 }
 
+static void kD3D11_NextFrame(void)
+{
+#ifndef IMGUI_DISABLE
+	ImGui_ImplDX11_NewFrame();
+#endif
+}
+
 static void kD3D11_ExecuteFrame(const kRenderFrame &frame)
 {
 	kD3D11_ExecuteGeometryPass(frame);
@@ -1707,6 +1724,15 @@ static void kD3D11_ExecuteFrame(const kRenderFrame &frame)
 	{
 		kD3D11_ExecuteMixPass();
 	}
+
+#ifndef IMGUI_DISABLE
+	ImGui::Render();
+	g_DeviceContext->OMSetRenderTargets(1, &g_RenderPipeline.BackBufferRTV, 0);
+	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+	ImGui::UpdatePlatformWindows();
+	ImGui::RenderPlatformWindowsDefault();
+	g_DeviceContext->ClearState();
+#endif
 }
 
 //
@@ -1742,6 +1768,7 @@ bool kD3D11_CreateRenderBackend(kRenderBackend *backend)
 	backend->DestroyTexture            = kD3D11_DestroyTexture;
 	backend->GetTextureSize            = kD3D11_GetTextureSize;
 
+	backend->NextFrame                 = kD3D11_NextFrame;
 	backend->ExecuteFrame              = kD3D11_ExecuteFrame;
 	backend->Flush                     = kD3D11_Flush;
 

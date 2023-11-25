@@ -383,8 +383,11 @@ static const kRenderPipelineConfig kDefaultRenderPipeline = {.Msaa              
                                                              .BloomFilterRadius = 0.005f,
                                                              .BloomStrength     = 0.12f,
                                                              .Intensity         = kVec3(1)};
+static const kWindowSpec           kDefaultWindow         = {.Width = 1280, .Height = 720};
 
-static const kMediaSpec            kDefaultSpec = {.Arena = kDefaultArena, .RenderPipeline = kDefaultRenderPipeline};
+static const kMediaSpec            kDefaultSpec           = {.Window         = kDefaultWindow,
+                                                             .Arena          = kDefaultArena,
+                                                             .RenderPipeline = kDefaultRenderPipeline};
 
 int                                kEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user);
 void                               kBreakLoop(int status);

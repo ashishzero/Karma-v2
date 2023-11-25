@@ -16,6 +16,7 @@ typedef kTexture (*kRenderBackendTextureCreateProc)(const kTextureSpec &);
 typedef void (*kkRenderBackendTextureDestroyProc)(kTexture);
 typedef kVec2u (*kRenderBackendTextureSizeProc)(kTexture);
 
+typedef void (*kRenderBackendNextFrameProc)(void);
 typedef void (*kRenderBackendExecuteFrameProc)(const kRenderFrame &);
 typedef void (*kRenderBackendFlush)(void);
 
@@ -35,6 +36,7 @@ typedef struct kRenderBackend
 	kkRenderBackendTextureDestroyProc DestroyTexture;
 	kRenderBackendTextureSizeProc     GetTextureSize;
 
+	kRenderBackendNextFrameProc       NextFrame;
 	kRenderBackendExecuteFrameProc    ExecuteFrame;
 	kRenderBackendFlush               Flush;
 
@@ -52,6 +54,7 @@ void        kApplyRenderPipelineConfigFallback(const kRenderPipelineConfig &);
 kTexture    kCreateTextureFallback(const kTextureSpec &);
 void        kDestroyTextureFallback(kTexture);
 kVec2u      kGetTextureSizeFallback(kTexture);
+void        kNextFrameFallback(void);
 void        kExecuteFrameFallback(const kRenderFrame &);
 void        kFlushFallback(void);
 void        kDestroyFallback(void);
