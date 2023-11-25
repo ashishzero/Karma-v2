@@ -224,7 +224,7 @@ void kFatalError(const char *msg)
 
 void kDefaultHandleAssertion(const char *file, int line, const char *proc, const char *string)
 {
-	kLogError("Assertion Failed: %(%): % ; Procedure: %", file, line, string, proc);
+	kLogError("Assertion Failed: %s(%d): %s ; Procedure: %s", file, line, string, proc);
 	kTriggerBreakpoint();
 }
 
