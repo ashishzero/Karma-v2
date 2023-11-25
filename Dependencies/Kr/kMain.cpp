@@ -74,13 +74,18 @@ static int kWinMain(void)
 #endif
 
 // SUBSYSTEM:CONSOLE
-int wmain()
+int main()
 {
 	return kWinMain();
 }
 
 // SUBSYSTEM:WINDOWS
 int __stdcall wWinMain(HINSTANCE instance, HINSTANCE prev_instance, LPWSTR cmd, int n)
+{
+	return kWinMain();
+}
+
+int __stdcall WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd, int n)
 {
 	return kWinMain();
 }

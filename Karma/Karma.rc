@@ -53,7 +53,7 @@ END
 #endif
 
 #ifndef K_ICON_PATH
-#define K_ICON_PATH "kIcon.ico"
+#define K_ICON_PATH "Karma.ico"
 #endif
 
 #ifndef K_MANIFEST_FILE

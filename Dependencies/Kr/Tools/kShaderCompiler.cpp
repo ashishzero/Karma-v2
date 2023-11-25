@@ -1,5 +1,5 @@
-#include "kShader.h"
 #include "kPlatform.h"
+#include "kShaderCompiler.h"
 
 #if K_PLATFORM_WINDOWS == 1
 

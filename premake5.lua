@@ -3,8 +3,14 @@ workspace "Karma"
    startproject "Karma"
    configurations { "Debug", "Developer", "Release" }
 
+IncludeDir = {}
+IncludeDir["Kr"] = "%{wks.location}/Dependencies/Kr"
+
+OutputDir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
+
 group "Dependencies"
-    include "Code/Prebuild"
+    include "Dependencies/Kr"
+    include "Dependencies/Premake"
 group ""
 
-include "Code/Karma"
+include "Karma"

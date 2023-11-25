@@ -1,6 +1,6 @@
-#include "kShader.h"
 #include "kPlatform.h"
 #include "kStrings.h"
+#include "kShaderCompiler.h"
 
 static void kWriteBuffer(kStringBuilder<> *builder, kString buffer, kString name, kString prefix, kString postfix)
 {
@@ -115,6 +115,6 @@ void Main(int argc, const char **argv)
 
 #include "kCommon.cpp"
 #include "kContext.cpp"
-#include "kShader.cpp"
+#include "kShaderCompiler.cpp"
 #include "kPlatform.cpp"
 #include "kMain.cpp"

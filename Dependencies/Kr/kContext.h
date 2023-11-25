@@ -61,6 +61,13 @@ void        kLogError(const char *fmt, ...);
 #define kDebugWarningEx(src, fmt, ...)   kLogWarningEx(src, fmt, __VA_ARGS__)
 #define kDebugErrorVEx(src, fmt, list)   kLogErrorExV(src, fmt, list)
 #define kDebugErrorEx(src, fmt, ...)     kLogErrorEx(src, fmt, __VA_ARGS__)
+#else
+#define kDebugTraceVEx(src, fmt, list)
+#define kDebugTraceEx(src, fmt, ...)
+#define kDebugWarningVEx(src, fmt, list)
+#define kDebugWarningEx(src, fmt, ...)
+#define kDebugErrorVEx(src, fmt, list)
+#define kDebugErrorEx(src, fmt, ...)
 #endif
 
 void  kFatalError(const char *msg);

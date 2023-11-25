@@ -1,0 +1,1 @@
+cl /D_CRT_SECURE_NO_WARNINGS /DK_BUILD_RELEASE /DK_CONSOLE_APPLICATION /std:c++20 kShader.cpp /I../ /O2 /FekShader.exe
