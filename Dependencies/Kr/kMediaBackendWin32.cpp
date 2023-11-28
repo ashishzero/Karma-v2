@@ -228,179 +228,179 @@ static DWORD InvVirtualKeyMap[255];
 
 static void  kWin32_MapVirutalKeys(void)
 {
-	VirtualKeyMap[(int)'A']            = kKey_A;
-	VirtualKeyMap[(int)'B']            = kKey_B;
-	VirtualKeyMap[(int)'C']            = kKey_C;
-	VirtualKeyMap[(int)'D']            = kKey_D;
-	VirtualKeyMap[(int)'E']            = kKey_E;
-	VirtualKeyMap[(int)'F']            = kKey_F;
-	VirtualKeyMap[(int)'G']            = kKey_G;
-	VirtualKeyMap[(int)'H']            = kKey_H;
-	VirtualKeyMap[(int)'I']            = kKey_I;
-	VirtualKeyMap[(int)'J']            = kKey_J;
-	VirtualKeyMap[(int)'K']            = kKey_K;
-	VirtualKeyMap[(int)'L']            = kKey_L;
-	VirtualKeyMap[(int)'M']            = kKey_M;
-	VirtualKeyMap[(int)'N']            = kKey_N;
-	VirtualKeyMap[(int)'O']            = kKey_O;
-	VirtualKeyMap[(int)'P']            = kKey_P;
-	VirtualKeyMap[(int)'Q']            = kKey_Q;
-	VirtualKeyMap[(int)'R']            = kKey_R;
-	VirtualKeyMap[(int)'S']            = kKey_S;
-	VirtualKeyMap[(int)'T']            = kKey_T;
-	VirtualKeyMap[(int)'U']            = kKey_U;
-	VirtualKeyMap[(int)'V']            = kKey_V;
-	VirtualKeyMap[(int)'W']            = kKey_W;
-	VirtualKeyMap[(int)'X']            = kKey_X;
-	VirtualKeyMap[(int)'Y']            = kKey_Y;
-	VirtualKeyMap[(int)'Z']            = kKey_Z;
+	VirtualKeyMap[(int)'A']                  = kKey::A;
+	VirtualKeyMap[(int)'B']                  = kKey::B;
+	VirtualKeyMap[(int)'C']                  = kKey::C;
+	VirtualKeyMap[(int)'D']                  = kKey::D;
+	VirtualKeyMap[(int)'E']                  = kKey::E;
+	VirtualKeyMap[(int)'F']                  = kKey::F;
+	VirtualKeyMap[(int)'G']                  = kKey::G;
+	VirtualKeyMap[(int)'H']                  = kKey::H;
+	VirtualKeyMap[(int)'I']                  = kKey::I;
+	VirtualKeyMap[(int)'J']                  = kKey::J;
+	VirtualKeyMap[(int)'K']                  = kKey::K;
+	VirtualKeyMap[(int)'L']                  = kKey::L;
+	VirtualKeyMap[(int)'M']                  = kKey::M;
+	VirtualKeyMap[(int)'N']                  = kKey::N;
+	VirtualKeyMap[(int)'O']                  = kKey::O;
+	VirtualKeyMap[(int)'P']                  = kKey::P;
+	VirtualKeyMap[(int)'Q']                  = kKey::Q;
+	VirtualKeyMap[(int)'R']                  = kKey::R;
+	VirtualKeyMap[(int)'S']                  = kKey::S;
+	VirtualKeyMap[(int)'T']                  = kKey::T;
+	VirtualKeyMap[(int)'U']                  = kKey::U;
+	VirtualKeyMap[(int)'V']                  = kKey::V;
+	VirtualKeyMap[(int)'W']                  = kKey::W;
+	VirtualKeyMap[(int)'X']                  = kKey::X;
+	VirtualKeyMap[(int)'Y']                  = kKey::Y;
+	VirtualKeyMap[(int)'Z']                  = kKey::Z;
 
-	VirtualKeyMap[(int)'0']            = kKey_0;
-	VirtualKeyMap[(int)'1']            = kKey_1;
-	VirtualKeyMap[(int)'2']            = kKey_2;
-	VirtualKeyMap[(int)'3']            = kKey_3;
-	VirtualKeyMap[(int)'4']            = kKey_4;
-	VirtualKeyMap[(int)'5']            = kKey_5;
-	VirtualKeyMap[(int)'6']            = kKey_6;
-	VirtualKeyMap[(int)'7']            = kKey_7;
-	VirtualKeyMap[(int)'8']            = kKey_8;
-	VirtualKeyMap[(int)'9']            = kKey_9;
+	VirtualKeyMap[(int)'0']                  = kKey::N0;
+	VirtualKeyMap[(int)'1']                  = kKey::N1;
+	VirtualKeyMap[(int)'2']                  = kKey::N2;
+	VirtualKeyMap[(int)'3']                  = kKey::N3;
+	VirtualKeyMap[(int)'4']                  = kKey::N4;
+	VirtualKeyMap[(int)'5']                  = kKey::N5;
+	VirtualKeyMap[(int)'6']                  = kKey::N6;
+	VirtualKeyMap[(int)'7']                  = kKey::N7;
+	VirtualKeyMap[(int)'8']                  = kKey::N8;
+	VirtualKeyMap[(int)'9']                  = kKey::N9;
 
-	VirtualKeyMap[VK_NUMPAD0]          = kKey_0;
-	VirtualKeyMap[VK_NUMPAD1]          = kKey_1;
-	VirtualKeyMap[VK_NUMPAD2]          = kKey_2;
-	VirtualKeyMap[VK_NUMPAD3]          = kKey_3;
-	VirtualKeyMap[VK_NUMPAD4]          = kKey_4;
-	VirtualKeyMap[VK_NUMPAD5]          = kKey_5;
-	VirtualKeyMap[VK_NUMPAD6]          = kKey_6;
-	VirtualKeyMap[VK_NUMPAD7]          = kKey_7;
-	VirtualKeyMap[VK_NUMPAD8]          = kKey_8;
-	VirtualKeyMap[VK_NUMPAD9]          = kKey_9;
+	VirtualKeyMap[VK_NUMPAD0]                = kKey::N0;
+	VirtualKeyMap[VK_NUMPAD1]                = kKey::N1;
+	VirtualKeyMap[VK_NUMPAD2]                = kKey::N2;
+	VirtualKeyMap[VK_NUMPAD3]                = kKey::N3;
+	VirtualKeyMap[VK_NUMPAD4]                = kKey::N4;
+	VirtualKeyMap[VK_NUMPAD5]                = kKey::N5;
+	VirtualKeyMap[VK_NUMPAD6]                = kKey::N6;
+	VirtualKeyMap[VK_NUMPAD7]                = kKey::N7;
+	VirtualKeyMap[VK_NUMPAD8]                = kKey::N8;
+	VirtualKeyMap[VK_NUMPAD9]                = kKey::N9;
 
-	VirtualKeyMap[VK_F1]               = kKey_F1;
-	VirtualKeyMap[VK_F2]               = kKey_F2;
-	VirtualKeyMap[VK_F3]               = kKey_F3;
-	VirtualKeyMap[VK_F4]               = kKey_F4;
-	VirtualKeyMap[VK_F5]               = kKey_F5;
-	VirtualKeyMap[VK_F6]               = kKey_F6;
-	VirtualKeyMap[VK_F7]               = kKey_F7;
-	VirtualKeyMap[VK_F8]               = kKey_F8;
-	VirtualKeyMap[VK_F9]               = kKey_F9;
-	VirtualKeyMap[VK_F10]              = kKey_F10;
-	VirtualKeyMap[VK_F11]              = kKey_F11;
-	VirtualKeyMap[VK_F12]              = kKey_F12;
+	VirtualKeyMap[VK_F1]                     = kKey::F1;
+	VirtualKeyMap[VK_F2]                     = kKey::F2;
+	VirtualKeyMap[VK_F3]                     = kKey::F3;
+	VirtualKeyMap[VK_F4]                     = kKey::F4;
+	VirtualKeyMap[VK_F5]                     = kKey::F5;
+	VirtualKeyMap[VK_F6]                     = kKey::F6;
+	VirtualKeyMap[VK_F7]                     = kKey::F7;
+	VirtualKeyMap[VK_F8]                     = kKey::F8;
+	VirtualKeyMap[VK_F9]                     = kKey::F9;
+	VirtualKeyMap[VK_F10]                    = kKey::F10;
+	VirtualKeyMap[VK_F11]                    = kKey::F11;
+	VirtualKeyMap[VK_F12]                    = kKey::F12;
 
-	VirtualKeyMap[VK_SNAPSHOT]         = kKey_PrintScreen;
-	VirtualKeyMap[VK_INSERT]           = kKey_Insert;
-	VirtualKeyMap[VK_HOME]             = kKey_Home;
-	VirtualKeyMap[VK_PRIOR]            = kKey_PageUp;
-	VirtualKeyMap[VK_NEXT]             = kKey_PageDown;
-	VirtualKeyMap[VK_DELETE]           = kKey_Delete;
-	VirtualKeyMap[VK_END]              = kKey_End;
-	VirtualKeyMap[VK_RIGHT]            = kKey_Right;
-	VirtualKeyMap[VK_LEFT]             = kKey_Left;
-	VirtualKeyMap[VK_DOWN]             = kKey_Down;
-	VirtualKeyMap[VK_UP]               = kKey_Up;
-	VirtualKeyMap[VK_DIVIDE]           = kKey_Divide;
-	VirtualKeyMap[VK_MULTIPLY]         = kKey_Multiply;
-	VirtualKeyMap[VK_ADD]              = kKey_Plus;
-	VirtualKeyMap[VK_SUBTRACT]         = kKey_Minus;
-	VirtualKeyMap[VK_DECIMAL]          = kKey_Period;
-	VirtualKeyMap[VK_OEM_3]            = kKey_BackTick;
-	VirtualKeyMap[VK_CONTROL]          = kKey_Ctrl;
-	VirtualKeyMap[VK_RETURN]           = kKey_Return;
-	VirtualKeyMap[VK_ESCAPE]           = kKey_Escape;
-	VirtualKeyMap[VK_BACK]             = kKey_Backspace;
-	VirtualKeyMap[VK_TAB]              = kKey_Tab;
-	VirtualKeyMap[VK_SPACE]            = kKey_Space;
-	VirtualKeyMap[VK_SHIFT]            = kKey_Shift;
+	VirtualKeyMap[VK_SNAPSHOT]               = kKey::PrintScreen;
+	VirtualKeyMap[VK_INSERT]                 = kKey::Insert;
+	VirtualKeyMap[VK_HOME]                   = kKey::Home;
+	VirtualKeyMap[VK_PRIOR]                  = kKey::PageUp;
+	VirtualKeyMap[VK_NEXT]                   = kKey::PageDown;
+	VirtualKeyMap[VK_DELETE]                 = kKey::Delete;
+	VirtualKeyMap[VK_END]                    = kKey::End;
+	VirtualKeyMap[VK_RIGHT]                  = kKey::Right;
+	VirtualKeyMap[VK_LEFT]                   = kKey::Left;
+	VirtualKeyMap[VK_DOWN]                   = kKey::Down;
+	VirtualKeyMap[VK_UP]                     = kKey::Up;
+	VirtualKeyMap[VK_DIVIDE]                 = kKey::Divide;
+	VirtualKeyMap[VK_MULTIPLY]               = kKey::Multiply;
+	VirtualKeyMap[VK_ADD]                    = kKey::Plus;
+	VirtualKeyMap[VK_SUBTRACT]               = kKey::Minus;
+	VirtualKeyMap[VK_DECIMAL]                = kKey::Period;
+	VirtualKeyMap[VK_OEM_3]                  = kKey::BackTick;
+	VirtualKeyMap[VK_CONTROL]                = kKey::Ctrl;
+	VirtualKeyMap[VK_RETURN]                 = kKey::Return;
+	VirtualKeyMap[VK_ESCAPE]                 = kKey::Escape;
+	VirtualKeyMap[VK_BACK]                   = kKey::Backspace;
+	VirtualKeyMap[VK_TAB]                    = kKey::Tab;
+	VirtualKeyMap[VK_SPACE]                  = kKey::Space;
+	VirtualKeyMap[VK_SHIFT]                  = kKey::Shift;
 
-	InvVirtualKeyMap[kKey_A]           = 'A';
-	InvVirtualKeyMap[kKey_B]           = 'B';
-	InvVirtualKeyMap[kKey_C]           = 'C';
-	InvVirtualKeyMap[kKey_D]           = 'D';
-	InvVirtualKeyMap[kKey_E]           = 'E';
-	InvVirtualKeyMap[kKey_F]           = 'F';
-	InvVirtualKeyMap[kKey_G]           = 'G';
-	InvVirtualKeyMap[kKey_H]           = 'H';
-	InvVirtualKeyMap[kKey_I]           = 'I';
-	InvVirtualKeyMap[kKey_J]           = 'J';
-	InvVirtualKeyMap[kKey_K]           = 'K';
-	InvVirtualKeyMap[kKey_L]           = 'L';
-	InvVirtualKeyMap[kKey_M]           = 'M';
-	InvVirtualKeyMap[kKey_N]           = 'N';
-	InvVirtualKeyMap[kKey_O]           = 'O';
-	InvVirtualKeyMap[kKey_P]           = 'P';
-	InvVirtualKeyMap[kKey_Q]           = 'Q';
-	InvVirtualKeyMap[kKey_R]           = 'R';
-	InvVirtualKeyMap[kKey_S]           = 'S';
-	InvVirtualKeyMap[kKey_T]           = 'T';
-	InvVirtualKeyMap[kKey_U]           = 'U';
-	InvVirtualKeyMap[kKey_V]           = 'V';
-	InvVirtualKeyMap[kKey_W]           = 'W';
-	InvVirtualKeyMap[kKey_X]           = 'X';
-	InvVirtualKeyMap[kKey_Y]           = 'Y';
-	InvVirtualKeyMap[kKey_Z]           = 'Z';
+	InvVirtualKeyMap[(int)kKey::A]           = 'A';
+	InvVirtualKeyMap[(int)kKey::B]           = 'B';
+	InvVirtualKeyMap[(int)kKey::C]           = 'C';
+	InvVirtualKeyMap[(int)kKey::D]           = 'D';
+	InvVirtualKeyMap[(int)kKey::E]           = 'E';
+	InvVirtualKeyMap[(int)kKey::F]           = 'F';
+	InvVirtualKeyMap[(int)kKey::G]           = 'G';
+	InvVirtualKeyMap[(int)kKey::H]           = 'H';
+	InvVirtualKeyMap[(int)kKey::I]           = 'I';
+	InvVirtualKeyMap[(int)kKey::J]           = 'J';
+	InvVirtualKeyMap[(int)kKey::K]           = 'K';
+	InvVirtualKeyMap[(int)kKey::L]           = 'L';
+	InvVirtualKeyMap[(int)kKey::M]           = 'M';
+	InvVirtualKeyMap[(int)kKey::N]           = 'N';
+	InvVirtualKeyMap[(int)kKey::O]           = 'O';
+	InvVirtualKeyMap[(int)kKey::P]           = 'P';
+	InvVirtualKeyMap[(int)kKey::Q]           = 'Q';
+	InvVirtualKeyMap[(int)kKey::R]           = 'R';
+	InvVirtualKeyMap[(int)kKey::S]           = 'S';
+	InvVirtualKeyMap[(int)kKey::T]           = 'T';
+	InvVirtualKeyMap[(int)kKey::U]           = 'U';
+	InvVirtualKeyMap[(int)kKey::V]           = 'V';
+	InvVirtualKeyMap[(int)kKey::W]           = 'W';
+	InvVirtualKeyMap[(int)kKey::X]           = 'X';
+	InvVirtualKeyMap[(int)kKey::Y]           = 'Y';
+	InvVirtualKeyMap[(int)kKey::Z]           = 'Z';
 
-	InvVirtualKeyMap[kKey_0]           = '0';
-	InvVirtualKeyMap[kKey_1]           = '1';
-	InvVirtualKeyMap[kKey_2]           = '2';
-	InvVirtualKeyMap[kKey_3]           = '3';
-	InvVirtualKeyMap[kKey_4]           = '4';
-	InvVirtualKeyMap[kKey_5]           = '5';
-	InvVirtualKeyMap[kKey_6]           = '6';
-	InvVirtualKeyMap[kKey_7]           = '7';
-	InvVirtualKeyMap[kKey_8]           = '8';
-	InvVirtualKeyMap[kKey_9]           = '9';
+	InvVirtualKeyMap[(int)kKey::N0]          = '0';
+	InvVirtualKeyMap[(int)kKey::N1]          = '1';
+	InvVirtualKeyMap[(int)kKey::N2]          = '2';
+	InvVirtualKeyMap[(int)kKey::N3]          = '3';
+	InvVirtualKeyMap[(int)kKey::N4]          = '4';
+	InvVirtualKeyMap[(int)kKey::N5]          = '5';
+	InvVirtualKeyMap[(int)kKey::N6]          = '6';
+	InvVirtualKeyMap[(int)kKey::N7]          = '7';
+	InvVirtualKeyMap[(int)kKey::N8]          = '8';
+	InvVirtualKeyMap[(int)kKey::N9]          = '9';
 
-	InvVirtualKeyMap[kKey_0]           = VK_NUMPAD0;
-	InvVirtualKeyMap[kKey_1]           = VK_NUMPAD1;
-	InvVirtualKeyMap[kKey_2]           = VK_NUMPAD2;
-	InvVirtualKeyMap[kKey_3]           = VK_NUMPAD3;
-	InvVirtualKeyMap[kKey_4]           = VK_NUMPAD4;
-	InvVirtualKeyMap[kKey_5]           = VK_NUMPAD5;
-	InvVirtualKeyMap[kKey_6]           = VK_NUMPAD6;
-	InvVirtualKeyMap[kKey_7]           = VK_NUMPAD7;
-	InvVirtualKeyMap[kKey_8]           = VK_NUMPAD8;
-	InvVirtualKeyMap[kKey_9]           = VK_NUMPAD9;
+	InvVirtualKeyMap[(int)kKey::N0]          = VK_NUMPAD0;
+	InvVirtualKeyMap[(int)kKey::N1]          = VK_NUMPAD1;
+	InvVirtualKeyMap[(int)kKey::N2]          = VK_NUMPAD2;
+	InvVirtualKeyMap[(int)kKey::N3]          = VK_NUMPAD3;
+	InvVirtualKeyMap[(int)kKey::N4]          = VK_NUMPAD4;
+	InvVirtualKeyMap[(int)kKey::N5]          = VK_NUMPAD5;
+	InvVirtualKeyMap[(int)kKey::N6]          = VK_NUMPAD6;
+	InvVirtualKeyMap[(int)kKey::N7]          = VK_NUMPAD7;
+	InvVirtualKeyMap[(int)kKey::N8]          = VK_NUMPAD8;
+	InvVirtualKeyMap[(int)kKey::N9]          = VK_NUMPAD9;
 
-	InvVirtualKeyMap[kKey_F1]          = VK_F1;
-	InvVirtualKeyMap[kKey_F2]          = VK_F2;
-	InvVirtualKeyMap[kKey_F3]          = VK_F3;
-	InvVirtualKeyMap[kKey_F4]          = VK_F4;
-	InvVirtualKeyMap[kKey_F5]          = VK_F5;
-	InvVirtualKeyMap[kKey_F6]          = VK_F6;
-	InvVirtualKeyMap[kKey_F7]          = VK_F7;
-	InvVirtualKeyMap[kKey_F8]          = VK_F8;
-	InvVirtualKeyMap[kKey_F9]          = VK_F9;
-	InvVirtualKeyMap[kKey_F10]         = VK_F1;
-	InvVirtualKeyMap[kKey_F11]         = VK_F11;
-	InvVirtualKeyMap[kKey_F12]         = VK_F1;
+	InvVirtualKeyMap[(int)kKey::F1]          = VK_F1;
+	InvVirtualKeyMap[(int)kKey::F2]          = VK_F2;
+	InvVirtualKeyMap[(int)kKey::F3]          = VK_F3;
+	InvVirtualKeyMap[(int)kKey::F4]          = VK_F4;
+	InvVirtualKeyMap[(int)kKey::F5]          = VK_F5;
+	InvVirtualKeyMap[(int)kKey::F6]          = VK_F6;
+	InvVirtualKeyMap[(int)kKey::F7]          = VK_F7;
+	InvVirtualKeyMap[(int)kKey::F8]          = VK_F8;
+	InvVirtualKeyMap[(int)kKey::F9]          = VK_F9;
+	InvVirtualKeyMap[(int)kKey::F10]         = VK_F1;
+	InvVirtualKeyMap[(int)kKey::F11]         = VK_F11;
+	InvVirtualKeyMap[(int)kKey::F12]         = VK_F1;
 
-	InvVirtualKeyMap[kKey_PrintScreen] = VK_SNAPSHOT;
-	InvVirtualKeyMap[kKey_Insert]      = VK_INSERT;
-	InvVirtualKeyMap[kKey_Home]        = VK_HOME;
-	InvVirtualKeyMap[kKey_PageUp]      = VK_PRIOR;
-	InvVirtualKeyMap[kKey_PageDown]    = VK_NEXT;
-	InvVirtualKeyMap[kKey_Delete]      = VK_DELETE;
-	InvVirtualKeyMap[kKey_End]         = VK_END;
-	InvVirtualKeyMap[kKey_Right]       = VK_RIGHT;
-	InvVirtualKeyMap[kKey_Left]        = VK_LEFT;
-	InvVirtualKeyMap[kKey_Down]        = VK_DOWN;
-	InvVirtualKeyMap[kKey_Up]          = VK_UP;
-	InvVirtualKeyMap[kKey_Divide]      = VK_DIVIDE;
-	InvVirtualKeyMap[kKey_Multiply]    = VK_MULTIPLY;
-	InvVirtualKeyMap[kKey_Plus]        = VK_ADD;
-	InvVirtualKeyMap[kKey_Minus]       = VK_SUBTRACT;
-	InvVirtualKeyMap[kKey_Period]      = VK_DECIMAL;
-	InvVirtualKeyMap[kKey_BackTick]    = VK_OEM_3;
-	InvVirtualKeyMap[kKey_Ctrl]        = VK_CONTROL;
-	InvVirtualKeyMap[kKey_Return]      = VK_RETURN;
-	InvVirtualKeyMap[kKey_Escape]      = VK_ESCAPE;
-	InvVirtualKeyMap[kKey_Backspace]   = VK_BACK;
-	InvVirtualKeyMap[kKey_Tab]         = VK_TAB;
-	InvVirtualKeyMap[kKey_Space]       = VK_SPACE;
-	InvVirtualKeyMap[kKey_Shift]       = VK_SHIFT;
+	InvVirtualKeyMap[(int)kKey::PrintScreen] = VK_SNAPSHOT;
+	InvVirtualKeyMap[(int)kKey::Insert]      = VK_INSERT;
+	InvVirtualKeyMap[(int)kKey::Home]        = VK_HOME;
+	InvVirtualKeyMap[(int)kKey::PageUp]      = VK_PRIOR;
+	InvVirtualKeyMap[(int)kKey::PageDown]    = VK_NEXT;
+	InvVirtualKeyMap[(int)kKey::Delete]      = VK_DELETE;
+	InvVirtualKeyMap[(int)kKey::End]         = VK_END;
+	InvVirtualKeyMap[(int)kKey::Right]       = VK_RIGHT;
+	InvVirtualKeyMap[(int)kKey::Left]        = VK_LEFT;
+	InvVirtualKeyMap[(int)kKey::Down]        = VK_DOWN;
+	InvVirtualKeyMap[(int)kKey::Up]          = VK_UP;
+	InvVirtualKeyMap[(int)kKey::Divide]      = VK_DIVIDE;
+	InvVirtualKeyMap[(int)kKey::Multiply]    = VK_MULTIPLY;
+	InvVirtualKeyMap[(int)kKey::Plus]        = VK_ADD;
+	InvVirtualKeyMap[(int)kKey::Minus]       = VK_SUBTRACT;
+	InvVirtualKeyMap[(int)kKey::Period]      = VK_DECIMAL;
+	InvVirtualKeyMap[(int)kKey::BackTick]    = VK_OEM_3;
+	InvVirtualKeyMap[(int)kKey::Ctrl]        = VK_CONTROL;
+	InvVirtualKeyMap[(int)kKey::Return]      = VK_RETURN;
+	InvVirtualKeyMap[(int)kKey::Escape]      = VK_ESCAPE;
+	InvVirtualKeyMap[(int)kKey::Backspace]   = VK_BACK;
+	InvVirtualKeyMap[(int)kKey::Tab]         = VK_TAB;
+	InvVirtualKeyMap[(int)kKey::Space]       = VK_SPACE;
+	InvVirtualKeyMap[(int)kKey::Shift]       = VK_SHIFT;
 }
 
 static u32 kWin32_GetKeyModFlags(void)
@@ -634,39 +634,39 @@ static LRESULT kWin32_WndProc(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		case WM_LBUTTONUP:
 		case WM_LBUTTONDOWN:
 		{
-			kAddButtonEvent(kButton_Left, msg == WM_LBUTTONDOWN);
+			kAddButtonEvent(kButton::Left, msg == WM_LBUTTONDOWN);
 			return 0;
 		}
 
 		case WM_RBUTTONUP:
 		case WM_RBUTTONDOWN:
 		{
-			kAddButtonEvent(kButton_Right, msg == WM_RBUTTONDOWN);
+			kAddButtonEvent(kButton::Right, msg == WM_RBUTTONDOWN);
 			return 0;
 		}
 
 		case WM_MBUTTONUP:
 		case WM_MBUTTONDOWN:
 		{
-			kAddButtonEvent(kButton_Middle, msg == WM_MBUTTONDOWN);
+			kAddButtonEvent(kButton::Middle, msg == WM_MBUTTONDOWN);
 			return 0;
 		}
 
 		case WM_LBUTTONDBLCLK:
 		{
-			kAddDoubleClickEvent(kButton_Left);
+			kAddDoubleClickEvent(kButton::Left);
 			return 0;
 		}
 
 		case WM_RBUTTONDBLCLK:
 		{
-			kAddDoubleClickEvent(kButton_Right);
+			kAddDoubleClickEvent(kButton::Right);
 			return 0;
 		}
 
 		case WM_MBUTTONDBLCLK:
 		{
-			kAddDoubleClickEvent(kButton_Middle);
+			kAddDoubleClickEvent(kButton::Middle);
 			return 0;
 		}
 
@@ -704,7 +704,7 @@ static LRESULT kWin32_WndProc(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			{
 				bool repeat = HIWORD(lparam) & KF_REPEAT;
 				bool down   = (msg == WM_KEYDOWN);
-				kAddKeyEvent(kKey_F10, down, repeat);
+				kAddKeyEvent(kKey::F10, down, repeat);
 			}
 			return DefWindowProcW(wnd, msg, wparam, lparam);
 		}
@@ -1051,7 +1051,7 @@ static void kWin32_CloseWindowImpl(void)
 
 static void kWin32_LoadKeyboardState(kKeyboardState *keyboard)
 {
-	for (uint key = 0; key < kKey_Count; ++key)
+	for (uint key = 0; key < (uint)kKey::Count; ++key)
 	{
 		keyboard->Keys[key].Down = GetAsyncKeyState(InvVirtualKeyMap[key]) & 0x8000;
 	}
@@ -1078,11 +1078,11 @@ static void kWin32_LoadMouseState(kMouseState *mouse)
 	POINT pt = {0};
 	GetCursorPos(&pt);
 	ScreenToClient(g_Win32.Window.Wnd, &pt);
-	mouse->Cursor.x                     = pt.x;
-	mouse->Cursor.y                     = pt.y;
-	mouse->Buttons[kButton_Left].Down   = GetAsyncKeyState(VK_LBUTTON) & 0x8000;
-	mouse->Buttons[kButton_Right].Down  = GetAsyncKeyState(VK_RBUTTON) & 0x8000;
-	mouse->Buttons[kButton_Middle].Down = GetAsyncKeyState(VK_RBUTTON) & 0x8000;
+	mouse->Cursor.x                           = pt.x;
+	mouse->Cursor.y                           = pt.y;
+	mouse->Buttons[(int)kButton::Left].Down   = GetAsyncKeyState(VK_LBUTTON) & 0x8000;
+	mouse->Buttons[(int)kButton::Right].Down  = GetAsyncKeyState(VK_RBUTTON) & 0x8000;
+	mouse->Buttons[(int)kButton::Middle].Down = GetAsyncKeyState(VK_RBUTTON) & 0x8000;
 }
 
 //

@@ -2,91 +2,91 @@
 #include "kCommon.h"
 #include "kRenderShared.h"
 
-typedef enum kKey
+enum class kKey
 {
-	kKey_Unknown,
-	kKey_A,
-	kKey_B,
-	kKey_C,
-	kKey_D,
-	kKey_E,
-	kKey_F,
-	kKey_G,
-	kKey_H,
-	kKey_I,
-	kKey_J,
-	kKey_K,
-	kKey_L,
-	kKey_M,
-	kKey_N,
-	kKey_O,
-	kKey_P,
-	kKey_Q,
-	kKey_R,
-	kKey_S,
-	kKey_T,
-	kKey_U,
-	kKey_V,
-	kKey_W,
-	kKey_X,
-	kKey_Y,
-	kKey_Z,
-	kKey_0,
-	kKey_1,
-	kKey_2,
-	kKey_3,
-	kKey_4,
-	kKey_5,
-	kKey_6,
-	kKey_7,
-	kKey_8,
-	kKey_9,
-	kKey_Return,
-	kKey_Escape,
-	kKey_Backspace,
-	kKey_Tab,
-	kKey_Space,
-	kKey_Shift,
-	kKey_Ctrl,
-	kKey_F1,
-	kKey_F2,
-	kKey_F3,
-	kKey_F4,
-	kKey_F5,
-	kKey_F6,
-	kKey_F7,
-	kKey_F8,
-	kKey_F9,
-	kKey_F10,
-	kKey_F11,
-	kKey_F12,
-	kKey_PrintScreen,
-	kKey_Insert,
-	kKey_Home,
-	kKey_PageUp,
-	kKey_PageDown,
-	kKey_Delete,
-	kKey_End,
-	kKey_Right,
-	kKey_Left,
-	kKey_Down,
-	kKey_Up,
-	kKey_Divide,
-	kKey_Multiply,
-	kKey_Minus,
-	kKey_Plus,
-	kKey_Period,
-	kKey_BackTick,
-	kKey_Count
-} kKey;
+	Unknown,
+	A,
+	B,
+	C,
+	D,
+	E,
+	F,
+	G,
+	H,
+	I,
+	J,
+	K,
+	L,
+	M,
+	N,
+	O,
+	P,
+	Q,
+	R,
+	S,
+	T,
+	U,
+	V,
+	W,
+	X,
+	Y,
+	Z,
+	N0,
+	N1,
+	N2,
+	N3,
+	N4,
+	N5,
+	N6,
+	N7,
+	N8,
+	N9,
+	Return,
+	Escape,
+	Backspace,
+	Tab,
+	Space,
+	Shift,
+	Ctrl,
+	F1,
+	F2,
+	F3,
+	F4,
+	F5,
+	F6,
+	F7,
+	F8,
+	F9,
+	F10,
+	F11,
+	F12,
+	PrintScreen,
+	Insert,
+	Home,
+	PageUp,
+	PageDown,
+	Delete,
+	End,
+	Right,
+	Left,
+	Down,
+	Up,
+	Divide,
+	Multiply,
+	Minus,
+	Plus,
+	Period,
+	BackTick,
+	Count
+};
 
-typedef enum kButton
+enum class kButton
 {
-	kButton_Left,
-	kButton_Right,
-	kButton_Middle,
-	kButton_Count
-} kButton;
+	Left,
+	Right,
+	Middle,
+	Count
+};
 
 enum kKeyModFlags
 {
@@ -101,24 +101,24 @@ enum kKeyModFlags
 	kKeyMod_Shift      = kKeyMod_LeftShift | kKeyMod_RightShift,
 };
 
-typedef enum kEventKind
+enum class kEventKind
 {
-	kEvent_Activated,
-	kEvent_Deactivated,
-	kEvent_Resized,
-	kEvent_Closed,
-	kEvent_DpiChanged,
-	kEvent_CursorEnter,
-	kEvent_CursorLeave,
-	kEvent_CursorMoved,
-	kEvent_ButtonPressed,
-	kEvent_ButtonReleased,
-	kEvent_DoubleClicked,
-	kEvent_WheelMoved,
-	kEvent_KeyPressed,
-	kEvent_KeyReleased,
-	kEvent_TextInput,
-} kEventKind;
+	Activated,
+	Deactivated,
+	Resized,
+	Closed,
+	DpiChanged,
+	CursorEnter,
+	CursorLeave,
+	CursorMoved,
+	ButtonPressed,
+	ButtonReleased,
+	DoubleClicked,
+	WheelMoved,
+	KeyPressed,
+	KeyReleased,
+	TextInput,
+};
 
 typedef struct kResizedEvent
 {
@@ -159,7 +159,7 @@ typedef struct kTextEvent
 	u32 Mods;
 } kTextEvent;
 
-typedef struct kEvent
+struct kEvent
 {
 	kEventKind Kind;
 	union
@@ -172,7 +172,7 @@ typedef struct kEvent
 		kWheelEvent      Wheel;
 		kTextEvent       Text;
 	};
-} kEvent;
+};
 
 enum kStateFlags
 {
@@ -191,7 +191,7 @@ typedef struct kKeyState
 typedef struct kKeyboardState
 {
 	uint      Mods;
-	kKeyState Keys[kKey_Count];
+	kKeyState Keys[(int)kKey::Count];
 } kKeyboardState;
 
 typedef struct kMouseState
@@ -199,7 +199,7 @@ typedef struct kMouseState
 	kVec2i    Cursor;
 	kVec2i    Delta;
 	kVec2     Wheel;
-	kKeyState Buttons[kKey_Count];
+	kKeyState Buttons[(int)kKey::Count];
 } kMouseState;
 
 typedef enum kWindowFlag
@@ -225,18 +225,18 @@ typedef struct kWindowState
 typedef struct kMediaUserEvents
 {
 	void *Data;
-	void (*Update)(float);
-	void (*Load)(void);
-	void (*Release)(void);
+	void (*Update)(float, void *);
+	void (*Load)(void *);
+	void (*Release)(void *);
 } kMediaUserEvents;
 
 //
 //
 //
 
-void kFallbackUserLoadProc(void);
-void kFallbackUserReleaseProc(void);
-void kFallbackUserUpdateProc(float dt);
+void kFallbackUserLoadProc(void *);
+void kFallbackUserReleaseProc(void *);
+void kFallbackUserUpdateProc(float dt, void *);
 
 //
 //
@@ -245,8 +245,6 @@ void kFallbackUserUpdateProc(float dt);
 kSpan<kEvent> kGetEvents(void);
 kArena       *kGetFrameArena(void);
 
-void         *kGetUserEventData(void);
-void          kSetUserEventData(void *);
 void          kGetUserEvents(kMediaUserEvents *user);
 void          kSetUserEvents(const kMediaUserEvents &user);
 

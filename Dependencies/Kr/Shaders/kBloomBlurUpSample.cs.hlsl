@@ -7,8 +7,8 @@ cbuffer constants : register(b0)
 
 Texture2D<float3> TexImage : register(t0);
 Texture2D<float3> BlurImage : register(t1);
-SamplerState Sampler : register(s0);
 RWTexture2D<float3> Output : register(u0);
+SamplerState Sampler : register(s0);
 
 [numthreads(32, 16, 1)]
 void Main(uint3 DTid : SV_DispatchThreadID)

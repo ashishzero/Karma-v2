@@ -38,11 +38,11 @@ static kMedia g_Media;
 //
 //
 
-void kFallbackUserLoadProc(void)
+void kFallbackUserLoadProc(void *)
 {}
-void kFallbackUserReleaseProc(void)
+void kFallbackUserReleaseProc(void *)
 {}
-void kFallbackUserUpdateProc(float dt)
+void kFallbackUserUpdateProc(float dt, void *)
 {}
 kSpan<kEvent> kGetEvents(void)
 {
@@ -51,14 +51,6 @@ kSpan<kEvent> kGetEvents(void)
 kArena *kGetFrameArena(void)
 {
 	return g_Media.Arena;
-}
-void *kGetUserEventData(void)
-{
-	return g_Media.User.Data;
-}
-void kSetUserEventData(void *data)
-{
-	g_Media.User.Data = data;
 }
 void kGetUserEvents(kMediaUserEvents *user)
 {
@@ -78,19 +70,19 @@ void kSetUserEvents(const kMediaUserEvents &user)
 
 bool kIsKeyDown(kKey key)
 {
-	return g_Media.Keyboard.Keys[key].Down;
+	return g_Media.Keyboard.Keys[(int)key].Down;
 }
 bool kKeyPressed(kKey key)
 {
-	return g_Media.Keyboard.Keys[key].Flags & kPressed;
+	return g_Media.Keyboard.Keys[(int)key].Flags & kPressed;
 }
 bool kKeyReleased(kKey key)
 {
-	return g_Media.Keyboard.Keys[key].Flags & kReleased;
+	return g_Media.Keyboard.Keys[(int)key].Flags & kReleased;
 }
 u8 kKeyHits(kKey key)
 {
-	return g_Media.Keyboard.Keys[key].Hits;
+	return g_Media.Keyboard.Keys[(int)key].Hits;
 }
 uint kGetKeyModFlags(void)
 {
@@ -98,15 +90,15 @@ uint kGetKeyModFlags(void)
 }
 bool kIsButtonDown(kButton button)
 {
-	return g_Media.Mouse.Buttons[button].Down;
+	return g_Media.Mouse.Buttons[(int)button].Down;
 }
 bool kButtonPressed(kButton button)
 {
-	return g_Media.Mouse.Buttons[button].Flags & kPressed;
+	return g_Media.Mouse.Buttons[(int)button].Flags & kPressed;
 }
 bool kButtonReleased(kButton button)
 {
-	return g_Media.Mouse.Buttons[button].Flags & kReleased;
+	return g_Media.Mouse.Buttons[(int)button].Flags & kReleased;
 }
 kVec2i kGetCursorPosition(void)
 {
@@ -179,7 +171,7 @@ void kGetKeyboardState(kKeyboardState *keyboard)
 
 void kGetKeyState(kKeyState *state, kKey key)
 {
-	memcpy(state, &g_Media.Keyboard.Keys[key], sizeof(g_Media.Keyboard.Keys[key]));
+	memcpy(state, &g_Media.Keyboard.Keys[(int)key], sizeof(g_Media.Keyboard.Keys[(int)key]));
 }
 
 void kGetMouseState(kMouseState *mouse)
@@ -189,7 +181,7 @@ void kGetMouseState(kMouseState *mouse)
 
 void kGetButtonState(kKeyState *state, kButton button)
 {
-	memcpy(state, &g_Media.Mouse.Buttons[button], sizeof(g_Media.Mouse.Buttons));
+	memcpy(state, &g_Media.Mouse.Buttons[(int)button], sizeof(g_Media.Mouse.Buttons));
 }
 
 void kGetWindowState(kWindowState *state)
@@ -203,7 +195,7 @@ void kSetKeyboardState(const kKeyboardState &keyboard)
 
 void kSetKeyState(const kKeyState &state, kKey key)
 {
-	memcpy(&g_Media.Keyboard.Keys[key], &state, sizeof(g_Media.Keyboard.Keys[key]));
+	memcpy(&g_Media.Keyboard.Keys[(int)key], &state, sizeof(g_Media.Keyboard.Keys[(int)key]));
 }
 
 void kSetKeyModFlags(uint mods)
@@ -218,7 +210,7 @@ void kSetMouseState(const kMouseState &mouse)
 
 void kSetButtonState(const kKeyState &state, kButton button)
 {
-	memcpy(&g_Media.Mouse.Buttons[button], &state, sizeof(g_Media.Mouse.Buttons[button]));
+	memcpy(&g_Media.Mouse.Buttons[(int)button], &state, sizeof(g_Media.Mouse.Buttons[(int)button]));
 }
 
 void kClearInput(void)
@@ -235,13 +227,13 @@ void kClearFrame(void)
 	g_Media.Events.Count  = 0;
 	g_Media.Keyboard.Mods = 0;
 
-	for (uint key = 0; key < kKey_Count; ++key)
+	for (uint key = 0; key < (uint)kKey::Count; ++key)
 	{
 		g_Media.Keyboard.Keys[key].Flags = 0;
 		g_Media.Keyboard.Keys[key].Hits  = 0;
 	}
 
-	for (uint button = 0; button < kButton_Count; ++button)
+	for (uint button = 0; button < (uint)kButton::Count; ++button)
 	{
 		g_Media.Mouse.Buttons[button].Flags = 0;
 		g_Media.Mouse.Buttons[button].Hits  = 0;
@@ -262,7 +254,7 @@ void kAddKeyEvent(kKey key, bool down, bool repeat)
 {
 	bool       pressed  = down && !repeat;
 	bool       released = !down;
-	kKeyState *state    = &g_Media.Keyboard.Keys[key];
+	kKeyState *state    = &g_Media.Keyboard.Keys[(int)key];
 	state->Down         = down;
 	if (released)
 	{
@@ -273,13 +265,13 @@ void kAddKeyEvent(kKey key, bool down, bool repeat)
 		state->Flags |= kPressed;
 		state->Hits += 1;
 	}
-	kEvent ev = {.Kind = down ? kEvent_KeyPressed : kEvent_KeyReleased, .Key = {.Symbol = key, .Repeat = repeat}};
+	kEvent ev = {.Kind = down ? kEventKind::KeyPressed : kEventKind::KeyReleased, .Key = {.Symbol = key, .Repeat = repeat}};
 	kAddEvent(ev);
 }
 
 void kAddButtonEvent(kButton button, bool down)
 {
-	kKeyState *state    = &g_Media.Mouse.Buttons[button];
+	kKeyState *state    = &g_Media.Mouse.Buttons[(int)button];
 	bool       previous = state->Down;
 	bool       pressed  = down && !previous;
 	bool       released = !down && previous;
@@ -293,21 +285,21 @@ void kAddButtonEvent(kButton button, bool down)
 	{
 		state->Flags |= kPressed;
 	}
-	kEvent ev = {.Kind = down ? kEvent_ButtonPressed : kEvent_ButtonReleased, .Button = {.Symbol = button}};
+	kEvent ev = {.Kind = down ? kEventKind::ButtonPressed : kEventKind::ButtonReleased, .Button = {.Symbol = button}};
 	kAddEvent(ev);
 }
 
 void kAddTextInputEvent(u32 codepoint, u32 mods)
 {
-	kEvent ev = {.Kind = kEvent_TextInput, .Text = {.Codepoint = codepoint, .Mods = mods}};
+	kEvent ev = {.Kind = kEventKind::TextInput, .Text = {.Codepoint = codepoint, .Mods = mods}};
 	kAddEvent(ev);
 }
 
 void kAddDoubleClickEvent(kButton button)
 {
-	kKeyState *state = &g_Media.Mouse.Buttons[button];
+	kKeyState *state = &g_Media.Mouse.Buttons[(int)button];
 	state->Flags |= kDoubleClicked;
-	kEvent ev = {.Kind = kEvent_DoubleClicked, .Button = {.Symbol = button}};
+	kEvent ev = {.Kind = kEventKind::DoubleClicked, .Button = {.Symbol = button}};
 	kAddEvent(ev);
 }
 
@@ -318,7 +310,7 @@ void kAddCursorEvent(kVec2i pos)
 	g_Media.Mouse.Delta.x += xdel;
 	g_Media.Mouse.Delta.y += ydel;
 	g_Media.Mouse.Cursor = pos;
-	kEvent ev            = {.Kind = kEvent_CursorMoved, .Cursor = {.Position = pos}};
+	kEvent ev            = {.Kind = kEventKind::CursorMoved, .Cursor = {.Position = pos}};
 	kAddEvent(ev);
 }
 
@@ -330,7 +322,7 @@ void kAddCursorDeltaEvent(kVec2i delta)
 	g_Media.Mouse.Delta.y += ydel;
 	g_Media.Mouse.Cursor.x += xdel;
 	g_Media.Mouse.Cursor.y += ydel;
-	kEvent ev = {.Kind = kEvent_CursorMoved, .Cursor = {.Position = g_Media.Mouse.Cursor}};
+	kEvent ev = {.Kind = kEventKind::CursorMoved, .Cursor = {.Position = g_Media.Mouse.Cursor}};
 	kAddEvent(ev);
 }
 
@@ -339,7 +331,7 @@ void kAddWheelEvent(float horz, float vert)
 	g_Media.Mouse.Wheel.x += horz;
 	g_Media.Mouse.Wheel.y += vert;
 
-	kEvent ev = {.Kind = kEvent_WheelMoved, .Wheel = {.Horz = horz, .Vert = vert}};
+	kEvent ev = {.Kind = kEventKind::WheelMoved, .Wheel = {.Horz = horz, .Vert = vert}};
 
 	kAddEvent(ev);
 }
@@ -347,14 +339,14 @@ void kAddWheelEvent(float horz, float vert)
 void kAddCursorEnterEvent(void)
 {
 	g_Media.Window.Flags[kWindow_Hovered] = true;
-	kEvent ev                             = {.Kind = kEvent_CursorEnter};
+	kEvent ev                             = {.Kind = kEventKind::CursorEnter};
 	kAddEvent(ev);
 }
 
 void kAddCursorLeaveEvent(void)
 {
 	g_Media.Window.Flags[kWindow_Hovered] = false;
-	kEvent ev                             = {.Kind = kEvent_CursorLeave};
+	kEvent ev                             = {.Kind = kEventKind::CursorLeave};
 	kAddEvent(ev);
 }
 
@@ -364,7 +356,7 @@ void kAddWindowResizeEvent(u32 width, u32 height, bool fullscreen)
 	g_Media.Window.Height                    = height;
 	g_Media.Window.Flags[kWindow_Resized]    = true;
 	g_Media.Window.Flags[kWindow_Fullscreen] = fullscreen;
-	kEvent ev                                = {.Kind = kEvent_Resized, .Resized = {.Width = width, .Height = height}};
+	kEvent ev                                = {.Kind = kEventKind::Resized, .Resized = {.Width = width, .Height = height}};
 	kAddEvent(ev);
 
 	g_Media.Render.ResizeSwapChain(width, height);
@@ -373,14 +365,14 @@ void kAddWindowResizeEvent(u32 width, u32 height, bool fullscreen)
 void kAddWindowActivateEvent(bool active)
 {
 	g_Media.Window.Flags[kWindow_Active] = active;
-	kEvent ev                            = {.Kind = active ? kEvent_Activated : kEvent_Deactivated};
+	kEvent ev                            = {.Kind = active ? kEventKind::Activated : kEventKind::Deactivated};
 	kAddEvent(ev);
 }
 
 void kAddWindowCloseEvent(void)
 {
 	g_Media.Window.Flags[kWindow_Closed] = true;
-	kEvent ev                            = {.Kind = kEvent_Closed};
+	kEvent ev                            = {.Kind = kEventKind::Closed};
 	kAddEvent(ev);
 }
 
@@ -404,7 +396,7 @@ void kAddWindowCursorReleaseEvent(void)
 void kAddWindowDpiChangedEvent(float yfactor)
 {
 	g_Media.Window.DpiFactor = yfactor;
-	kEvent ev                = {.Kind = kEvent_DpiChanged};
+	kEvent ev                = {.Kind = kEventKind::DpiChanged};
 	kAddEvent(ev);
 }
 
@@ -479,15 +471,15 @@ void kCloseWindow(void)
 
 void kUserLoad(void)
 {
-	g_Media.User.Load();
+	g_Media.User.Load(g_Media.User.Data);
 }
 void kUserUpdate(float dt)
 {
-	g_Media.User.Update(dt);
+	g_Media.User.Update(dt, g_Media.User.Data);
 }
 void kUserRelease(void)
 {
-	g_Media.User.Release();
+	g_Media.User.Release(g_Media.User.Data);
 }
 
 namespace ImGui
@@ -741,14 +733,14 @@ int kEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user)
 	kCreateRenderContext(kDefaultRenderSpec, textures, &g_Media.Builtin.Font);
 
 	kLogInfoEx("Windows", "Calling user load.\n");
-	g_Media.User.Load();
+	kUserLoad();
 
 	int status = g_Media.Backend.EventLoop();
 
 	g_Media.Render.Flush();
 
 	kLogInfoEx("Windows", "Calling user release.\n");
-	g_Media.User.Release();
+	kUserRelease();
 
 	kFreeArena(g_Media.Arena, allocator);
 	kDestroyRenderContext();
