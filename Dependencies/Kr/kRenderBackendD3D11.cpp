@@ -384,7 +384,7 @@ static void kD3D11_DestroyGraphicsDevice(void)
 
 	kD3D11_DestroyTexturePool();
 
-	kLogInfoEx("D3D11", "Destroying graphics devices.\n");
+	kLogInfoEx("D3D11", "Destroying graphics devices.");
 
 	for (ID3D11RasterizerState *&rs : g_RasterizerStates)
 		kRelease(&rs);
@@ -563,7 +563,7 @@ static bool kD3D11_CreateBlendState(void)
 
 static bool kD3D11_CreateVertexShaders(void)
 {
-	kLogInfoEx("D3D11", "Compiling vertex shaders.\n");
+	kLogInfoEx("D3D11", "Compiling vertex shaders.");
 
 	for (int i = 0; i < kVertexShader_Count; ++i)
 	{
@@ -600,7 +600,7 @@ static bool kD3D11_CreateVertexShaders(void)
 
 static bool kD3D11_CreatePixelShaders(void)
 {
-	kLogInfoEx("D3D11", "Compiling pixel shaders.\n");
+	kLogInfoEx("D3D11", "Compiling pixel shaders.");
 
 	for (int i = 0; i < kPixelShader_Count; ++i)
 	{
@@ -619,7 +619,7 @@ static bool kD3D11_CreatePixelShaders(void)
 
 static bool kD3D11_CreateComputeShaders(void)
 {
-	kLogInfoEx("D3D11", "Compiling compute shaders.\n");
+	kLogInfoEx("D3D11", "Compiling compute shaders.");
 
 	for (int i = 0; i < kComputeShader_Count; ++i)
 	{
@@ -696,13 +696,13 @@ static bool kD3D11_TryCreateGraphicsDevice(void)
 		if (kEnableDebugLayer && !adapter)
 		{
 			kEnableDebugLayer = false;
-			kLogWarningEx("D3D11", "Debug Layer SDK not present. Falling back to adaptor without debug layer.\n");
+			kLogWarningEx("D3D11", "Debug Layer SDK not present. Falling back to adaptor without debug layer.");
 		}
 	}
 
 	if (adapter == nullptr)
 	{
-		kLogWarningEx("D3D11", "Supported adaptor not found!\n");
+		kLogWarningEx("D3D11", "Supported adaptor not found!");
 		return false;
 	}
 
@@ -1397,7 +1397,7 @@ static bool kD3D11_CreateRenderTarget(kD3D11_RenderTarget *rt, const kD3D11_Rend
 
 static void kD3D11_DestroySwapChainBuffers(void)
 {
-	kDebugTraceEx("D3D11", "Destroying swap chain render targets.\n");
+	kDebugTraceEx("D3D11", "Destroying swap chain render targets.");
 
 	g_RenderPipeline.BackBufferSize   = kVec2u(0);
 	g_RenderPipeline.BloomMaxMipLevel = 0;
@@ -1629,7 +1629,7 @@ static void kD3D11_ResizeSwapChainBuffers(uint w, uint h)
 
 static void kD3D11_DestroySwapChain(void)
 {
-	kLogInfoEx("D3D11", "Destroying swap chain.\n");
+	kLogInfoEx("D3D11", "Destroying swap chain.");
 
 	kD3D11_Flush();
 	kD3D11_DestroySwapChainBuffers();
@@ -1638,7 +1638,7 @@ static void kD3D11_DestroySwapChain(void)
 
 static void kD3D11_CreateSwapChain(void *_window, const kRenderPipelineConfig &config)
 {
-	kLogInfoEx("D3D11", "Creating swap chain.\n");
+	kLogInfoEx("D3D11", "Creating swap chain.");
 
 	HWND                  wnd             = (HWND)_window;
 
@@ -1663,7 +1663,7 @@ static void kD3D11_CreateSwapChain(void *_window, const kRenderPipelineConfig &c
 
 	if (FAILED(hr))
 	{
-		kLogHresultError(hr, "D3D11", "Failed to create swap chain");
+		kLogHresultError(hr, "D3D11", "Failed to create swap chain.");
 		return;
 	}
 
@@ -1748,13 +1748,13 @@ static void kD3D11_DestroyRenderBackend(void)
 
 bool kD3D11_CreateRenderBackend(kRenderBackend *backend)
 {
-	kLogInfoEx("D3D11", "Creating graphics devices\n");
+	kLogInfoEx("D3D11", "Creating graphics devices.");
 	if (!kD3D11_CreateGraphicsDevice())
 	{
 		return false;
 	}
 
-	kLogInfoEx("D3D11", "Registering render backend.\n");
+	kLogInfoEx("D3D11", "Registering render backend.");
 
 	backend->CreateSwapChain           = kD3D11_CreateSwapChain;
 	backend->DestroySwapChain          = kD3D11_DestroySwapChain;

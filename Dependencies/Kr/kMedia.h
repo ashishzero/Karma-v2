@@ -387,5 +387,10 @@ static const kMediaSpec            kDefaultSpec           = {.Window         = k
                                                              .Arena          = kDefaultArena,
                                                              .RenderPipeline = kDefaultRenderPipeline};
 
-int                                kEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user);
-void                               kBreakLoop(int status);
+//
+//
+//
+
+int  kEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user);
+void kRestartLoop(void);
+void kBreakLoop(int status);

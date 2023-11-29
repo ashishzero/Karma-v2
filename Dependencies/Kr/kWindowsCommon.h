@@ -21,7 +21,7 @@ static void kLogHresultError(DWORD error, const char *source, const char *fmt, .
 		va_start(args, fmt);
 		vsnprintf(buff, sizeof(buff), fmt, args);
 		va_end(args);
-		kLogErrorEx(source, "%s. Reason: %S.\n", buff, message);
+		kLogErrorEx(source, "%s. Reason: %S.", buff, message);
 		LocalFree(message);
 	}
 	else
@@ -31,6 +31,6 @@ static void kLogHresultError(DWORD error, const char *source, const char *fmt, .
 		va_start(args, fmt);
 		vsnprintf(buff, sizeof(buff), fmt, args);
 		va_end(args);
-		kLogErrorEx(source, "%s: Reason: Unknown.\n", buff);
+		kLogErrorEx(source, "%s: Reason: Unknown.", buff);
 	}
 }

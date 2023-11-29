@@ -835,13 +835,13 @@ typedef struct kArenaSpec
 //
 //
 
-typedef enum kLogLevel
+enum class kLogLevel
 {
-	kLogLevel_Trace = 0,
-	kLogLevel_Info,
-	kLogLevel_Warning,
-	kLogLevel_Error
-} kLogLevel;
+	Trace = 0,
+	Info,
+	Warning,
+	Error
+};
 typedef void (*kLogProc)(void *, kLogLevel, const char *, const u8 *, imem);
 
 typedef void (*kFatalErrorProc)(const char *message);

@@ -103,19 +103,19 @@ void kLogPrintV(kLogLevel level, const char *src, const char *fmt, va_list list)
 
 void kLogTraceExV(const char *src, const char *fmt, va_list list)
 {
-	kLogPrintV(kLogLevel_Trace, src, fmt, list);
+	kLogPrintV(kLogLevel::Trace, src, fmt, list);
 }
 void kLogInfoExV(const char *src, const char *fmt, va_list list)
 {
-	kLogPrintV(kLogLevel_Info, src, fmt, list);
+	kLogPrintV(kLogLevel::Info, src, fmt, list);
 }
 void kLogWarningExV(const char *src, const char *fmt, va_list list)
 {
-	kLogPrintV(kLogLevel_Warning, src, fmt, list);
+	kLogPrintV(kLogLevel::Warning, src, fmt, list);
 }
 void kLogErrorExV(const char *src, const char *fmt, va_list list)
 {
-	kLogPrintV(kLogLevel_Error, src, fmt, list);
+	kLogPrintV(kLogLevel::Error, src, fmt, list);
 }
 
 void kLogTraceV(const char *fmt, va_list list)
@@ -230,7 +230,7 @@ void kDefaultHandleAssertion(const char *file, int line, const char *proc, const
 
 void kDefaultFatalError(const char *message)
 {
-	kLogError("%s\n", message);
+	kLogError("%s", message);
 #ifndef K_CONSOLE_APPLICATION
 	int      wlen = MultiByteToWideChar(CP_UTF8, 0, message, (int)strlen(message), NULL, 0);
 	wchar_t *msg  = (wchar_t *)HeapAlloc(GetProcessHeap(), 0, ((imem)wlen + 1) * sizeof(wchar_t));
@@ -248,8 +248,8 @@ static const WORD  kColorsMap[] = {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUN
                                    FOREGROUND_GREEN | FOREGROUND_BLUE, FOREGROUND_RED | FOREGROUND_GREEN,
                                    FOREGROUND_RED};
 static const char *kHeaderMap[] = {"Trace", "Info", "Warning", "Error"};
-static_assert(kArrayCount(kHeaderMap) == kLogLevel_Error + 1, "");
-static_assert(kArrayCount(kColorsMap) == kLogLevel_Error + 1, "");
+static_assert(kArrayCount(kHeaderMap) == (int)kLogLevel::Error + 1, "");
+static_assert(kArrayCount(kColorsMap) == (int)kLogLevel::Error + 1, "");
 
 void kDefaultHandleLog(void *data, kLogLevel level, const char *src, const u8 *msg, imem msg_len)
 {
@@ -259,7 +259,7 @@ void kDefaultHandleLog(void *data, kLogLevel level, const char *src, const u8 *m
 
 	kAtomicLock(&Guard);
 
-	msg_len = snprintf(MessageBufferUTF8, kArrayCount(MessageBufferUTF8), "%-8s: %-12s %s", kHeaderMap[level],
+	msg_len = snprintf(MessageBufferUTF8, kArrayCount(MessageBufferUTF8), "%-8s: %-12s %s\n", kHeaderMap[(int)level],
 	                   src ? src : "", msg);
 
 	int len = MultiByteToWideChar(CP_UTF8, 0, MessageBufferUTF8, (int)msg_len, MessageBufferWide,
@@ -267,12 +267,12 @@ void kDefaultHandleLog(void *data, kLogLevel level, const char *src, const u8 *m
 	MessageBufferWide[len] = 0;
 
 #ifndef K_CONSOLE_APPLICATION
-	HANDLE handle = (level == kLogLevel_Error) ? GetStdHandle(STD_ERROR_HANDLE) : GetStdHandle(STD_OUTPUT_HANDLE);
+	HANDLE handle = (level == kLogLevel::Error) ? GetStdHandle(STD_ERROR_HANDLE) : GetStdHandle(STD_OUTPUT_HANDLE);
 	if (handle != INVALID_HANDLE_VALUE)
 	{
 		CONSOLE_SCREEN_BUFFER_INFO buffer_info;
 		GetConsoleScreenBufferInfo(handle, &buffer_info);
-		SetConsoleTextAttribute(handle, kColorsMap[level]);
+		SetConsoleTextAttribute(handle, kColorsMap[(int)level]);
 		DWORD written = 0;
 		WriteConsoleW(handle, MessageBufferWide, len, &written, 0);
 		SetConsoleTextAttribute(handle, buffer_info.wAttributes);

@@ -21,7 +21,7 @@ typedef struct kMediaBuiltin
 
 typedef struct kMedia
 {
-	kArena          *Arena;
+	kArena *         Arena;
 	kArray<kEvent>   Events;
 	kKeyboardState   Keyboard;
 	kMouseState      Mouse;
@@ -30,6 +30,7 @@ typedef struct kMedia
 	kRenderBackend   Render;
 	kMediaBackend    Backend;
 	kMediaBuiltin    Builtin;
+	bool             Relaunch;
 } kMedia;
 
 static kMedia g_Media;
@@ -265,7 +266,8 @@ void kAddKeyEvent(kKey key, bool down, bool repeat)
 		state->Flags |= kPressed;
 		state->Hits += 1;
 	}
-	kEvent ev = {.Kind = down ? kEventKind::KeyPressed : kEventKind::KeyReleased, .Key = {.Symbol = key, .Repeat = repeat}};
+	kEvent ev = {.Kind = down ? kEventKind::KeyPressed : kEventKind::KeyReleased,
+	             .Key  = {.Symbol = key, .Repeat = repeat}};
 	kAddEvent(ev);
 }
 
@@ -356,7 +358,7 @@ void kAddWindowResizeEvent(u32 width, u32 height, bool fullscreen)
 	g_Media.Window.Height                    = height;
 	g_Media.Window.Flags[kWindow_Resized]    = true;
 	g_Media.Window.Flags[kWindow_Fullscreen] = fullscreen;
-	kEvent ev                                = {.Kind = kEventKind::Resized, .Resized = {.Width = width, .Height = height}};
+	kEvent ev = {.Kind = kEventKind::Resized, .Resized = {.Width = width, .Height = height}};
 	kAddEvent(ev);
 
 	g_Media.Render.ResizeSwapChain(width, height);
@@ -534,7 +536,7 @@ static void kCreateBuiltinResources(void)
 	}
 
 	{
-		kFont       *font = &g_Media.Builtin.Font;
+		kFont *      font = &g_Media.Builtin.Font;
 
 		kTextureSpec spec = {};
 		spec.Format       = kFormat_R8_UNORM;
@@ -631,7 +633,7 @@ void ImCreateContext()
 	io.Fonts->Build();
 
 	ImGuiStyle &style                     = ImGui::GetStyle();
-	ImVec4     *color                     = style.Colors;
+	ImVec4 *    color                     = style.Colors;
 
 	color[ImGuiCol_Text]                  = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
 	color[ImGuiCol_TextDisabled]          = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
@@ -692,15 +694,15 @@ void ImCreateContext()
 {}
 #endif
 
-int kEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user)
+static int kLaunchEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user)
 {
-	ImCreateContext();
+	g_Media.Relaunch = false;
 
-	memset(&g_Media, 0, sizeof(g_Media));
+	ImCreateContext();
 
 	kCreateMediaBackend(&g_Media.Backend);
 
-	kLogInfoEx("Windows", "Creating render backend.\n");
+	kLogInfoEx("Windows", "Creating render backend.");
 	kCreateRenderBackend(&g_Media.Render);
 
 	void *window = g_Media.Backend.CreateWindow(&g_Media.Window, spec.Window);
@@ -717,11 +719,11 @@ int kEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user)
 
 	if (g_Media.Arena != &kFallbackArena)
 	{
-		kLogInfoEx("Windows", "Allocated frame arena of size: %zu bytes\n", (u64)g_Media.Arena->Cap);
+		kLogInfoEx("Windows", "Allocated frame arena of size: %zu bytes", (u64)g_Media.Arena->Cap);
 	}
 	else
 	{
-		kLogWarningEx("Windows", "Failed to allocate frame arena.\n");
+		kLogWarningEx("Windows", "Failed to allocate frame arena.");
 	}
 
 	kCreateBuiltinResources();
@@ -732,14 +734,14 @@ int kEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user)
 
 	kCreateRenderContext(kDefaultRenderSpec, textures, &g_Media.Builtin.Font);
 
-	kLogInfoEx("Windows", "Calling user load.\n");
+	kLogInfoEx("Windows", "Calling user load.");
 	kUserLoad();
 
 	int status = g_Media.Backend.EventLoop();
 
 	g_Media.Render.Flush();
 
-	kLogInfoEx("Windows", "Calling user release.\n");
+	kLogInfoEx("Windows", "Calling user release.");
 	kUserRelease();
 
 	kFreeArena(g_Media.Arena, allocator);
@@ -749,14 +751,31 @@ int kEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user)
 	g_Media.Render.DestroySwapChain();
 	g_Media.Backend.DestroyWindow();
 	g_Media.Render.Destroy();
+	g_Media.Backend.Destroy();
 
 #ifndef IMGUI_DISABLE
 	ImGui::DestroyContext();
 #endif
 
-	memset(&g_Media, 0, sizeof(g_Media));
-
 	return status;
+}
+
+int kEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user)
+{
+	memset(&g_Media, 0, sizeof(g_Media));
+	int rc          = 0;
+	g_Media.Relaunch = true;
+	while (g_Media.Relaunch)
+		rc = kLaunchEventLoop(spec, user);
+	memset(&g_Media, 0, sizeof(g_Media));
+	return rc;
+}
+
+void kRestartLoop(void)
+{
+	kLogInfoEx("Media", "Restarting");
+	g_Media.Relaunch = true;
+	kBreakLoop(0);
 }
 
 void kBreakLoop(int status)

@@ -8,17 +8,17 @@
 #include "kPlatform.h"
 #include "kImGui.h"
 
-struct Timestep
+struct WorldTime
 {
-	float Time;
-	float TickDt;
-	float Accum;
+	float Now;
+	float Delta;
+	float Accumulator;
 };
 
 struct World
 {
-	Timestep Ts;
-	kTexture Texture;
+	WorldTime Time;
+	kTexture  Texture;
 };
 
 //
@@ -47,10 +47,11 @@ kTexture LoadTexture(kString filepath)
 	return t;
 }
 
-void Tick(World *world, float dt)
-{}
+void Tick(World *world, float t, float dt)
+{
+}
 
-void Update(World *world, float dt)
+void Update(World *world, float dt, float alpha)
 {
 	kArena *arena = kGetFrameArena();
 
@@ -62,6 +63,11 @@ void Update(World *world, float dt)
 	if (kKeyPressed(kKey::F11))
 	{
 		kToggleWindowFullscreen();
+	}
+
+	if (kKeyPressed(kKey::R) && (kGetKeyModFlags() & (kKeyMod_Shift | kKeyMod_Ctrl)))
+	{
+		kRestartLoop();
 	}
 
 	kVec2i      size     = kGetWindowSize();
@@ -89,11 +95,11 @@ void Update(World *world, float dt)
 
 void OnLoadEvent(void *data)
 {
-	World *world     = (World *)data;
-	world->Ts.Accum  = 0;
-	world->Ts.TickDt = 1.0f / 60.0f;
-	world->Ts.Time   = 0.0f;
-	world->Texture   = LoadTexture("Resources/ColossChibi.png");
+	World *world            = (World *)data;
+	world->Time.Accumulator = 0;
+	world->Time.Delta       = 1.0f / 60.0f;
+	world->Time.Now         = 0.0f;
+	world->Texture          = LoadTexture("Resources/ColossChibi.png");
 }
 
 void OnReleaseEvent(void *data)
@@ -104,25 +110,28 @@ void OnReleaseEvent(void *data)
 
 void OnUpdateEvent(float dt, void *data)
 {
-	World    *world = (World *)data;
-	Timestep &ts    = world->Ts;
+	dt               = kMin(dt, 0.25f);
 
-	while (ts.Accum >= ts.TickDt)
+	World *    world = (World *)data;
+	WorldTime &time  = world->Time;
+	time.Accumulator += dt;
+
+	while (time.Accumulator >= time.Delta)
 	{
-		Tick(world, ts.TickDt);
-		ts.Accum -= ts.TickDt;
+		Tick(world, time.Now, time.Delta);
+		time.Accumulator -= time.Delta;
+		time.Now += time.Delta;
 	}
 
-	Update(world, dt);
+	float alpha = time.Accumulator / time.Delta;
 
-	ts.Accum += dt;
-	ts.Time += dt;
+	Update(world, dt, alpha);
 }
 
 void Main(int argc, const char **argv)
 {
-	kSetLogLevel(kLogLevel_Info);
-	World           *world = (World *)kAlloc(sizeof(World));
+	kSetLogLevel(kLogLevel::Trace);
+	World *          world = (World *)kAlloc(sizeof(World));
 	kMediaUserEvents user  = {.Data = world, .Update = OnUpdateEvent, .Load = OnLoadEvent, .Release = OnReleaseEvent};
 	kEventLoop(kDefaultSpec, user);
 }

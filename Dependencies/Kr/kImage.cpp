@@ -30,7 +30,7 @@ bool kReadImage(kString buffer, kImage *image, int req_channels)
 	if (!image->Pixels)
 	{
 		const char *err = stbi_failure_reason();
-		kLogError("Failed to read image: %s\n", err);
+		kLogError("Failed to read image: %s", err);
 		return false;
 	}
 	return true;

@@ -85,7 +85,7 @@ static DWORD kGetWindowStyleFromFlags(u32 flags)
 
 static void kWin32_ResizeWindow(kWin32Window *window, u32 w, u32 h)
 {
-	kDebugTraceEx("Windows", "Resizing window to size %ux%u.\n", w, h);
+	kDebugTraceEx("Windows", "Resizing window to size %ux%u.", w, h);
 	DWORD style = (DWORD)GetWindowLongPtrW(window->Wnd, GWL_STYLE);
 	RECT  rect  = {.left = 0, .top = 0, .right = (LONG)w, .bottom = (LONG)h};
 	UINT  dpi   = GetDpiForWindow(window->Wnd);
@@ -98,7 +98,7 @@ static void kWin32_ToggleWindowFullscreen(kWin32Window *window)
 {
 	if (!window->Fullscreen)
 	{
-		kLogInfoEx("Windows", "Switching to fullscreen mode.\n");
+		kLogInfoEx("Windows", "Switching to fullscreen mode.");
 
 		DWORD       style = (DWORD)GetWindowLongPtrW(window->Wnd, GWL_STYLE);
 		MONITORINFO mi    = {.cbSize = sizeof(mi)};
@@ -115,7 +115,7 @@ static void kWin32_ToggleWindowFullscreen(kWin32Window *window)
 	}
 	else
 	{
-		kLogInfoEx("Windows", "Restoring window from fullscreen mode.\n");
+		kLogInfoEx("Windows", "Restoring window from fullscreen mode.");
 
 		SetWindowLongPtrW(window->Wnd, GWL_STYLE, window->Style);
 		SetWindowPlacement(window->Wnd, &window->Placement);
@@ -128,7 +128,7 @@ static void kWin32_ToggleWindowFullscreen(kWin32Window *window)
 
 static void kWin32_ClipCursorToWindow(kWin32Window *window)
 {
-	kDebugTraceEx("Windows", "Clipping cursor to window.\n");
+	kDebugTraceEx("Windows", "Clipping cursor to window.");
 
 	RECT rect;
 	GetClientRect(window->Wnd, &rect);
@@ -148,7 +148,7 @@ static void kWin32_ClipCursorToWindow(kWin32Window *window)
 
 static void kWin32_ForceReleaseCursor(kWin32Window *window)
 {
-	kDebugTraceEx("Windows", "Releasing cursor from window.\n");
+	kDebugTraceEx("Windows", "Releasing cursor from window.");
 
 	ShowCursor(TRUE);
 	ClipCursor(NULL);
@@ -161,7 +161,7 @@ static void kWin32_ForceReleaseCursor(kWin32Window *window)
 
 static void kWin32_ForceCaptureCursor(kWin32Window *window)
 {
-	kDebugTraceEx("Windows", "Capturing cursor in window.\n");
+	kDebugTraceEx("Windows", "Capturing cursor in window.");
 
 	if (GetActiveWindow() == window->Wnd)
 	{
@@ -197,25 +197,25 @@ static int kWin32_GetWindowCaptionSize(kWin32Window *window)
 
 static void kWin32_MaximizeWindow(kWin32Window *window)
 {
-	kDebugTraceEx("Windows", "Maximizing window.\n");
+	kDebugTraceEx("Windows", "Maximizing window.");
 	ShowWindow(window->Wnd, SW_MAXIMIZE);
 }
 
 static void kWin32_RestoreWindow(kWin32Window *window)
 {
-	kDebugTraceEx("Windows", "Restoring window.\n");
+	kDebugTraceEx("Windows", "Restoring window.");
 	ShowWindow(window->Wnd, SW_RESTORE);
 }
 
 static void kWin32_MinimizeWindow(kWin32Window *window)
 {
-	kDebugTraceEx("Windows", "Minimizing window.\n");
+	kDebugTraceEx("Windows", "Minimizing window.");
 	ShowWindow(window->Wnd, SW_MINIMIZE);
 }
 
 static void kWin32_CloseWindow(kWin32Window *window)
 {
-	kDebugTraceEx("Windows", "Closing window.\n");
+	kDebugTraceEx("Windows", "Closing window.");
 	PostMessageW(window->Wnd, WM_CLOSE, 0, 0);
 }
 
@@ -531,7 +531,7 @@ static LRESULT kWin32_WndProc(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				}
 			}
 
-			kDebugTraceEx("Windows", "Window focus %s.\n", focused ? "gained" : "lost");
+			kDebugTraceEx("Windows", "Window focus %s.", focused ? "gained" : "lost");
 
 			return DefWindowProcW(wnd, msg, wparam, lparam);
 		}
@@ -779,7 +779,7 @@ static kWin32Backend g_Win32;
 
 static void kWin32_DestroyWindow(void)
 {
-	kLogInfoEx("Windows", "Destroying window.\n");
+	kLogInfoEx("Windows", "Destroying window.");
 
 #ifndef IMGUI_DISABLE
 	ImGui_ImplWin32_Shutdown();
@@ -818,7 +818,7 @@ static void *kWin32_CreateWindow(kWindowState *ws, const kWindowSpec &spec)
 		title[len] = 0;
 	}
 
-	kLogInfoEx("Windows", "Creating window: %S.\n", title);
+	kLogInfoEx("Windows", "Creating window: %S.", title);
 
 	int width  = CW_USEDEFAULT;
 	int height = CW_USEDEFAULT;
@@ -1096,6 +1096,9 @@ static void kWin32_BreakLoop(int status)
 
 void kWin32_DestroyBackend(void)
 {
+	if (g_Win32.Window.Wnd)
+		kWin32_DestroyWindow();
+
 	if (g_Win32.AvrtHandle)
 		AvRevertMmThreadCharacteristics(g_Win32.AvrtHandle);
 	memset(&g_Win32, 0, sizeof(g_Win32));
