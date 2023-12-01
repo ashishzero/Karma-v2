@@ -1045,14 +1045,10 @@ constexpr kVec3 kUintToColor3(u32 c)
 	return res;
 }
 
-kVec3 kLinearToSrgb(kVec3 Col);
-kVec4 kLinearToSrgb(kVec4 Col);
-kVec3 kLinearToSrgb(kVec3 Col, float gamma);
-kVec4 kLinearToSrgb(kVec4 Col, float gamma);
-kVec3 kSrgbToLinear(kVec3 Col);
-kVec4 kSrgbToLinear(kVec4 Col);
-kVec3 kSrgbToLinear(kVec3 Col, float gamma);
-kVec4 kSrgbToLinear(kVec4 Col, float gamma);
+kVec3 kLinearToSrgb(kVec3 Col, float gamma = 2.2f);
+kVec4 kLinearToSrgb(kVec4 Col, float gamma = 2.2f);
+kVec3 kSrgbToLinear(kVec3 Col, float gamma = 2.2f);
+kVec4 kSrgbToLinear(kVec4 Col, float gamma = 2.2f);
 
 kVec3 kHsvToRgb(kVec3 c);
 kVec3 kRgbToHsv(kVec3 c);

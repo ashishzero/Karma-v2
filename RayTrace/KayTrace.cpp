@@ -9,6 +9,14 @@
 #include "kImGui.h"
 #include "kPlatform.h"
 
+
+#include <stdlib.h>
+
+float RandomCRT()
+{
+	return (float)rand() / (float)(RAND_MAX + 1);
+}
+
 //
 //
 //
@@ -90,9 +98,9 @@ bool RayHitSphere(const kSphere &sphere, const kRay &ray, kRange trange, kHitRec
 
 kVec3 RandomVec3()
 {
-	float x = kRandomFloat();
-	float y = kRandomFloat();
-	float z = kRandomFloat();
+	float x = kRandomFloat01();
+	float y = kRandomFloat01();
+	float z = kRandomFloat01();
 	return kVec3(x, y, z);
 }
 
@@ -171,7 +179,7 @@ bool Scatter(const Material &material, const kRay &ray, const kHitRecord &record
 	}
 	else if (material.Type == MaterialType::Metal)
 	{
-		kVec3 reflected      = Reflect(kNormalize(ray.Direction), record.Normal);
+		kVec3 reflected      = Reflect(ray.Direction, record.Normal);
 		scattered->Direction = kNormalize(reflected);
 		scattered->Origin    = record.Position;
 		*color               = material.Color;
@@ -206,11 +214,12 @@ kVec4 RayColor(const kRay &ray, int depth)
 	if (hit)
 	{
 		kRay  scattered;
-		kVec4 color;
+		kVec4 attenuation;
 
-		if (Scatter(Materials[material], ray, record, &color, &scattered))
+		if (Scatter(Materials[material], ray, record, &attenuation, &scattered))
 		{
-			return color * RayColor(scattered, depth - 1);
+			kVec4 color = RayColor(scattered, depth - 1);
+			return attenuation * color;
 		}
 		return kVec4(0);
 	}
@@ -293,7 +302,8 @@ void Render()
 				color += RayColor(ray, max_depth);
 			}
 
-			color /= (float)sample_count;
+			float inv = 1.0f / (float)sample_count;
+			color *= inv;
 
 			SetPixel(y, x, kLinearToSrgb(color));
 
@@ -345,8 +355,10 @@ void OnUpdateEvent(float dt, void *data)
 			kLaunchThread(RayTraceThread, 0, kThreadAttribute_Games);
 		}
 	}
+	static float colors[4];
 	ImGui::Text("Render Progress");
 	ImGui::ProgressBar(ProgressFraction);
+	ImGui::ColorPicker3("Color", colors, ImGuiColorEditFlags_Float);
 	ImGui::End();
 }
 

@@ -2,26 +2,38 @@
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
 
 	<Type Name="kString">
-		<Intrinsic Name="count" Expression="count" />
-		<Intrinsic Name="data" Expression="data" />
-		<DisplayString>{data,[count]}</DisplayString>
-		<StringView>data,[count]</StringView>
+		<Intrinsic Name="Count" Expression="Count" />
+		<Intrinsic Name="Items" Expression="Items" />
+		<DisplayString>{Items,[Count]}</DisplayString>
+		<StringView>Items,[Count]</StringView>
 		<Expand>
-			<Item Name="[count]" ExcludeView="simple">count</Item>
+			<Item Name="[Count]" ExcludeView="simple">Count</Item>
 			<ArrayItems>
-				<Size>count</Size>
-				<ValuePointer>data</ValuePointer>
+				<Size>Count</Size>
+				<ValuePointer>Items</ValuePointer>
 			</ArrayItems>
 		</Expand>
 	</Type>
 
 	<Type Name="kSpan&lt;*&gt;">
-		<DisplayString>{{ count={count} }}</DisplayString>
+		<DisplayString>{{ Count={Count} }}</DisplayString>
 		<Expand>
-			<Item Name="[count]" ExcludeView="simple">count</Item>
+			<Item Name="[Count]" ExcludeView="simple">Count</Item>
 			<ArrayItems>
-				<Size>count</Size>
-				<ValuePointer>data</ValuePointer>
+				<Size>Count</Size>
+				<ValuePointer>Items</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+
+	<Type Name="kArray&lt;*&gt;">
+		<DisplayString>{{ Count={Count} }}</DisplayString>
+		<Expand>
+			<Item Name="[Count]" ExcludeView="simple">Count</Item>
+			<Item Name="[Capacity]" ExcludeView="simple">Capacity</Item>
+			<ArrayItems>
+				<Size>Count</Size>
+				<ValuePointer>Items</ValuePointer>
 			</ArrayItems>
 		</Expand>
 	</Type>
@@ -87,18 +99,6 @@
 			<Item Name="[x]" ExcludeView="simple">x</Item>
 			<Item Name="[y]" ExcludeView="simple">y</Item>
 			<Item Name="[z]" ExcludeView="simple">z</Item>
-		</Expand>
-	</Type>
-
-	<Type Name="kArray&lt;*&gt;">
-		<DisplayString>{{ count={count} }}</DisplayString>
-		<Expand>
-			<Item Name="[count]" ExcludeView="simple">count</Item>
-			<Item Name="[allocated]" ExcludeView="simple">allocated</Item>
-			<ArrayItems>
-				<Size>count</Size>
-				<ValuePointer>data</ValuePointer>
-			</ArrayItems>
 		</Expand>
 	</Type>
 

@@ -1754,22 +1754,6 @@ kVec2 kReflect(kVec2 d, kVec2 n)
 //
 //
 
-// https://en.wikipedia.org/wiki/SRGB#Specification_of_the_transformation
-kVec3 kLinearToSrgb(kVec3 col)
-{
-	const kMat3 Transforms{kVec3(0.4142f, 0.3576f, 0.1805f), kVec3(0.2126f, 0.7152f, 0.0722f),
-	                       kVec3(0.0193f, 0.1192f, 0.9505f)};
-
-	kVec3       res = Transforms * col;
-	return res;
-}
-
-kVec4 kLinearToSrgb(kVec4 col)
-{
-	kVec4 res = kVec4(kLinearToSrgb(col.xyz), col.w);
-	return res;
-}
-
 kVec3 kLinearToSrgb(kVec3 col, float gamma)
 {
 	float igamma = 1.0f / gamma;
@@ -1783,20 +1767,6 @@ kVec3 kLinearToSrgb(kVec3 col, float gamma)
 kVec4 kLinearToSrgb(kVec4 col, float gamma)
 {
 	kVec4 res = kVec4(kLinearToSrgb(col.xyz, gamma), col.w);
-	return res;
-}
-
-kVec3 kSrgbToLinear(kVec3 col)
-{
-	const kMat3 Transforms{kVec3(+3.2406f, -1.5372f, -0.4986f), kVec3(-0.9689f, +1.8758f, +0.0415f),
-	                       kVec3(+0.0557f, -0.2040f, +1.0570f)};
-	kVec3       res = Transforms * col;
-	return res;
-}
-
-kVec4 kSrgbToLinear(kVec4 col)
-{
-	kVec4 res = kVec4(kSrgbToLinear(col.xyz), col.w);
 	return res;
 }
 
