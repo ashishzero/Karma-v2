@@ -41,29 +41,29 @@ kFile kOpenFile(kString mb_path, kFileAccess paccess, kFileShareMode pshare, kFi
 	path[len] = 0;
 
 	DWORD access = 0;
-	if (paccess == kFileAccess_Read)
+	if (paccess == kFileAccess::Read)
 		access = GENERIC_READ;
-	else if (paccess == kFileAccess_Write)
+	else if (paccess == kFileAccess::Write)
 		access = GENERIC_WRITE;
-	else if (paccess == kFileAccess_ReadWrite)
+	else if (paccess == kFileAccess::ReadWrite)
 		access = GENERIC_READ | GENERIC_WRITE;
 
 	DWORD share_mode = 0;
-	if (pshare == kFileShareMode_Read)
+	if (pshare == kFileShareMode::Read)
 		share_mode = FILE_SHARE_READ;
-	else if (pshare == kFileShareMode_Write)
+	else if (pshare == kFileShareMode::Write)
 		share_mode = FILE_SHARE_WRITE;
-	else if (pshare == kFileShareMode_ReadWrite)
+	else if (pshare == kFileShareMode::ReadWrite)
 		share_mode = FILE_SHARE_READ | FILE_SHARE_WRITE;
 
 	DWORD disposition = 0;
-	if (method == kFileMethod_CreateAlways)
+	if (method == kFileMethod::CreateAlways)
 		disposition = CREATE_ALWAYS;
-	else if (method == kFileMethod_CreateNew)
+	else if (method == kFileMethod::CreateNew)
 		disposition = CREATE_NEW;
-	else if (method == kFileMethod_OpenAlways)
+	else if (method == kFileMethod::OpenAlways)
 		disposition = OPEN_ALWAYS;
-	else if (method == kFileMethod_OpenExisting)
+	else if (method == kFileMethod::OpenExisting)
 		disposition = OPEN_EXISTING;
 
 	HANDLE file = CreateFileW(path, access, share_mode, NULL, disposition, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -152,7 +152,7 @@ umem kGetFileSize(kFile handle)
 
 kString kReadEntireFile(kString path)
 {
-	kFile handle = kOpenFile(path, kFileAccess_Read, kFileShareMode_Read, kFileMethod_OpenExisting);
+	kFile handle = kOpenFile(path, kFileAccess::Read, kFileShareMode::Read, kFileMethod::OpenExisting);
 	if (handle.Resource)
 	{
 		umem size = kGetFileSize(handle);
@@ -167,7 +167,7 @@ kString kReadEntireFile(kString path)
 
 bool kWriteEntireFile(kString path, u8 *buffer, umem size)
 {
-	kFile handle = kOpenFile(path, kFileAccess_Write, kFileShareMode_Read, kFileMethod_CreateAlways);
+	kFile handle = kOpenFile(path, kFileAccess::Write, kFileShareMode::Read, kFileMethod::CreateAlways);
 	if (handle.Resource)
 	{
 		umem written = kWriteFile(handle, buffer, size);
@@ -247,7 +247,7 @@ uint kGetFileAttributes(kString mb_path)
 
 u64 kGetFileLastModifiedTime(kString mb_filepath)
 {
-	kFile file = kOpenFile(mb_filepath, kFileAccess_Read, kFileShareMode_ReadWrite, kFileMethod_OpenExisting);
+	kFile file = kOpenFile(mb_filepath, kFileAccess::Read, kFileShareMode::ReadWrite, kFileMethod::OpenExisting);
 	if (file.Resource)
 	{
 		HANDLE   handle = file.Resource;
@@ -390,7 +390,7 @@ static bool kVisitDirectories(wchar_t *path, int len, kDirectoryVisitorProc visi
 
 			kDirectoryVisit r = visitor(item, data);
 
-			if ((item.attributes & kFileAttribute_Directory) && r == kDirectoryVisit_Recurse)
+			if ((item.attributes & kFileAttribute_Directory) && r == kDirectoryVisit::Recurse)
 			{
 				wchar_t append[] = L"\\*";
 				int     flen     = lstrlenW(find.cFileName);
@@ -407,7 +407,7 @@ static bool kVisitDirectories(wchar_t *path, int len, kDirectoryVisitorProc visi
 				if (!kVisitDirectories(subpath, sublen, visitor, data))
 					return false;
 			}
-			else if (r == kDirectoryVisit_Break)
+			else if (r == kDirectoryVisit::Break)
 			{
 				break;
 			}

@@ -8,6 +8,7 @@ project "Premake"
 	{
 		["Kr"] = { "../Kr/**" },
 		["Karma"] = { "../../Karma/**" },
+		["RayTrace"] = { "../../RayTrace/**" },
 		["Premake"] = { "**" },
 	}
 

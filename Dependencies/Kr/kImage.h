@@ -9,16 +9,17 @@ typedef struct kImage
 	u8 *Pixels;
 } kImage;
 
-typedef enum kImageFormat
+enum class kImageFileFormat
 {
-	kImageFormat_PNG,
-	kImageFormat_BMP,
-	kImageFormat_TGA,
-	kImageFormat_JPG,
-} kImageFormat;
+	PNG,
+	BMP,
+	TGA,
+	JPG,
+};
 
 typedef void (*kImageDataWriterProc)(void *ctx, void *data, int);
 
+kImage kAllocImage(int width, int height, int channels);
 bool kReadImage(kString buffer, kImage *image, int req_channels);
-bool kWriteImage(const kImage &image, kImageFormat format, kImageDataWriterProc proc, void *context);
+bool kWriteImage(const kImage &image, kImageFileFormat format, kImageDataWriterProc proc, void *context);
 void kFreeImage(const kImage &image);

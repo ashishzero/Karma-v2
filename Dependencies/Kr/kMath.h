@@ -1002,15 +1002,19 @@ constexpr void kUnpackRGBA(u32 c, u8 channels[4])
 
 constexpr u32 kPackRGBA(u8 r, u8 g, u8 b, u8 a)
 {
+	#if K_ENDIAN_LITTLE == 1
+	return ((u32)a << 24) | ((u32)b << 16) | ((u32)g << 8) | (u32)r;
+	#else
 	return ((u32)r << 24) | ((u32)g << 16) | ((u32)b << 8) | (u32)a;
+	#endif
 }
 
 constexpr u32 kColor4ToUint(kVec4 v)
 {
-	u8 r = static_cast<u8>(255.0f * v.x);
-	u8 g = static_cast<u8>(255.0f * v.y);
-	u8 b = static_cast<u8>(255.0f * v.z);
-	u8 a = static_cast<u8>(255.0f * v.w);
+	u8 r = (u8)kMin((int)(255.0f * v.x), 0xff);
+	u8 g = (u8)kMin((int)(255.0f * v.y), 0xff);
+	u8 b = (u8)kMin((int)(255.0f * v.z), 0xff);
+	u8 a = (u8)kMin((int)(255.0f * v.w), 0xff);
 	return kPackRGBA(r, g, b, a);
 }
 

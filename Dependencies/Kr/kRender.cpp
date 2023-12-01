@@ -350,7 +350,7 @@ void kBeginScene(const kCameraView &view, const kViewport &viewport)
 	kRenderScene *scene   = g_Render2D.Scenes[g_Render2D.RenderPass].Add();
 	scene->CameraView     = view;
 	scene->Viewport       = viewport;
-	scene->Commands       = kRange<u32>((u32)g_Render2D.Commands.Count);
+	scene->Commands       = kRangeT<u32>((u32)g_Render2D.Commands.Count);
 
 	g_Render2D.Rects.Add(g_Render2D.Stack.Rects.Last());
 	g_Render2D.OutLineStyles.Add(g_Render2D.Stack.OutLineStyles.Last());
@@ -381,7 +381,7 @@ void kEndScene(void)
 	}
 
 	kRenderScene *scene = &g_Render2D.Scenes[g_Render2D.RenderPass].Last();
-	scene->Commands.End = (u32)g_Render2D.Commands.Count;
+	scene->Commands.Max = (u32)g_Render2D.Commands.Count;
 
 	if (!scene->Commands.Length())
 	{

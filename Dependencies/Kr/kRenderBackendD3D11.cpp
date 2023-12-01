@@ -996,7 +996,7 @@ static void kD3D11_RenderFrame2D(const kRenderFrame2D &render)
 			if (!kD3D11_UploadTransform2D(proj))
 				return;
 
-			for (u32 index = scene.Commands.Beg; index < scene.Commands.End; ++index)
+			for (u32 index = scene.Commands.Min; index < scene.Commands.Max; ++index)
 			{
 				const kRenderCommand2D &cmd = render.Commands[index];
 

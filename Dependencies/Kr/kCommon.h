@@ -148,6 +148,22 @@
 #endif
 #endif
 
+#if !defined(K_ENDIAN_LITTLE) && !defined(K_ENDIAN_BIG)
+#define K_ENDIAN_LITTLE 1
+#endif
+
+#if K_ENDIAN_LITTLE == 1
+#if !defined(K_ENDIAN_BIG)
+#define K_ENDIAN_BIG 0
+#endif
+#endif
+
+#if K_ENDIAN_BIG == 1
+#if !defined(K_ENDIAN_LITTLE)
+#define K_ENDIAN_LITTLE 0
+#endif
+#endif
+
 #if K_PLATFORM_WINDOWS == 1
 #define K_EXPORT __declspec(dllexport)
 #define K_IMPORT __declspec(dllimport)
@@ -626,22 +642,45 @@ typedef struct kRect
 //
 
 template <typename T>
-struct kRange
+struct kRangeT
 {
-	T Beg;
-	T End;
+	T Min;
+	T Max;
 
-	inline kRange() : Beg(0), End(0)
+	inline kRangeT() : Min(0), Max(0)
 	{}
-	inline kRange(T r) : Beg(r), End(r)
+	inline kRangeT(T r) : Min(r), Max(r)
 	{}
-	inline kRange(T b, T e) : Beg(b), End(e)
+	inline kRangeT(T b, T e) : Min(b), Max(e)
 	{}
 	inline T Length(void)
 	{
-		return End - Beg;
+		return Max - Min;
 	}
 };
+
+using kRangei = kRangeT<int>;
+using kRange  = kRangeT<float>;
+
+template <typename Item>
+constexpr bool kRangeContains(const kRangeT<Item> &range, Item v)
+{
+	return range.Min <= v && v <= range.Max;
+}
+template <typename Item>
+constexpr bool kRangeSurrounds(const kRangeT<Item> &range, Item v)
+{
+	return range.Min < v && v < range.Max;
+}
+template <typename Item>
+constexpr Item kClamp(const kRangeT<Item> &range, Item v)
+{
+	return kClamp(range.Min, range.Max, v);
+}
+
+//
+//
+//
 
 template <typename Item>
 struct kSpan

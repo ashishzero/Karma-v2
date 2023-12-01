@@ -8,28 +8,28 @@ struct kFile
 	void *Resource;
 };
 
-typedef enum kFileAccess
+enum class kFileAccess
 {
-	kFileAccess_Read,
-	kFileAccess_Write,
-	kFileAccess_ReadWrite
-} kFileAccess;
+	Read,
+	Write,
+	ReadWrite
+};
 
-typedef enum kFileShareMode
+enum class kFileShareMode
 {
-	kFileShareMode_Exclusive,
-	kFileShareMode_Read,
-	kFileShareMode_Write,
-	kFileShareMode_ReadWrite
-} kFileShareMode;
+	Exclusive,
+	Read,
+	Write,
+	ReadWrite
+};
 
-typedef enum kFileMethod
+enum class kFileMethod
 {
-	kFileMethod_CreateAlways,
-	kFileMethod_CreateNew,
-	kFileMethod_OpenAlways,
-	kFileMethod_OpenExisting
-} kFileMethod;
+	CreateAlways,
+	CreateNew,
+	OpenAlways,
+	OpenExisting
+};
 
 typedef enum kFileAttribute
 {
@@ -45,12 +45,12 @@ typedef enum kFileAttribute
 	kFileAttribute_Temporary  = 0x200,
 } kFileAttribute;
 
-typedef enum kDirectoryVisit
+enum class kDirectoryVisit
 {
-	kDirectoryVisit_Next,
-	kDirectoryVisit_Break,
-	kDirectoryVisit_Recurse
-} kDirectoryVisit;
+	Next,
+	Break,
+	Recurse
+};
 
 typedef struct kDirectoryItem
 {
