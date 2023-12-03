@@ -379,7 +379,7 @@ static const kRenderPipelineConfig kDefaultRenderPipeline = {.Msaa              
                                                              .Hdr               = kHighDynamicRange_AES,
                                                              .Clear             = kVec4(0.1f, 0.1f, 0.1f, 1.0f),
                                                              .BloomFilterRadius = 0.005f,
-                                                             .BloomStrength     = 0.12f,
+                                                             .BloomStrength     = 0.05f,
                                                              .Intensity         = kVec3(1)};
 static const kWindowSpec           kDefaultWindow         = {.Width = 1280, .Height = 720};
 
