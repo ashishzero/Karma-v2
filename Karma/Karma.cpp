@@ -28,7 +28,7 @@ struct Rect
 
 constexpr int   MaxIterations    = 16;
 constexpr float MaxWorldSize     = 1000.0f;
-constexpr float MinWorldStep     = 1.0f / (MaxWorldSize * 100.0f);
+constexpr float MinPenetration   = 1.0f / MaxWorldSize;
 constexpr float MinDeltaTimeStep = 0.00001f;
 constexpr int   MaxContacts      = 2048;
 
@@ -87,8 +87,6 @@ struct ContactManifold
 
 CollisionType DetectCollision(State *states, Rect *rects, int n, ContactManifold *manifold)
 {
-	CollisionType type       = CollisionType::None;
-
 	manifold->Count          = 0;
 	manifold->MinPenetration = REAL_MAX;
 	manifold->MaxPenetration = REAL_MIN;
@@ -116,33 +114,18 @@ CollisionType DetectCollision(State *states, Rect *rects, int n, ContactManifold
 
 			if (p.x >= rmin.x && p.y <= rmax.x && p.y >= rmin.y && p.y <= rmax.y)
 			{
-				float    penetration = max_a.y - min_b.y;
-				kVec2    normal      = kVec2(0, 1);
+				float    penetration     = max_a.y - min_b.y;
+				kVec2    normal          = kVec2(0, 1);
 
-				Contact *r           = &manifold->Contacts[manifold->Count];
-				r->Ids[0]            = iter_a;
-				r->Ids[1]            = iter_b;
-				r->Normal            = -normal;
-				r->Penetration       = penetration;
-				r->Restitution       = 0.4f;
+				Contact *r               = &manifold->Contacts[manifold->Count];
+				r->Ids[0]                = iter_a;
+				r->Ids[1]                = iter_b;
+				r->Normal                = -normal;
+				r->Penetration           = penetration;
+				r->Restitution           = 0.4f;
 
-				if (penetration < manifold->MinPenetration)
-				{
-					manifold->MinPenetration = penetration;
-				}
-
-				if (penetration > manifold->MaxPenetration)
-				{
-					manifold->MaxPenetration = penetration;
-					if (penetration > MinDeltaTimeStep)
-					{
-						type = CollisionType::Penetrating;
-					}
-					else
-					{
-						type = CollisionType::Colliding;
-					}
-				}
+				manifold->MinPenetration = kMin(manifold->MinPenetration, penetration);
+				manifold->MaxPenetration = kMax(manifold->MaxPenetration, penetration);
 
 				manifold->Count += 1;
 				state_a.Flags |= State_IsColliding;
@@ -151,7 +134,9 @@ CollisionType DetectCollision(State *states, Rect *rects, int n, ContactManifold
 		}
 	}
 
-	return type;
+	if (manifold->MaxPenetration <= MinPenetration)
+		return CollisionType::Colliding;
+	return CollisionType::Penetrating;
 }
 
 void ResolveContacts(State *states, int n, float dt, ContactManifold &manifold)
@@ -197,7 +182,7 @@ void ResolveContacts(State *states, int n, float dt, ContactManifold &manifold)
 static kArray<State> g_Bodies;
 static kArray<State> g_Temp;
 static kArray<Rect>  g_Rects;
-static kArray<kVec4> g_Colors;
+static int           g_GiveUpCounts = 0;
 
 //
 //
@@ -247,7 +232,7 @@ void Tick(World *world, float t, float dt)
 
 		bool          resolve = true;
 
-		if (ct == CollisionType::Penetrating && manifold.MinPenetration > MinWorldStep)
+		if (ct == CollisionType::Penetrating && manifold.MinPenetration > MinPenetration)
 		{
 			target = (target - current) * 0.5f;
 
@@ -276,6 +261,7 @@ void Tick(World *world, float t, float dt)
 	if (step >= MinDeltaTimeStep)
 	{
 		// Give up
+		g_GiveUpCounts += 1;
 		Integrate(g_Temp.Items, (int)g_Temp.Count, t + current, step);
 		CollisionType ct = DetectCollision(g_Temp.Items, g_Rects.Items, (int)g_Temp.Count, &manifold);
 		if (ct != CollisionType::None)
@@ -302,7 +288,6 @@ void ResetWorld()
 
 	g_Rects.Resize(2);
 	g_Bodies.Resize(2);
-	g_Colors.Resize(2);
 
 	g_Rects[0]           = {};
 	g_Rects[1]           = {};
@@ -311,10 +296,7 @@ void ResetWorld()
 	g_Bodies[1]          = {};
 
 	g_Rects[0].Radius    = kVec2(75, 25);
-	g_Rects[1].Radius    = kVec2(5);
-
-	g_Colors[0]          = kVec4(0.2f, 0.7f, 0.1f, 1.0f);
-	g_Colors[1]          = kVec4(0.6f, 0.7f, 0.1f, 1.0f);
+	g_Rects[1].Radius    = kVec2(3);
 
 	g_Bodies[1].InvMass  = 1.0f / 1.0f;
 	g_Bodies[1].Gravity  = kVec2(0, -10);
@@ -355,8 +337,7 @@ void Update(World *world, float dt, float alpha)
 	if (kButtonPressed(kButton::Left))
 	{
 		g_Bodies.Add(State{.Position = kVec2(sx, sy), .InvMass = 1, .Gravity = kVec2(0, -10)});
-		g_Rects.Add(Rect{.Center = kVec2(0), .Radius = kVec2(5.0f)});
-		g_Colors.Add(kVec4(0.7f, 0.7f, 0.5f, 1.0f));
+		g_Rects.Add(Rect{.Center = kVec2(0), .Radius = kVec2(3.0f)});
 	}
 
 	kLineThickness(0.5f);
@@ -365,12 +346,17 @@ void Update(World *world, float dt, float alpha)
 
 	for (int iter = 0; iter < (int)g_Bodies.Count; ++iter)
 	{
-		kVec4 color = kVec4(1);
+		kVec4 outline = kVec4(1);
 
 		if (g_Bodies[iter].Flags & State_IsColliding)
-			color = kVec4(0.7f, 0.1f, 0.1f, 1.0f);
+			outline = kVec4(0.7f, 0.1f, 0.1f, 1.0f);
 
-		DrawBody(g_Bodies[iter], g_Rects[iter], g_Colors[iter], color);
+		kVec4 color = kVec4(0.7f, 0.7f, 0.5f, 1.0f);
+
+		if (g_Bodies[iter].InvMass == 0)
+			color.xyz *= 0.2f;
+
+		DrawBody(g_Bodies[iter], g_Rects[iter], color, outline);
 	}
 
 	kDrawCircle(kVec2(sx, sy), 1.0f, kVec4(1));
@@ -392,8 +378,7 @@ void Update(World *world, float dt, float alpha)
 	if (ImGui::Button("Reset"))
 		ResetWorld();
 
-	ImGui::Text("Position: %f, %f", kVec2Arg(g_Bodies[0].Position));
-	ImGui::Text("Velocity: %f, %f", kVec2Arg(g_Bodies[0].Velocity));
+	ImGui::Text("Giveups: %d", g_GiveUpCounts);
 
 	ImGui::End();
 }

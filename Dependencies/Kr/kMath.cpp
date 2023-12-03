@@ -18,7 +18,7 @@ kVec2 kArmInverse(float angle)
 }
 
 // https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
-bool kAlmostEqual(float a, float b, float delta)
+bool kNearlyEqual(float a, float b, float delta)
 {
 	float diff   = kAbsolute(a - b);
 	a            = kAbsolute(a);
@@ -31,46 +31,46 @@ bool kAlmostEqual(float a, float b, float delta)
 	return false;
 }
 
-bool kAlmostEqual(kVec2 a, kVec2 b, float delta)
+bool kNearlyEqual(kVec2 a, kVec2 b, float delta)
 {
-	return kAlmostEqual(a.x, b.x, delta) && kAlmostEqual(a.y, b.y, delta);
+	return kNearlyEqual(a.x, b.x, delta) && kNearlyEqual(a.y, b.y, delta);
 }
 
-bool kAlmostEqual(kVec3 a, kVec3 b, float delta)
+bool kNearlyEqual(kVec3 a, kVec3 b, float delta)
 {
-	return kAlmostEqual(a.x, b.x, delta) && kAlmostEqual(a.y, b.y, delta) && kAlmostEqual(a.z, b.z, delta);
+	return kNearlyEqual(a.x, b.x, delta) && kNearlyEqual(a.y, b.y, delta) && kNearlyEqual(a.z, b.z, delta);
 }
 
-bool kAlmostEqual(kVec4 a, kVec4 b, float delta)
+bool kNearlyEqual(kVec4 a, kVec4 b, float delta)
 {
-	return kAlmostEqual(a.x, b.x, delta) && kAlmostEqual(a.y, b.y, delta) && kAlmostEqual(a.z, b.z, delta) &&
-	       kAlmostEqual(a.w, b.w, delta);
+	return kNearlyEqual(a.x, b.x, delta) && kNearlyEqual(a.y, b.y, delta) && kNearlyEqual(a.z, b.z, delta) &&
+	       kNearlyEqual(a.w, b.w, delta);
 }
 
-bool kAlmostEqual(kBivec3 a, kBivec3 b, float delta)
+bool kNearlyEqual(kBivec3 a, kBivec3 b, float delta)
 {
-	return kAlmostEqual(a.yz, b.yz, delta) && kAlmostEqual(a.zx, b.zx, delta) && kAlmostEqual(a.xy, b.xy, delta);
+	return kNearlyEqual(a.yz, b.yz, delta) && kNearlyEqual(a.zx, b.zx, delta) && kNearlyEqual(a.xy, b.xy, delta);
 }
 
 bool kIsNull(float a)
 {
-	return kAlmostEqual(a, 0.0f);
+	return kNearlyEqual(a, 0.0f);
 }
 bool kIsNull(kVec2 a)
 {
-	return kAlmostEqual(a, kVec2(0.0f));
+	return kNearlyEqual(a, kVec2(0.0f));
 }
 bool kIsNull(kVec3 a)
 {
-	return kAlmostEqual(a, kVec3(0.0f));
+	return kNearlyEqual(a, kVec3(0.0f));
 }
 bool kIsNull(kVec4 a)
 {
-	return kAlmostEqual(a, kVec4(0.0f));
+	return kNearlyEqual(a, kVec4(0.0f));
 }
 bool kIsNull(kBivec3 a)
 {
-	return kAlmostEqual(a, kBivec3(0.0f));
+	return kNearlyEqual(a, kBivec3(0.0f));
 }
 bool kIsNull(int32_t a)
 {

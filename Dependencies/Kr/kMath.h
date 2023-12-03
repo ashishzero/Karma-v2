@@ -99,11 +99,11 @@ float kWrap(float min, float a, float max);
 kVec2 kArm(float angle);
 kVec2 kArmInverse(float angle);
 
-bool  kAlmostEqual(float a, float b, float delta = REAL_EPSILON);
-bool  kAlmostEqual(kVec2 a, kVec2 b, float delta = REAL_EPSILON);
-bool  kAlmostEqual(kVec3 a, kVec3 b, float delta = REAL_EPSILON);
-bool  kAlmostEqual(kVec4 a, kVec4 b, float delta = REAL_EPSILON);
-bool  kAlmostEqual(kBivec3 a, kBivec3 b, float delta = REAL_EPSILON);
+bool  kNearlyEqual(float a, float b, float delta = REAL_EPSILON);
+bool  kNearlyEqual(kVec2 a, kVec2 b, float delta = REAL_EPSILON);
+bool  kNearlyEqual(kVec3 a, kVec3 b, float delta = REAL_EPSILON);
+bool  kNearlyEqual(kVec4 a, kVec4 b, float delta = REAL_EPSILON);
+bool  kNearlyEqual(kBivec3 a, kBivec3 b, float delta = REAL_EPSILON);
 
 bool  kIsNull(float a);
 bool  kIsNull(kVec2 a);

@@ -325,7 +325,7 @@ kCameraView kOrthographicView(float aspect_ratio, float height)
 {
 	float halfx = aspect_ratio * 0.5f * kAbsolute(height);
 	float halfy = 0.5f * height;
-	return KOrthographicView(-halfx, halfx, -halfy, halfy, -1.0f, 1.0f);
+	return KOrthographicView(-halfx, halfx, halfy, -halfy, -1.0f, 1.0f);
 }
 
 //

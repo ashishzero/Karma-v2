@@ -579,8 +579,11 @@ static LRESULT kWin32_WndProc(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 			if (!kIsCursorCaptured() || !window->RawInput)
 			{
+				RECT rc;
+				GetClientRect(window->Wnd, &rc);
+				int    h      = rc.bottom - rc.top;
 				int    x      = GET_X_LPARAM(lparam);
-				int    y      = GET_Y_LPARAM(lparam);
+				int    y      = h - GET_Y_LPARAM(lparam);
 				kVec2i cursor = kVec2i(x, y);
 				kAddCursorEvent(cursor);
 			}
@@ -617,14 +620,18 @@ static LRESULT kWin32_WndProc(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				int   abs_y     = (int)((mouse->lLastY / 65535.0f) * height);
 				POINT pt        = {.x = abs_x, .y = abs_y};
 				ScreenToClient(wnd, &pt);
-				kVec2i cursor = kVec2i(pt.x, pt.y);
+
+				RECT rc;
+				GetClientRect(window->Wnd, &rc);
+				int    wheight = rc.bottom - rc.top;
+				kVec2i cursor  = kVec2i(pt.x, wheight - pt.y);
 				kAddCursorEvent(cursor);
 			}
 			else if (mouse->lLastX != 0 || mouse->lLastY != 0)
 			{
 				int    rel_x = mouse->lLastX;
 				int    rel_y = mouse->lLastY;
-				kVec2i delta = kVec2i(rel_x, rel_y);
+				kVec2i delta = kVec2i(rel_x, -rel_y);
 				kAddCursorDeltaEvent(delta);
 			}
 
