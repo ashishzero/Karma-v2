@@ -4,7 +4,8 @@
 
 #include <string.h>
 
-#define K_MAX_CIRCLE_SEGMENTS 512
+constexpr int kMaxCircleSegments = 512;
+constexpr int kMinCircleSegments = 32;
 
 //
 //
@@ -52,8 +53,8 @@ kRenderContext2D          g_Render2D;
 kRenderContextBuiltin     g_Builtin;
 static kRenderMemoryStats g_Memory;
 
-static float              Sines[K_MAX_CIRCLE_SEGMENTS];
-static float              Cosines[K_MAX_CIRCLE_SEGMENTS];
+static float              Sines[kMaxCircleSegments];
+static float              Cosines[kMaxCircleSegments];
 
 //
 //
@@ -70,33 +71,33 @@ static float kWrapTurns(float turns)
 
 static float kSinLookup(int index, int segments)
 {
-	float lookup = ((float)index / (float)segments) * (K_MAX_CIRCLE_SEGMENTS - 1);
+	float lookup = ((float)index / (float)segments) * (kMaxCircleSegments - 1);
 	int   a      = (int)lookup;
-	int   b      = (int)(a + 1) & (K_MAX_CIRCLE_SEGMENTS - 1);
+	int   b      = (int)(a + 1) & (kMaxCircleSegments - 1);
 	return kLerp(Sines[a], Sines[b], lookup - a);
 }
 
 static float kCosLookup(int index, int segments)
 {
-	float lookup = ((float)index / (float)segments) * (K_MAX_CIRCLE_SEGMENTS - 1);
+	float lookup = ((float)index / (float)segments) * (kMaxCircleSegments - 1);
 	int   a      = (int)lookup;
-	int   b      = (int)(a + 1) & (K_MAX_CIRCLE_SEGMENTS - 1);
+	int   b      = (int)(a + 1) & (kMaxCircleSegments - 1);
 	return kLerp(Cosines[a], Cosines[b], lookup - a);
 }
 
 static float kSinLookup(float turns)
 {
-	float lookup = turns * (K_MAX_CIRCLE_SEGMENTS - 1);
+	float lookup = turns * (kMaxCircleSegments - 1);
 	int   a      = (int)lookup;
-	int   b      = (int)(a + 1) & (K_MAX_CIRCLE_SEGMENTS - 1);
+	int   b      = (int)(a + 1) & (kMaxCircleSegments - 1);
 	return kLerp(Sines[a], Sines[b], lookup - a);
 }
 
 static float kCosLookup(float turns)
 {
-	float lookup = turns * (K_MAX_CIRCLE_SEGMENTS - 1);
+	float lookup = turns * (kMaxCircleSegments - 1);
 	int   a      = (int)lookup;
-	int   b      = (int)(a + 1) & (K_MAX_CIRCLE_SEGMENTS - 1);
+	int   b      = (int)(a + 1) & (kMaxCircleSegments - 1);
 	return kLerp(Cosines[a], Cosines[b], lookup - a);
 }
 
@@ -881,10 +882,12 @@ void kDrawRectCenteredRotated(kVec2 pos, kVec2 dim, float angle, kRect rect, kVe
 
 void kDrawEllipse(kVec3 pos, float radius_a, float radius_b, kVec4 color)
 {
-	int   segments = (int)kCeil(2 * K_PI * kSquareRoot(0.5f * (radius_a * radius_a + radius_b * radius_b)));
+	int segments = (int)kCeil(2 * K_PI * kSquareRoot(0.5f * (radius_a * radius_a + radius_b * radius_b)));
+	if (segments < kMinCircleSegments)
+		segments = kMinCircleSegments;
 
-	float px       = Cosines[0] * radius_a;
-	float py       = Sines[0] * radius_b;
+	float px = Cosines[0] * radius_a;
+	float py = Sines[0] * radius_b;
 
 	float npx, npy;
 	for (int index = 1; index <= segments; ++index)
@@ -927,7 +930,10 @@ void kDrawPie(kVec3 pos, float radius_a, float radius_b, float theta_a, float th
 	}
 
 	float segments =
-		kCeil(2 * K_PI * kSquareRoot(0.5f * (radius_a * radius_a + radius_b * radius_b)) / (theta_b - theta_a));
+		kCeil(2.0f * (float)K_PI * kSquareRoot(0.5f * (radius_a * radius_a + radius_b * radius_b)) / (theta_b - theta_a));
+	if (segments < kMinCircleSegments)
+		segments = kMinCircleSegments;
+
 	float dt = 1.0f / segments;
 
 	float px = kCosLookup(theta_a) * radius_a;
@@ -974,14 +980,17 @@ void kDrawPiePart(kVec3 pos, float radius_a_min, float radius_b_min, float radiu
 		theta_b = t;
 	}
 
-	float segments = kCeil(2 * K_PI * kSquareRoot(0.5f * (radius_a_max * radius_a_max + radius_b_max * radius_b_max)) /
+	float segments = kCeil(2.0f * (float)K_PI * kSquareRoot(0.5f * (radius_a_max * radius_a_max + radius_b_max * radius_b_max)) /
 	                       (theta_b - theta_a));
-	float dt       = 1.0f / segments;
+	if (segments < kMinCircleSegments)
+		segments = kMinCircleSegments;
 
-	float min_px   = kCosLookup(theta_a) * radius_a_min;
-	float min_py   = kSinLookup(theta_a) * radius_b_min;
-	float max_px   = kCosLookup(theta_a) * radius_a_max;
-	float max_py   = kSinLookup(theta_a) * radius_b_max;
+	float dt     = 1.0f / segments;
+
+	float min_px = kCosLookup(theta_a) * radius_a_min;
+	float min_py = kSinLookup(theta_a) * radius_b_min;
+	float max_px = kCosLookup(theta_a) * radius_a_max;
+	float max_py = kSinLookup(theta_a) * radius_b_max;
 
 	float min_npx, min_npy;
 	float max_npx, max_npy;
@@ -1068,7 +1077,10 @@ void kArcTo(kVec2 position, float radius_a, float radius_b, float theta_a, float
 	}
 
 	float segments =
-		kCeil(2 * K_PI * kSquareRoot(0.5f * (radius_a * radius_a + radius_b * radius_b)) / (theta_b - theta_a));
+		kCeil(2.0f * (float)K_PI * kSquareRoot(0.5f * (radius_a * radius_a + radius_b * radius_b)) / (theta_b - theta_a));
+	if (segments < kMinCircleSegments)
+		segments = kMinCircleSegments;
+
 	float dt = 1.0f / segments;
 
 	float npx, npy;
@@ -1084,6 +1096,8 @@ void kBezierQuadraticTo(kVec2 a, kVec2 b, kVec2 c)
 {
 	imem index    = g_Render2D.Stack.Paths.Count;
 	int  segments = (int)kCeil(kLength(a) + kLength(b) + kLength(c));
+	if (segments < kMinCircleSegments)
+		segments = kMinCircleSegments;
 	if (g_Render2D.Stack.Paths.Resize(g_Render2D.Stack.Paths.Count + segments + 1))
 		kBuildBezierQuadratic(a, b, c, &g_Render2D.Stack.Paths[index], segments);
 }
@@ -1092,6 +1106,8 @@ void kBezierCubicTo(kVec2 a, kVec2 b, kVec2 c, kVec2 d)
 {
 	imem index    = g_Render2D.Stack.Paths.Count;
 	int  segments = (int)kCeil(kLength(a) + kLength(b) + kLength(c));
+	if (segments < kMinCircleSegments)
+		segments = kMinCircleSegments;
 	if (g_Render2D.Stack.Paths.Resize(g_Render2D.Stack.Paths.Count + segments + 1))
 		kBuildBezierCubic(a, b, c, d, &g_Render2D.Stack.Paths[index], segments);
 }
@@ -1357,7 +1373,10 @@ void kDrawRectCenteredOutline(kVec2 pos, kVec2 dim, kVec4 color)
 
 void kDrawEllipseOutline(kVec3 pos, float radius_a, float radius_b, kVec4 color)
 {
-	int   segments = (int)kCeil(2 * K_PI * kSquareRoot(0.5f * (radius_a * radius_a + radius_b * radius_b)));
+	int segments = (int)kCeil(2 * K_PI * kSquareRoot(0.5f * (radius_a * radius_a + radius_b * radius_b)));
+	if (segments < kMinCircleSegments)
+		segments = kMinCircleSegments;
+
 	float npx, npy;
 	for (int index = 0; index <= segments; ++index)
 	{
@@ -1869,15 +1888,15 @@ void kDrawText(kString text, kVec2 pos, kVec4 color, float scale)
 
 void kCreateRenderContext(const kRenderSpec &spec, kTexture textures[kTextureType_Count], kFont *font)
 {
-	for (u32 i = 0; i < K_MAX_CIRCLE_SEGMENTS; ++i)
+	for (u32 i = 0; i < kMaxCircleSegments; ++i)
 	{
-		float theta = ((float)i / (float)(K_MAX_CIRCLE_SEGMENTS - 1));
+		float theta = ((float)i / (float)(kMaxCircleSegments - 1));
 		Cosines[i]  = kCos(theta);
 		Sines[i]    = kSin(theta);
 	}
 
-	Cosines[K_MAX_CIRCLE_SEGMENTS - 1] = 1;
-	Sines[K_MAX_CIRCLE_SEGMENTS - 1]   = 0;
+	Cosines[kMaxCircleSegments - 1] = 1;
+	Sines[kMaxCircleSegments - 1]   = 0;
 
 	for (u32 i = 0; i < kTextureType_Count; ++i)
 		g_Builtin.Textures[i] = textures[i];

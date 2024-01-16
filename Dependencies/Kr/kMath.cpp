@@ -1,12 +1,6 @@
 #include "kMath.h"
-
-float kWrap(float min, float a, float max)
-{
-	float range  = max - min;
-	float offset = a - min;
-	float result = (offset - (kFloor(offset / range) * range) + min);
-	return result;
-}
+#include <string.h>
+#include <immintrin.h>
 
 kVec2 kArm(float angle)
 {
@@ -866,7 +860,7 @@ kVec3 kRotor3ToEulerAngles(kRotor3 q)
 	if (kAbsolute(sinp) >= 1.0f)
 	{
 		// use 90 degrees if out of range
-		angles.x = kCopySign(K_PI / 2, sinp);
+		angles.x = kCopySign((float)(K_PI / 2.0), sinp);
 	}
 	else
 	{
@@ -1873,4 +1867,51 @@ kVec4 kHsvToRgb(kVec4 c)
 kVec4 kRgbToHsv(kVec4 c)
 {
 	return kVec4(kRgbToHsv(c.xyz), c.w);
+}
+
+template <typename T>
+int kSolveGaussSeidelT(T *A, T *x, T *b, T *o, int n, int max_iters, T epsilon)
+{
+	int iter = 0;
+
+	for (; iter < max_iters; ++iter)
+	{
+		T err = 0;
+
+		for (int j = 0; j < n; ++j)
+		{
+			T *a  = &A[j * n];
+
+			T  f1 = 0;
+			for (int k = 0; k < j; ++k)
+				f1 += a[k] * x[k];
+
+			T f2 = 0;
+			for (int k = j + 1; k < n; ++k)
+				f2 += a[k] * x[k];
+
+			T out = (b[j] - f1 - f2) / a[j];
+			err   = kMax(err, kAbsolute(out - x[j]));
+			x[j]  = out;
+		}
+
+		if (err < epsilon)
+		{
+			break;
+		}
+	}
+
+	Memcpy(o, x, n * sizeof(T));
+
+	return iter;
+}
+
+int kSolveGaussSeidel(float *A, float *x, float *b, float *o, int n, int max_iters, float epsilon)
+{
+	return kSolveGaussSeidelT(A, x, b, o, n, max_iters, epsilon);
+}
+
+int kSolveGaussSeidel(double *A, double *x, double *b, double *o, int n, int max_iters, double epsilon)
+{
+	return kSolveGaussSeidelT(A, x, b, o, n, max_iters, epsilon);
 }

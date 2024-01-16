@@ -1,7 +1,7 @@
 #pragma once
 #include "kCommon.h"
 
-#include <math.h>
+#include <cmath>
 
 #define kVec2Arg(v)   (v).x, (v).y
 #define kVec3Arg(v)   (v).x, (v).y, (v).z
@@ -30,72 +30,95 @@ inproc kVec4 kSgn(kVec4 v)
 	return kVec4(kSgn(v.x), kSgn(v.y), kSgn(v.z), kSgn(v.w));
 }
 
-inproc float kAbsolute(float x)
+template <typename T>
+inproc T kAbsolute(T x)
 {
-	return fabsf(x);
+	return std::fabs(x);
 }
-inproc float kSin(float x)
+template <typename T>
+inproc T kSin(T x)
 {
-	return sinf(kTurnToRad * (x));
+	return std::sin((T)kTurnToRad * (x));
 }
-inproc float kCos(float x)
+template <typename T>
+inproc T kCos(T x)
 {
-	return cosf(kTurnToRad * (x));
+	return std::cos((T)kTurnToRad * (x));
 }
-inproc float kTan(float x)
+template <typename T>
+inproc T kTan(T x)
 {
-	return tanf(kTurnToRad * (x));
+	return std::tan((T)kTurnToRad * (x));
 }
-inproc float kArcSin(float x)
+template <typename T>
+inproc T kArcSin(T x)
 {
-	return kRadToTurn * (asinf(x));
+	return (T)(kRadToTurn * (std::asin(x)));
 }
-inproc float kArcCos(float x)
+template <typename T>
+inproc T kArcCos(T x)
 {
-	return kRadToTurn * (acosf(x));
+	return (T)(kRadToTurn * (std::acos(x)));
 }
-inproc float kArcTan2(float y, float x)
+template <typename T>
+inproc T kArcTan2(T y, T x)
 {
-	return kRadToTurn * (atan2f(y, x));
+	return (T)(kRadToTurn * (std::atan2(y, x)));
 }
-inproc float kSquareRoot(float x)
+template <typename T>
+inproc T kSquareRoot(T x)
 {
-	return sqrtf(x);
+	return std::sqrt(x);
 }
-inproc float kPow(float x, float y)
+template <typename T>
+inproc T kPow(T x, T y)
 {
-	return powf(x, y);
+	return std::pow(x, y);
 }
-inproc float kCopySign(float x, float y)
+template <typename T>
+inproc T kCopySign(T x, T y)
 {
-	return copysignf(x, y);
+	return std::copysign(x, y);
 }
-inproc float kMod(float x, float y)
+template <typename T>
+inproc T kMod(T x, T y)
 {
-	return fmodf(x, y);
+	return std::fmod(x, y);
 }
-inproc float kSquare(float x)
+template <typename T>
+inproc T kSquare(T x)
 {
 	return (x * x);
 }
-inproc float kFloor(float x)
+template <typename T>
+inproc T kFloor(T x)
 {
-	return floorf(x);
+	return std::floor(x);
 }
-inproc float kRound(float x)
+template <typename T>
+inproc T kRound(T x)
 {
-	return roundf(x);
+	return std::round(x);
 }
-inproc float kCeil(float x)
+template <typename T>
+inproc T kCeil(T x)
 {
-	return ceilf(x);
+	return std::ceil(x);
 }
 
 //
 //
 //
 
-float kWrap(float min, float a, float max);
+template <typename T>
+inproc T kWrap(T min, T a, T max)
+{
+	T range  = max - min;
+	T offset = a - min;
+	T result = (offset - (kFloor(offset / range) * range) + min);
+	return result;
+}
+
 kVec2 kArm(float angle);
 kVec2 kArmInverse(float angle);
 
@@ -1002,11 +1025,11 @@ constexpr void kUnpackRGBA(u32 c, u8 channels[4])
 
 constexpr u32 kPackRGBA(u8 r, u8 g, u8 b, u8 a)
 {
-	#if K_ENDIAN_LITTLE == 1
+#if K_ENDIAN_LITTLE == 1
 	return ((u32)a << 24) | ((u32)b << 16) | ((u32)g << 8) | (u32)r;
-	#else
+#else
 	return ((u32)r << 24) | ((u32)g << 16) | ((u32)b << 8) | (u32)a;
-	#endif
+#endif
 }
 
 constexpr u32 kColor4ToUint(kVec4 v)
@@ -1054,3 +1077,10 @@ kVec3 kHsvToRgb(kVec3 c);
 kVec3 kRgbToHsv(kVec3 c);
 kVec4 kHsvToRgb(kVec4 c);
 kVec4 kRgbToHsv(kVec4 c);
+
+//
+//
+//
+
+int kSolveGaussSeidel(float *A, float *x, float *b, float *o, int n, int max_iters, float epsilon = FLT_EPSILON);
+int kSolveGaussSeidel(double *A, double *x, double *b, double *o, int n, int max_iters, double epsilon = DBL_EPSILON);

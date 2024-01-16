@@ -289,8 +289,8 @@ typedef ptrdiff_t imem;
 #define REAL_MAX       REAL32_MAX
 #define REAL_EPSILON   FLT_EPSILON
 
-#define K_PI           (3.1415926535f)
-#define K_PI_INVERSE   (1.0f / K_PI)
+#define K_PI           (3.1415926535)
+#define K_PI_INVERSE   (1.0 / K_PI)
 #define K_TAU          (K_PI / 2)
 
 #define kArrayCount(a) (sizeof(a) / sizeof((a)[0]))
@@ -336,6 +336,11 @@ template <typename Item, typename U>
 constexpr Item kAlignDown(Item x, U p)
 {
 	return ((x) & ~((p)-1));
+}
+template <typename T>
+constexpr bool kIsAligned(T x, umem alignment)
+{
+	return (((umem)(x) & (alignment - 1)) == 0);
 }
 
 template <typename Item, typename U>
@@ -383,10 +388,10 @@ inproc constexpr umem  kKiloByte  = (1024ULL);
 inproc constexpr umem  kMegaByte  = (kKiloByte * 1024ULL);
 inproc constexpr umem  kGegaByte  = (kMegaByte * 1024ULL);
 
-inproc constexpr float kDegToRad  = ((K_PI / 180.0f));
-inproc constexpr float kRadToDeg  = ((180.0f / K_PI));
-inproc constexpr float kRadToTurn = (1.0f / (2.0f * K_PI));
-inproc constexpr float kTurnToRad = (2.0f * K_PI);
+inproc constexpr double kDegToRad  = ((K_PI / 180.0));
+inproc constexpr double kRadToDeg  = ((180.0 / K_PI));
+inproc constexpr double kRadToTurn = (1.0 / (2.0 * K_PI));
+inproc constexpr double kTurnToRad = (2.0 * K_PI);
 
 #define kAlignNative alignas(sizeof(void *))
 
@@ -941,6 +946,9 @@ void       kPopSize(kArena *arena, umem size, uint flags);
 
 kTempBlock kBeginTemporaryMemory(kArena *arena, uint flags);
 void       kEndTemporaryMemory(kTempBlock *temp, uint flags);
+
+void       Memcpy(void *dst, void *src, umem sz);
+void       Memmov(void *dst, void *src, umem sz);
 
 //
 //

@@ -223,6 +223,16 @@ void kEndTemporaryMemory(kTempBlock *temp, uint flags)
 	UnlockSyncFlaggedArena(temp->Arena, flags);
 }
 
+void Memcpy(void *dst, void *src, umem sz)
+{
+	memcpy(dst, src, sz);
+}
+
+void Memmov(void *dst, void *src, umem sz)
+{
+	memmove(dst, src, sz);
+}
+
 //
 //
 //
