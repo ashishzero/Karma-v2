@@ -45,6 +45,15 @@ typedef struct kRenderCommand2D
 	u32            IndexCount;
 } kRenderCommand2D;
 
+typedef struct kRenderCommand3D
+{
+	u32      Flags;
+	kMat4    Transform;
+	kMesh    Mesh;
+	kTexture Diffuse;
+	kVec4    Color;
+} kRenderCommand3D;
+
 struct kOrthographicViewData
 {
 	float Left;
@@ -77,6 +86,7 @@ typedef struct kCameraView
 		kOrthographicViewData Orthographic;
 		kPerspectiveViewData  Perspective;
 	};
+	kMat4 Transform;
 } kCameraView;
 
 typedef struct kViewport
@@ -87,20 +97,26 @@ typedef struct kViewport
 
 typedef struct kRenderScene
 {
-	kCameraView CameraView;
-	kViewport   Viewport;
+	kCameraView  CameraView;
+	kViewport    Viewport;
 	kRangeT<u32> Commands;
 } kRenderScene;
 
 typedef struct kRenderFrame2D
 {
-	kSpan<kRenderScene>     Scenes[kRenderPass_Count];
+	kSpan<kRenderScene>     Scenes[(int)kRenderPass::Count];
 	kSpan<kRenderCommand2D> Commands;
 	kSpan<kRect>            Rects;
 	kSpan<kVec4>            OutLineStyles;
 	kSpan<kVertex2D>        Vertices;
 	kSpan<kIndex2D>         Indices;
 } kRenderFrame2D;
+
+typedef struct kRenderFrame3D
+{
+	kSpan<kRenderScene>     Scenes;
+	kSpan<kRenderCommand3D> Commands;
+} kRenderFrame3D;
 
 //
 //
@@ -109,4 +125,5 @@ typedef struct kRenderFrame2D
 typedef struct kRenderFrame
 {
 	kRenderFrame2D Frame2D;
+	kRenderFrame3D Frame3D;
 } kRenderFrame;

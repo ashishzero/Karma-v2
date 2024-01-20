@@ -10,6 +10,11 @@
 #include <dwmapi.h>
 #include <avrt.h>
 
+#include <initguid.h>
+#include <mmdeviceapi.h>
+#include <Audioclient.h>
+#include <Functiondiscoverykeys_devpkey.h>
+
 #include "kResource.h"
 #include "ImGui/imgui_impl_win32.h"
 
@@ -45,8 +50,23 @@
 #pragma comment(lib, "Shcore.lib") // GetDpiForMonitor
 #pragma comment(lib, "Dwmapi.lib") // DwmSetWindowAttribute
 
+DEFINE_GUID(WIN32_CLSID_MMDeviceEnumerator, 0xbcde0395, 0xe52f, 0x467c, 0x8e, 0x3d, 0xc4, 0x57, 0x92, 0x91, 0x69, 0x2e);
+DEFINE_GUID(WIN32_IID_IUnknown, 0x00000000, 0x0000, 0x0000, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46);
+DEFINE_GUID(WIN32_IID_IMMDeviceEnumerator, 0xa95664d2, 0x9614, 0x4f35, 0xa7, 0x46, 0xde, 0x8d, 0xb6, 0x36, 0x17, 0xe6);
+DEFINE_GUID(WIN32_IID_IMMNotificationClient, 0x7991eec9, 0x7e89, 0x4d85, 0x83, 0x90, 0x6c, 0x70, 0x3c, 0xec, 0x60,
+            0xc0);
+DEFINE_GUID(WIN32_IID_IMMEndpoint, 0x1BE09788, 0x6894, 0x4089, 0x85, 0x86, 0x9A, 0x2A, 0x6C, 0x26, 0x5A, 0xC5);
+DEFINE_GUID(WIN32_IID_IAudioClient, 0x1cb9ad4c, 0xdbfa, 0x4c32, 0xb1, 0x78, 0xc2, 0xf5, 0x68, 0xa7, 0x03, 0xb2);
+DEFINE_GUID(WIN32_IID_IAudioRenderClient, 0xf294acfc, 0x3146, 0x4483, 0xa7, 0xbf, 0xad, 0xdc, 0xa7, 0xc2, 0x60, 0xe2);
+DEFINE_GUID(WIN32_IID_IAudioCaptureClient, 0xc8adbd64, 0xe71e, 0x48a0, 0xa4, 0xde, 0x18, 0x5c, 0x39, 0x5c, 0xd3, 0x17);
+DEFINE_GUID(WIN32_KSDATAFORMAT_SUBTYPE_PCM, 0x00000001, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71);
+DEFINE_GUID(WIN32_KSDATAFORMAT_SUBTYPE_IEEE_FLOAT, 0x00000003, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b,
+            0x71);
+DEFINE_GUID(WIN32_KSDATAFORMAT_SUBTYPE_WAVEFORMATEX, 0x00000000L, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38,
+            0x9b, 0x71);
+
 //
-//
+// Window
 //
 
 typedef struct kWin32Window
@@ -767,6 +787,173 @@ static LRESULT kWin32_WndProc(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 	return 0;
 }
+
+//
+// Audio
+//
+
+enum kAudioCommand
+{
+	kAudioCommand_Update,
+	kAudioCommand_Resume,
+	kAudioCommand_Pause,
+	kAudioCommand_Reset,
+	kAudioCommand_SwitchDevice,
+	kAudioCommand_Terminate,
+	kAudioCommand_Count
+};
+
+enum kAudioEndpointKind
+{
+	kAudioEndpointKind_Render,
+	kAudioEndpointKind_Capture,
+	kAudioEndpointKind_Count,
+};
+
+//class kWin32NotificationClient : IMMNotificationClient
+//{
+//  public:
+//	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, _COM_Outptr_ void __RPC_FAR *__RPC_FAR *ppvObject)
+//	{
+//		if (memcmp(&WIN32_IID_IUnknown, (void *)&riid, sizeof(GUID)) == 0)
+//		{
+//			*ppvObject = (IUnknown *)this;
+//		}
+//		else if (memcmp(&WIN32_IID_IMMNotificationClient, (void *)&riid, sizeof(GUID)) == 0)
+//		{
+//			*ppvObject = (IMMNotificationClient *)this;
+//		}
+//		else
+//		{
+//			*ppvObject = 0;
+//			return E_NOINTERFACE;
+//		}
+//		return S_OK;
+//	}
+//
+//	virtual ULONG STDMETHODCALLTYPE AddRef(void)
+//	{
+//		return 1;
+//	}
+//
+//	virtual ULONG STDMETHODCALLTYPE Release(void)
+//	{
+//		return 1;
+//	}
+//
+//	virtual HRESULT STDMETHODCALLTYPE OnDeviceStateChanged(_In_ LPCWSTR dev_id, _In_ DWORD state)
+//	{}
+//
+//	virtual HRESULT STDMETHODCALLTYPE OnDeviceAdded(_In_ LPCWSTR dev_id)
+//	{
+//		return S_OK;
+//	}
+//
+//	virtual HRESULT STDMETHODCALLTYPE OnDeviceRemoved(_In_ LPCWSTR pwstrDeviceId)
+//	{
+//		return S_OK;
+//	}
+//
+//	virtual HRESULT STDMETHODCALLTYPE OnDefaultDeviceChanged(_In_ EDataFlow flow, _In_ ERole role,
+//	                                                         _In_opt_ LPCWSTR dev_id)
+//	{}
+//
+//	virtual HRESULT STDMETHODCALLTYPE OnPropertyValueChanged(_In_ LPCWSTR dev_id, _In_ const PROPERTYKEY key)
+//	{}
+//};
+//
+//static DWORD WINAPI PL_AudioThread(LPVOID param)
+//{
+//	kAudioEndpointKind kind   = (kAudioEndpointKind)(int)param;
+//
+//	HANDLE             thread = GetCurrentThread();
+//	SetThreadDescription(thread, kind == kAudioEndpointKind_Render ? L"Audio Render Thread" : L"Audio Capture Thread");
+//
+//	DWORD             task_index;
+//	HANDLE            avrt     = AvSetMmThreadCharacteristicsW(L"Pro Audio", &task_index);
+//
+//	PL_AudioEndpoint *endpoint = &Audio.Endpoints[kind];
+//
+//	PL_AudioEndpoint_RestartDevice(kind);
+//
+//	HRESULT hr;
+//
+//	while (1)
+//	{
+//		DWORD wait = WaitForMultipleObjects(kAudioCommand_Count, endpoint->Commands, FALSE, INFINITE);
+//
+//		if (wait == WAIT_OBJECT_0 + kAudioCommand_Update)
+//		{
+//			if (kind == kAudioEndpointKind_Render)
+//				PL_AudioEndpoint_RenderFrames();
+//			else
+//				PL_AudioEndpoint_CaptureFrames();
+//		}
+//		else if (wait == WAIT_OBJECT_0 + kAudioCommand_Resume)
+//		{
+//			InterlockedExchange(&endpoint->Resumed, 1);
+//			if (!endpoint->DeviceLost)
+//			{
+//				hr = endpoint->Client->lpVtbl->Start(endpoint->Client);
+//				if (SUCCEEDED(hr) || hr == AUDCLNT_E_NOT_STOPPED)
+//				{
+//					PostThreadMessageW(Audio.ParentThreadId, PL_WM_AUDIO_RESUMED, PL_AudioEndpoint_Render, 0);
+//				}
+//				else
+//				{
+//					InterlockedExchange(&endpoint->DeviceLost, 1);
+//				}
+//			}
+//		}
+//		else if (wait == WAIT_OBJECT_0 + kAudioCommand_Pause)
+//		{
+//			InterlockedExchange(&endpoint->Resumed, 0);
+//			if (!endpoint->DeviceLost)
+//			{
+//				hr = endpoint->Client->lpVtbl->Stop(endpoint->Client);
+//				if (SUCCEEDED(hr))
+//				{
+//					if (!PostThreadMessageW(Audio.ParentThreadId, PL_WM_AUDIO_PAUSED, PL_AudioEndpoint_Render, 0))
+//					{
+//						kTriggerBreakpoint();
+//					}
+//				}
+//				else
+//				{
+//					InterlockedExchange(&endpoint->DeviceLost, 1);
+//				}
+//			}
+//		}
+//		else if (wait == WAIT_OBJECT_0 + kAudioCommand_Reset)
+//		{
+//			LONG resumed = InterlockedExchange(&endpoint->Resumed, 0);
+//			if (!endpoint->DeviceLost)
+//			{
+//				if (resumed)
+//				{
+//					endpoint->Client->lpVtbl->Stop(endpoint->Client);
+//				}
+//				hr = endpoint->Client->lpVtbl->Reset(endpoint->Client);
+//				if (FAILED(hr))
+//				{
+//					InterlockedExchange(&endpoint->DeviceLost, 1);
+//				}
+//			}
+//		}
+//		else if (wait == WAIT_OBJECT_0 + kAudioCommand_SwitchDevice)
+//		{
+//			PL_AudioEndpoint_RestartDevice(kind);
+//		}
+//		else if (wait == WAIT_OBJECT_0 + kAudioCommand_Terminate)
+//		{
+//			break;
+//		}
+//	}
+//
+//	AvRevertMmThreadCharacteristics(avrt);
+//
+//	return 0;
+//}
 
 //
 //

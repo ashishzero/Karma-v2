@@ -24,6 +24,14 @@ void kGetRenderPipelineConfigFallback(kRenderPipelineConfig *)
 void kApplyRenderPipelineConfigFallback(const kRenderPipelineConfig &)
 {}
 
+kMesh kCreateMeshFallback(const kMeshSpec&)
+{
+	return kMesh{};
+}
+
+void kDestroyMeshFallback(kMesh)
+{}
+
 kTexture kCreateTextureFallback(const kTextureSpec &)
 {
 	return kTexture{};
@@ -56,6 +64,9 @@ void kFallbackRenderBackend(kRenderBackend *backend)
 
 	backend->GetRenderPipelineConfig   = kGetRenderPipelineConfigFallback;
 	backend->ApplyRenderPipelineConfig = kApplyRenderPipelineConfigFallback;
+
+	backend->CreateMesh                = kCreateMeshFallback;
+	backend->DestroyMesh               = kDestroyMeshFallback;
 
 	backend->CreateTexture             = kCreateTextureFallback;
 	backend->DestroyTexture            = kDestroyTextureFallback;

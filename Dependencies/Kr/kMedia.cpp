@@ -15,13 +15,14 @@ static const kGlyph FallbackGlyph      = {
 
 typedef struct kMediaBuiltin
 {
+	kMesh    Meshes[kEmbeddedMesh_Count];
 	kTexture Texture;
 	kFont    Font;
 } kMediaBuiltin;
 
 typedef struct kMedia
 {
-	kArena *         Arena;
+	kArena          *Arena;
 	kArray<kEvent>   Events;
 	kKeyboardState   Keyboard;
 	kMouseState      Mouse;
@@ -507,7 +508,7 @@ void kUpdateFrame(float dt)
 	}
 
 	kRenderFrame frame;
-	kGetFrameData(&frame.Frame2D);
+	kGetFrameData(&frame);
 
 	g_Media.Render.ExecuteFrame(frame);
 	g_Media.Render.Present();
@@ -517,10 +518,29 @@ void kUpdateFrame(float dt)
 //
 //
 
-#include "Font/kFont.h"
+#include "Resources/kFont.h"
+#include "Resources/kMesh.h"
+
+static const kSpan<kVertex3D> kEmbeddedMeshVertices[kEmbeddedMesh_Count] = {kCubeVertices};
+static const kSpan<u32>       kEmbeddedMeshIndices[kEmbeddedMesh_Count]  = {kCubeIndices};
+static const kString          kEmbeddedMeshNames[kEmbeddedMesh_Count]    = {"CubeMesh"};
+
+//
+//
+//
 
 static void kCreateBuiltinResources(void)
 {
+	for (int i = 0; i < kEmbeddedMesh_Count; ++i)
+	{
+		kMeshSpec spec            = {};
+		spec.Vertices             = kEmbeddedMeshVertices[i];
+		spec.Indices              = kEmbeddedMeshIndices[i];
+		spec.Name                 = kEmbeddedMeshNames[i];
+
+		g_Media.Builtin.Meshes[i] = g_Media.Render.CreateMesh(spec);
+	}
+
 	{
 		u8           pixels[]   = {0xff, 0xff, 0xff, 0xff};
 
@@ -528,7 +548,7 @@ static void kCreateBuiltinResources(void)
 		spec.Width              = 1;
 		spec.Height             = 1;
 		spec.Pitch              = 1 * sizeof(u32);
-		spec.Format             = kFormat_RGBA8_UNORM;
+		spec.Format             = kFormat::RGBA8_UNORM;
 		spec.Pixels             = pixels;
 		spec.Name               = "White";
 
@@ -536,10 +556,10 @@ static void kCreateBuiltinResources(void)
 	}
 
 	{
-		kFont *      font = &g_Media.Builtin.Font;
+		kFont       *font = &g_Media.Builtin.Font;
 
 		kTextureSpec spec = {};
-		spec.Format       = kFormat_R8_UNORM;
+		spec.Format       = kFormat::R8_UNORM;
 		spec.Width        = kEmFontAtlasWidth;
 		spec.Height       = kEmFontAtlasHeight;
 		spec.Pitch        = kEmFontAtlasWidth;
@@ -588,6 +608,14 @@ static void kDestroyBuiltinResources(void)
 	{
 		g_Media.Render.DestroyTexture(g_Media.Builtin.Texture);
 	}
+
+	for (int i = 0; i < kEmbeddedMesh_Count; ++i)
+	{
+		if (g_Media.Builtin.Meshes[i].ID.Index)
+		{
+			g_Media.Render.DestroyMesh(g_Media.Builtin.Meshes[i]);
+		}
+	}
 }
 
 //
@@ -633,7 +661,7 @@ void ImCreateContext()
 	io.Fonts->Build();
 
 	ImGuiStyle &style                     = ImGui::GetStyle();
-	ImVec4 *    color                     = style.Colors;
+	ImVec4     *color                     = style.Colors;
 
 	color[ImGuiCol_Text]                  = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
 	color[ImGuiCol_TextDisabled]          = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
@@ -732,7 +760,7 @@ static int kLaunchEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user
 	for (int i = 0; i < kTextureType_Count; ++i)
 		textures[i] = g_Media.Builtin.Texture;
 
-	kCreateRenderContext(kDefaultRenderSpec, textures, &g_Media.Builtin.Font);
+	kCreateRenderContext(kDefaultRenderSpec, g_Media.Builtin.Meshes, textures, &g_Media.Builtin.Font);
 
 	kLogInfoEx("Windows", "Calling user load.");
 	kUserLoad();
@@ -763,7 +791,7 @@ static int kLaunchEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user
 int kEventLoop(const kMediaSpec &spec, const kMediaUserEvents &user)
 {
 	memset(&g_Media, 0, sizeof(g_Media));
-	int rc          = 0;
+	int rc           = 0;
 	g_Media.Relaunch = true;
 	while (g_Media.Relaunch)
 		rc = kLaunchEventLoop(spec, user);

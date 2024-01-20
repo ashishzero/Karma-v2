@@ -174,6 +174,19 @@ struct kEvent
 	};
 };
 
+enum class kAudioDeviceState
+{
+	Resume,
+	Pause,
+	Lost
+};
+
+enum class kAudioEndpoint
+{
+	Render,
+	Capture
+};
+
 enum kStateFlags
 {
 	kPressed       = 0x1,
@@ -242,51 +255,61 @@ void kFallbackUserUpdateProc(float dt, void *);
 //
 //
 
-kSpan<kEvent> kGetEvents(void);
-kArena       *kGetFrameArena(void);
+kSpan<kEvent>     kGetEvents(void);
+kArena           *kGetFrameArena(void);
 
-void          kGetUserEvents(kMediaUserEvents *user);
-void          kSetUserEvents(const kMediaUserEvents &user);
+void              kGetUserEvents(kMediaUserEvents *user);
+void              kSetUserEvents(const kMediaUserEvents &user);
 
-bool          kIsKeyDown(kKey key);
-bool          kKeyPressed(kKey key);
-bool          kKeyReleased(kKey key);
-u8            kKeyHits(kKey key);
-uint          kGetKeyModFlags(void);
+bool              kIsKeyDown(kKey key);
+bool              kKeyPressed(kKey key);
+bool              kKeyReleased(kKey key);
+u8                kKeyHits(kKey key);
+uint              kGetKeyModFlags(void);
 
-bool          kIsButtonDown(kButton button);
-bool          kButtonPressed(kButton button);
-bool          kButtonReleased(kButton button);
+bool              kIsButtonDown(kButton button);
+bool              kButtonPressed(kButton button);
+bool              kButtonReleased(kButton button);
 
-kVec2i        kGetCursorPosition(void);
-kVec2i        kGetCursorDelta(void);
-float         kGetWheelHorizontal(void);
-float         kGetWheelVertical(void);
+kVec2i            kGetCursorPosition(void);
+kVec2i            kGetCursorDelta(void);
+float             kGetWheelHorizontal(void);
+float             kGetWheelVertical(void);
 
-bool          kIsWindowClosed(void);
-bool          kIsWindowResized(void);
-void          kIgnoreWindowCloseEvent(void);
-bool          kIsWindowActive(void);
-bool          kIsWindowFullscreen(void);
-bool          kIsWindowMaximized(void);
-kVec2i        kGetWindowSize(void);
-float         kGetWindowAspectRatio(void);
-float         kGetWindowDpiScale(void);
+bool              kIsWindowClosed(void);
+bool              kIsWindowResized(void);
+void              kIgnoreWindowCloseEvent(void);
+bool              kIsWindowActive(void);
+bool              kIsWindowFullscreen(void);
+bool              kIsWindowMaximized(void);
+kVec2i            kGetWindowSize(void);
+float             kGetWindowAspectRatio(void);
+float             kGetWindowDpiScale(void);
 
-bool          kIsCursorCaptured(void);
-bool          kIsCursorHovered(void);
+bool              kIsCursorCaptured(void);
+bool              kIsCursorHovered(void);
 
-void          kGetKeyboardState(kKeyboardState *keyboard);
-void          kGetKeyState(kKeyState *state, kKey key);
-void          kGetMouseState(kMouseState *mouse);
-void          kGetButtonState(kKeyState *state, kButton button);
-void          kGetWindowState(kWindowState *state);
+void              kGetKeyboardState(kKeyboardState *keyboard);
+void              kGetKeyState(kKeyState *state, kKey key);
+void              kGetMouseState(kMouseState *mouse);
+void              kGetButtonState(kKeyState *state, kButton button);
+void              kGetWindowState(kWindowState *state);
 
-void          kSetKeyboardState(const kKeyboardState &keyboard);
-void          kSetKeyState(const kKeyState &state, kKey key);
-void          kSetKeyModFlags(uint mods);
-void          kSetMouseState(const kMouseState &mouse);
-void          kSetButtonState(const kKeyState &state, kButton button);
+void              kSetKeyboardState(const kKeyboardState &keyboard);
+void              kSetKeyState(const kKeyState &state, kKey key);
+void              kSetKeyModFlags(uint mods);
+void              kSetMouseState(const kMouseState &mouse);
+void              kSetButtonState(const kKeyState &state, kButton button);
+
+kAudioDeviceState kGetAudioDeviceState(kAudioEndpoint endpoint);
+void              kResumeAudioRender(void);
+void              kPauseAudioRender(void);
+void              kResetAudioRender(void);
+void              kUpdateAudioRender(void);
+void              kResumeAudioCapture(void);
+void              kPauseAudioCapture(void);
+void              kResetAudioCapture(void);
+void              kUpdateAudioCapture(void);
 
 //
 //
@@ -374,9 +397,9 @@ typedef struct kMediaSpec
 } kMediaSpec;
 
 static const kArenaSpec            kDefaultArena          = {.Alignment = sizeof(8), .Capacity = kMegaByte * 64};
-static const kRenderPipelineConfig kDefaultRenderPipeline = {.Msaa              = kMultiSamplingAntiAliasing_8,
-                                                             .Bloom             = kBloom_Enabled,
-                                                             .Hdr               = kHighDynamicRange_AES,
+static const kRenderPipelineConfig kDefaultRenderPipeline = {.Msaa              = kMultiSamplingAntiAliasing::x8,
+                                                             .Bloom             = kBloom::Enabled,
+                                                             .Hdr               = kHighDynamicRange::AES,
                                                              .Clear             = kVec4(0.1f, 0.1f, 0.1f, 1.0f),
                                                              .BloomFilterRadius = 0.005f,
                                                              .BloomStrength     = 0.05f,

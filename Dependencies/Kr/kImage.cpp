@@ -23,54 +23,42 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "Image/stb_image_write.h"
 
-kImage kAllocImage(int width, int height, int channels) 
+u8  *kReadImage(kString buffer, int *w, int *h, int *channels, int req_channels)
 {
-	u8 *pixels = (u8 *)kAlloc(width * height * channels * sizeof(u8));
-	if (pixels)
-	{
-		memset(pixels, 0, width * height * channels * sizeof(u8));
-		return kImage{.Width = width, .Height = height, .Channels = channels, .Pixels = pixels};
-	}
-	return kImage{0, 0, 0, 0};
-}
-
-bool kReadImage(kString buffer, kImage *image, int req_channels)
-{
-	image->Pixels = stbi_load_from_memory(buffer.Items, (int)buffer.Count, &image->Width, &image->Height,
-	                                      &image->Channels, req_channels);
-	if (!image->Pixels)
+	u8 *pixels = stbi_load_from_memory(buffer.Items, (int)buffer.Count, w, h, channels, req_channels);
+	if (!pixels)
 	{
 		const char *err = stbi_failure_reason();
 		kLogError("Failed to read image: %s", err);
-		return false;
+		return 0;
 	}
-	return true;
+	return pixels;
 }
 
-bool kWriteImage(const kImage &image, kImageFileFormat format, kImageDataWriterProc proc, void *context)
+bool kWriteImage(u8 *pixels, int w, int h, int channels, kImageFileFormat format, kImageDataWriterProc proc,
+                 void *context)
 {
 	int res = 0;
 	switch (format)
 	{
 		case kImageFileFormat::PNG:
-			res = stbi_write_png_to_func(proc, context, image.Width, image.Height, image.Channels, image.Pixels,
-			                             image.Width * image.Channels);
+			res = stbi_write_png_to_func(proc, context, w, h, channels, pixels, w * channels);
 			break;
 		case kImageFileFormat::BMP:
-			res = stbi_write_bmp_to_func(proc, context, image.Width, image.Height, image.Channels, image.Pixels);
+			res = stbi_write_bmp_to_func(proc, context, w, h, channels, pixels);
 			break;
 		case kImageFileFormat::TGA:
-			res = stbi_write_tga_to_func(proc, context, image.Width, image.Height, image.Channels, image.Pixels);
+			res = stbi_write_tga_to_func(proc, context, w, h, channels, pixels);
 			break;
 		case kImageFileFormat::JPG:
-			res = stbi_write_jpg_to_func(proc, context, image.Width, image.Height, image.Channels, image.Pixels, 0);
+			res = stbi_write_jpg_to_func(proc, context, w, h, channels, pixels, 0);
 			break;
 			kNoDefaultCase();
 	}
 	return res != 0;
 }
 
-void kFreeImage(const kImage &image)
+void kFreeImage(u8 *pixels, int w, int h, int channels)
 {
-	kFree(image.Pixels, image.Width * image.Height * image.Channels);
+	kFree(pixels, w * h * channels);
 }

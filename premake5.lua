@@ -10,8 +10,6 @@ OutputDir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 
 group "Dependencies"
     include "Dependencies/Kr"
-    include "Dependencies/Premake"
 group ""
 
 include "Karma"
-include "RayTrace"

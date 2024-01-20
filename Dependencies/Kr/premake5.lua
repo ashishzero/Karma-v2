@@ -9,12 +9,12 @@ project "Kr"
 
    vpaths
    {
-        ["Font"] = { "Font/**.h" },
+        ["Resources"] = { "Resources/**.h" },
         ["Image"] = { "Image/*.h" },
         ["ImGui"] = { "ImGui/*.h", "ImGui/*.cpp", "kImGui.h" },
         ["Shaders"] = { "*.hlsl", "*.fx" },
         ["Basic"] = {
-            "kArray.h", "kLinkedList.h", "kStrings.h", "kPoolAllocator.h",
+            "kArray.h", "kLinkedList.h", "kStrings.h", "kPool.h",
             "kImage.h", "kImage.cpp",
             "kCmdLine.h", "kCmdLine.cpp",
             "kCommon.h", "kCommon.cpp",

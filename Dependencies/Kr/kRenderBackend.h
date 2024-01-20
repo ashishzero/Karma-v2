@@ -12,6 +12,9 @@ typedef void (*kSwapChainPresentProc)(void);
 typedef void (*kGetRenderPipelineConfigProc)(kRenderPipelineConfig *);
 typedef void (*kApplyRenderPipelineConfigProc)(const kRenderPipelineConfig &);
 
+typedef kMesh (*kRenderBackendCreateMeshProc)(const kMeshSpec &);
+typedef void (*kRenderBackendDestroyMeshProc)(kMesh);
+
 typedef kTexture (*kRenderBackendTextureCreateProc)(const kTextureSpec &);
 typedef void (*kkRenderBackendTextureDestroyProc)(kTexture);
 typedef kVec2u (*kRenderBackendTextureSizeProc)(kTexture);
@@ -32,6 +35,9 @@ typedef struct kRenderBackend
 	kGetRenderPipelineConfigProc      GetRenderPipelineConfig;
 	kApplyRenderPipelineConfigProc    ApplyRenderPipelineConfig;
 
+	kRenderBackendCreateMeshProc      CreateMesh;
+	kRenderBackendDestroyMeshProc     DestroyMesh;
+
 	kRenderBackendTextureCreateProc   CreateTexture;
 	kkRenderBackendTextureDestroyProc DestroyTexture;
 	kRenderBackendTextureSizeProc     GetTextureSize;
@@ -50,6 +56,9 @@ void        kPresentFallback(void);
 
 void        kGetRenderPipelineConfigFallback(kRenderPipelineConfig *);
 void        kApplyRenderPipelineConfigFallback(const kRenderPipelineConfig &);
+
+kMesh       kCreateMeshFallback(const kMeshSpec &);
+void        kDestroyMeshFallback(kMesh);
 
 kTexture    kCreateTextureFallback(const kTextureSpec &);
 void        kDestroyTextureFallback(kTexture);

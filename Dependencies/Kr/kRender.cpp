@@ -32,13 +32,20 @@ typedef struct kRenderContext2D
 	kArray<kVec4>            OutLineStyles;
 	kArray<kRect>            Rects;
 	kArray<kRenderCommand2D> Commands;
-	kArray<kRenderScene>     Scenes[kRenderPass_Count];
+	kArray<kRenderScene>     Scenes[(int)kRenderPass::Count];
 	kRenderPass              RenderPass;
 	kRenderStack2D           Stack;
 } kRenderContext2D;
 
+typedef struct kRenderContext3D
+{
+	kArray<kRenderCommand3D> Commands;
+	kArray<kRenderScene>     Scenes;
+} kRenderContext3D;
+
 typedef struct kRenderContextBuiltin
 {
+	kMesh    Meshes[kEmbeddedMesh_Count];
 	kTexture Textures[kTextureType_Count];
 	kFont   *Font;
 } kRenderContextBuiltin;
@@ -50,6 +57,7 @@ struct kRenderMemoryStats
 };
 
 kRenderContext2D          g_Render2D;
+kRenderContext3D          g_Render3D;
 kRenderContextBuiltin     g_Builtin;
 static kRenderMemoryStats g_Memory;
 
@@ -309,6 +317,24 @@ static void kHandleTextureChange(kTextureType type)
 //
 //
 
+kCameraView kPerspectiveView(float fov, float aspect_ratio, float near, float far, const kMat4 &transform)
+{
+	kCameraView view;
+	view.Type                    = kCameraView_Perspective;
+	view.Perspective.AspectRatio = aspect_ratio;
+	view.Perspective.FieldOfView = fov;
+	view.Perspective.Near        = near;
+	view.Perspective.Far         = far;
+	view.Transform               = transform;
+	return view;
+}
+
+kCameraView kPerspectiveView(float fov, float aspect_ratio, float near, float far)
+{
+	kMat4 transform = kIdentity();
+	return kPerspectiveView(fov, aspect_ratio, near, far, transform);
+}
+
 kCameraView KOrthographicView(float left, float right, float top, float bottom, float near, float far)
 {
 	kCameraView view;
@@ -319,6 +345,7 @@ kCameraView KOrthographicView(float left, float right, float top, float bottom, 
 	view.Orthographic.Bottom = bottom;
 	view.Orthographic.Near   = near;
 	view.Orthographic.Far    = far;
+	view.Transform           = kIdentity();
 	return view;
 }
 
@@ -333,22 +360,22 @@ kCameraView kOrthographicView(float aspect_ratio, float height)
 //
 //
 
-void kBeginRenderPass(kRenderPass pass)
+void kRender2D::kBeginRenderPass(kRenderPass pass)
 {
 	g_Render2D.Stack.RenderPass.Add(pass);
 }
 
-void kEndRenderPass(void)
+void kRender2D::kEndRenderPass(void)
 {
 	kAssert(g_Render2D.Stack.RenderPass.Count > 1);
 	g_Render2D.Stack.RenderPass.Pop();
 }
 
-void kBeginScene(const kCameraView &view, const kViewport &viewport)
+void kRender2D::kBeginScene(const kCameraView &view, const kViewport &viewport)
 {
 	g_Render2D.RenderPass = g_Render2D.Stack.RenderPass.Last();
 
-	kRenderScene *scene   = g_Render2D.Scenes[g_Render2D.RenderPass].Add();
+	kRenderScene *scene   = g_Render2D.Scenes[(int)g_Render2D.RenderPass].Add();
 	scene->CameraView     = view;
 	scene->Viewport       = viewport;
 	scene->Commands       = kRangeT<u32>((u32)g_Render2D.Commands.Count);
@@ -364,7 +391,7 @@ void kBeginScene(const kCameraView &view, const kViewport &viewport)
 	kPushRect(rect);
 }
 
-void kEndScene(void)
+void kRender2D::kEndScene(void)
 {
 	kAssert(g_Render2D.RenderPass == g_Render2D.Stack.RenderPass.Last());
 
@@ -381,80 +408,80 @@ void kEndScene(void)
 		g_Render2D.Commands.Pop();
 	}
 
-	kRenderScene *scene = &g_Render2D.Scenes[g_Render2D.RenderPass].Last();
+	kRenderScene *scene = &g_Render2D.Scenes[(int)g_Render2D.RenderPass].Last();
 	scene->Commands.Max = (u32)g_Render2D.Commands.Count;
 
 	if (!scene->Commands.Length())
 	{
-		g_Render2D.Scenes[g_Render2D.RenderPass].Pop();
+		g_Render2D.Scenes[(int)g_Render2D.RenderPass].Pop();
 	}
 }
 
-void kLineThickness(float thickness)
+void kRender2D::kLineThickness(float thickness)
 {
 	g_Render2D.Stack.Thickness = thickness;
 }
 
-void kSetBlendMode(kBlendMode mode)
+void kRender2D::kSetBlendMode(kBlendMode mode)
 {
 	g_Render2D.Stack.BlendModes.Last() = mode;
 	kHandleBlendModeChange();
 }
 
-void kBeginBlendMode(kBlendMode mode)
+void kRender2D::kBeginBlendMode(kBlendMode mode)
 {
 	kBlendMode last = g_Render2D.Stack.BlendModes.Last();
 	g_Render2D.Stack.BlendModes.Add(last);
 	kSetBlendMode(mode);
 }
 
-void kEndBlendMode(void)
+void kRender2D::kEndBlendMode(void)
 {
 	imem count = g_Render2D.Stack.BlendModes.Count;
 	kSetBlendMode(g_Render2D.Stack.BlendModes[count - 2]);
 	g_Render2D.Stack.BlendModes.Pop();
 }
 
-void kSetTextureFilter(kTextureFilter filter)
+void kRender2D::kSetTextureFilter(kTextureFilter filter)
 {
 	g_Render2D.Stack.TextureFilters.Last() = filter;
 	kHandleTextureFilterChange();
 }
 
-void kSetTexture(kTexture texture, kTextureType idx)
+void kRender2D::kSetTexture(kTexture texture, kTextureType idx)
 {
 	g_Render2D.Stack.Textures[idx].Last() = texture;
 	kHandleTextureChange(idx);
 }
 
-void kPushTexture(kTexture texture, kTextureType idx)
+void kRender2D::kPushTexture(kTexture texture, kTextureType idx)
 {
 	kTexture last = g_Render2D.Stack.Textures[idx].Last();
 	g_Render2D.Stack.Textures[idx].Add(last);
 	kSetTexture(texture, idx);
 }
 
-void kPopTexture(kTextureType idx)
+void kRender2D::kPopTexture(kTextureType idx)
 {
 	imem count = g_Render2D.Stack.Textures[idx].Count;
 	kSetTexture(g_Render2D.Stack.Textures[idx][count - 2], idx);
 	g_Render2D.Stack.Textures[idx].Pop();
 }
 
-void kSetOutLineStyle(kVec3 color, float width)
+void kRender2D::kSetOutLineStyle(kVec3 color, float width)
 {
 	g_Render2D.Stack.OutLineStyles.Last() = kVec4(color, width);
 	kHandleOutLineStyleChange();
 }
 
-void kPushOutLineStyle(kVec3 color, float width)
+void kRender2D::kPushOutLineStyle(kVec3 color, float width)
 {
 	kVec4 last = g_Render2D.Stack.OutLineStyles.Last();
 	g_Render2D.Stack.OutLineStyles.Add(last);
 	kSetOutLineStyle(color, width);
 }
 
-void kPopOutLineStyle(void)
+void kRender2D::kPopOutLineStyle(void)
 {
 	imem  count = g_Render2D.Stack.OutLineStyles.Count;
 	kVec4 style = g_Render2D.Stack.OutLineStyles[count - 2];
@@ -462,13 +489,13 @@ void kPopOutLineStyle(void)
 	g_Render2D.Stack.OutLineStyles.Pop();
 }
 
-void kSetRect(kRect rect)
+void kRender2D::kSetRect(kRect rect)
 {
 	g_Render2D.Stack.Rects.Last() = rect;
 	kHandleRectChange();
 }
 
-void kSetRectEx(float x, float y, float w, float h)
+void kRender2D::kSetRectEx(float x, float y, float w, float h)
 {
 	kRect rect;
 	rect.min.x = x;
@@ -478,14 +505,14 @@ void kSetRectEx(float x, float y, float w, float h)
 	kSetRect(rect);
 }
 
-void kPushRect(kRect rect)
+void kRender2D::kPushRect(kRect rect)
 {
 	kRect last = g_Render2D.Stack.Rects.Last();
 	g_Render2D.Stack.Rects.Add(last);
 	kSetRect(rect);
 }
 
-void kPushRectEx(float x, float y, float w, float h)
+void kRender2D::kPushRectEx(float x, float y, float w, float h)
 {
 	kRect rect;
 	rect.min.x = x;
@@ -495,19 +522,19 @@ void kPushRectEx(float x, float y, float w, float h)
 	kPushRect(rect);
 }
 
-void kPopRect(void)
+void kRender2D::kPopRect(void)
 {
 	imem count = g_Render2D.Stack.Rects.Count;
 	kSetRect(g_Render2D.Stack.Rects[count - 2]);
 	g_Render2D.Stack.Rects.Pop();
 }
 
-void kSetTransform(const kMat3 &transform)
+void kRender2D::kSetTransform(const kMat3 &transform)
 {
 	g_Render2D.Stack.Transforms.Last() = transform;
 }
 
-void kPushTransform(const kMat3 &transform)
+void kRender2D::kPushTransform(const kMat3 &transform)
 {
 	kMat3 last = g_Render2D.Stack.Transforms.Last();
 	g_Render2D.Stack.Transforms.Add(last);
@@ -515,7 +542,7 @@ void kPushTransform(const kMat3 &transform)
 	kSetTransform(t);
 }
 
-void kPushTransform(kVec2 pos, float angle)
+void kRender2D::kPushTransform(kVec2 pos, float angle)
 {
 	kVec2 arm = kArm(angle);
 	kMat3 mat;
@@ -525,7 +552,7 @@ void kPushTransform(kVec2 pos, float angle)
 	kPushTransform(mat);
 }
 
-void kPopTransform(void)
+void kRender2D::kPopTransform(void)
 {
 	imem count = g_Render2D.Stack.Transforms.Count;
 	kSetTransform(g_Render2D.Stack.Transforms[count - 2]);
@@ -547,7 +574,7 @@ static void kCommitPrimitive(u32 vertex, u32 index)
 //
 //
 
-void kDrawTriangle(kVec3 va, kVec3 vb, kVec3 vc, kVec2 ta, kVec2 tb, kVec2 tc, kVec4 ca, kVec4 cb, kVec4 cc)
+void kRender2D::kDrawTriangle(kVec3 va, kVec3 vb, kVec3 vc, kVec2 ta, kVec2 tb, kVec2 tc, kVec4 ca, kVec4 cb, kVec4 cc)
 {
 	kVertex2D *vtx  = g_Render2D.Vertices.Extend(3);
 	vtx[0].Position = va;
@@ -578,27 +605,27 @@ void kDrawTriangle(kVec3 va, kVec3 vb, kVec3 vc, kVec2 ta, kVec2 tb, kVec2 tc, k
 	kCommitPrimitive(3, 3);
 }
 
-void kDrawTriangle(kVec3 a, kVec3 b, kVec3 c, kVec2 ta, kVec2 tb, kVec2 tc, kVec4 col)
+void kRender2D::kDrawTriangle(kVec3 a, kVec3 b, kVec3 c, kVec2 ta, kVec2 tb, kVec2 tc, kVec4 col)
 {
 	kDrawTriangle(a, b, c, ta, tb, tc, col, col, col);
 }
 
-void kDrawTriangle(kVec2 a, kVec2 b, kVec2 c, kVec2 ta, kVec2 tb, kVec2 tc, kVec4 col)
+void kRender2D::kDrawTriangle(kVec2 a, kVec2 b, kVec2 c, kVec2 ta, kVec2 tb, kVec2 tc, kVec4 col)
 {
 	kDrawTriangle(kVec3(a, 0), kVec3(b, 0), kVec3(c, 0), ta, tb, tc, col, col, col);
 }
 
-void kDrawTriangle(kVec3 a, kVec3 b, kVec3 c, kVec4 color)
+void kRender2D::kDrawTriangle(kVec3 a, kVec3 b, kVec3 c, kVec4 color)
 {
 	kDrawTriangle(a, b, c, kVec2(0), kVec2(0), kVec2(0), color, color, color);
 }
 
-void kDrawTriangle(kVec2 a, kVec2 b, kVec2 c, kVec4 color)
+void kRender2D::kDrawTriangle(kVec2 a, kVec2 b, kVec2 c, kVec4 color)
 {
 	kDrawTriangle(kVec3(a, 0), kVec3(b, 0), kVec3(c, 0), kVec2(0), kVec2(0), kVec2(0), color, color, color);
 }
 
-void kDrawQuad(kVec3 va, kVec3 vb, kVec3 vc, kVec3 vd, kVec2 ta, kVec2 tb, kVec2 tc, kVec2 td, kVec4 color)
+void kRender2D::kDrawQuad(kVec3 va, kVec3 vb, kVec3 vc, kVec3 vd, kVec2 ta, kVec2 tb, kVec2 tc, kVec2 td, kVec4 color)
 {
 	kVertex2D *vtx  = g_Render2D.Vertices.Extend(4);
 	vtx[0].Position = va;
@@ -636,22 +663,23 @@ void kDrawQuad(kVec3 va, kVec3 vb, kVec3 vc, kVec3 vd, kVec2 ta, kVec2 tb, kVec2
 	kCommitPrimitive(4, 6);
 }
 
-void kDrawQuad(kVec2 a, kVec2 b, kVec2 c, kVec2 d, kVec2 uv_a, kVec2 uv_b, kVec2 uv_c, kVec2 uv_d, kVec4 color)
+void kRender2D::kDrawQuad(kVec2 a, kVec2 b, kVec2 c, kVec2 d, kVec2 uv_a, kVec2 uv_b, kVec2 uv_c, kVec2 uv_d,
+                          kVec4 color)
 {
 	kDrawQuad(kVec3(a, 0), kVec3(b, 0), kVec3(c, 0), kVec3(d, 0), uv_a, uv_b, uv_c, uv_d, color);
 }
 
-void kDrawQuad(kVec3 a, kVec3 b, kVec3 c, kVec3 d, kVec4 color)
+void kRender2D::kDrawQuad(kVec3 a, kVec3 b, kVec3 c, kVec3 d, kVec4 color)
 {
 	kDrawQuad(a, b, c, d, kVec2(0, 0), kVec2(0, 1), kVec2(1, 1), kVec2(1, 0), color);
 }
 
-void kDrawQuad(kVec2 a, kVec2 b, kVec2 c, kVec2 d, kVec4 color)
+void kRender2D::kDrawQuad(kVec2 a, kVec2 b, kVec2 c, kVec2 d, kVec4 color)
 {
 	kDrawQuad(kVec3(a, 0), kVec3(b, 0), kVec3(c, 0), kVec3(d, 0), color);
 }
 
-void kDrawQuad(kVec3 a, kVec3 b, kVec3 c, kVec3 d, kRect rect, kVec4 color)
+void kRender2D::kDrawQuad(kVec3 a, kVec3 b, kVec3 c, kVec3 d, kRect rect, kVec4 color)
 {
 	kVec2 uv_a = rect.min;
 	kVec2 uv_b = kVec2(rect.min.x, rect.max.y);
@@ -660,12 +688,12 @@ void kDrawQuad(kVec3 a, kVec3 b, kVec3 c, kVec3 d, kRect rect, kVec4 color)
 	kDrawQuad(a, b, c, d, uv_a, uv_b, uv_c, uv_d, color);
 }
 
-void kDrawQuad(kVec2 a, kVec2 b, kVec2 c, kVec2 d, kRect rect, kVec4 color)
+void kRender2D::kDrawQuad(kVec2 a, kVec2 b, kVec2 c, kVec2 d, kRect rect, kVec4 color)
 {
 	kDrawQuad(kVec3(a, 0), kVec3(b, 0), kVec3(c, 0), kVec3(d, 0), rect, color);
 }
 
-void kDrawRect(kVec3 pos, kVec2 dim, kVec2 uv_a, kVec2 uv_b, kVec2 uv_c, kVec2 uv_d, kVec4 color)
+void kRender2D::kDrawRect(kVec3 pos, kVec2 dim, kVec2 uv_a, kVec2 uv_b, kVec2 uv_c, kVec2 uv_d, kVec4 color)
 {
 	kVec3 a = pos;
 	kVec3 b = kVec3(pos.x, pos.y + dim.y, pos.z);
@@ -674,22 +702,22 @@ void kDrawRect(kVec3 pos, kVec2 dim, kVec2 uv_a, kVec2 uv_b, kVec2 uv_c, kVec2 u
 	kDrawQuad(a, b, c, d, uv_a, uv_b, uv_c, uv_d, color);
 }
 
-void kDrawRect(kVec2 pos, kVec2 dim, kVec2 uv_a, kVec2 uv_b, kVec2 uv_c, kVec2 uv_d, kVec4 color)
+void kRender2D::kDrawRect(kVec2 pos, kVec2 dim, kVec2 uv_a, kVec2 uv_b, kVec2 uv_c, kVec2 uv_d, kVec4 color)
 {
 	kDrawRect(kVec3(pos, 0), dim, uv_a, uv_b, uv_c, uv_d, color);
 }
 
-void kDrawRect(kVec3 pos, kVec2 dim, kVec4 color)
+void kRender2D::kDrawRect(kVec3 pos, kVec2 dim, kVec4 color)
 {
 	kDrawRect(pos, dim, kVec2(0, 0), kVec2(0, 1), kVec2(1, 1), kVec2(1, 0), color);
 }
 
-void kDrawRect(kVec2 pos, kVec2 dim, kVec4 color)
+void kRender2D::kDrawRect(kVec2 pos, kVec2 dim, kVec4 color)
 {
 	kDrawRect(kVec3(pos, 0), dim, color);
 }
 
-void kDrawRect(kVec3 pos, kVec2 dim, kRect rect, kVec4 color)
+void kRender2D::kDrawRect(kVec3 pos, kVec2 dim, kRect rect, kVec4 color)
 {
 	kVec2 uv_a = rect.min;
 	kVec2 uv_b = kVec2(rect.min.x, rect.max.y);
@@ -698,12 +726,13 @@ void kDrawRect(kVec3 pos, kVec2 dim, kRect rect, kVec4 color)
 	kDrawRect(pos, dim, uv_a, uv_b, uv_c, uv_d, color);
 }
 
-void kDrawRect(kVec2 pos, kVec2 dim, kRect rect, kVec4 color)
+void kRender2D::kDrawRect(kVec2 pos, kVec2 dim, kRect rect, kVec4 color)
 {
 	kDrawRect(kVec3(pos, 0), dim, rect, color);
 }
 
-void kDrawRectRotated(kVec3 pos, kVec2 dim, float angle, kVec2 uv_a, kVec2 uv_b, kVec2 uv_c, kVec2 uv_d, kVec4 color)
+void kRender2D::kDrawRectRotated(kVec3 pos, kVec2 dim, float angle, kVec2 uv_a, kVec2 uv_b, kVec2 uv_c, kVec2 uv_d,
+                                 kVec4 color)
 {
 	kVec2 center = 0.5f * (2.0f * pos.xy + dim);
 
@@ -737,22 +766,23 @@ void kDrawRectRotated(kVec3 pos, kVec2 dim, float angle, kVec2 uv_a, kVec2 uv_b,
 	kDrawQuad(kVec3(a, pos.z), kVec3(b, pos.z), kVec3(c, pos.z), kVec3(d, pos.z), uv_a, uv_b, uv_c, uv_d, color);
 }
 
-void kDrawRectRotated(kVec2 pos, kVec2 dim, float angle, kVec2 uv_a, kVec2 uv_b, kVec2 uv_c, kVec2 uv_d, kVec4 color)
+void kRender2D::kDrawRectRotated(kVec2 pos, kVec2 dim, float angle, kVec2 uv_a, kVec2 uv_b, kVec2 uv_c, kVec2 uv_d,
+                                 kVec4 color)
 {
 	kDrawRectRotated(kVec3(pos, 0), dim, angle, uv_a, uv_b, uv_c, uv_d, color);
 }
 
-void kDrawRectRotated(kVec3 pos, kVec2 dim, float angle, kVec4 color)
+void kRender2D::kDrawRectRotated(kVec3 pos, kVec2 dim, float angle, kVec4 color)
 {
 	kDrawRectRotated(pos, dim, angle, kVec2(0, 0), kVec2(0, 1), kVec2(1, 1), kVec2(1, 0), color);
 }
 
-void kDrawRectRotated(kVec2 pos, kVec2 dim, float angle, kVec4 color)
+void kRender2D::kDrawRectRotated(kVec2 pos, kVec2 dim, float angle, kVec4 color)
 {
 	kDrawRectRotated(kVec3(pos, 0), dim, angle, color);
 }
 
-void kDrawRectRotated(kVec3 pos, kVec2 dim, float angle, kRect rect, kVec4 color)
+void kRender2D::kDrawRectRotated(kVec3 pos, kVec2 dim, float angle, kRect rect, kVec4 color)
 {
 	kVec2 uv_a = rect.min;
 	kVec2 uv_b = kVec2(rect.min.x, rect.max.y);
@@ -761,12 +791,12 @@ void kDrawRectRotated(kVec3 pos, kVec2 dim, float angle, kRect rect, kVec4 color
 	kDrawRectRotated(pos, dim, angle, uv_a, uv_b, uv_c, uv_d, color);
 }
 
-void kDrawRectRotated(kVec2 pos, kVec2 dim, float angle, kRect rect, kVec4 color)
+void kRender2D::kDrawRectRotated(kVec2 pos, kVec2 dim, float angle, kRect rect, kVec4 color)
 {
 	kDrawRectRotated(kVec3(pos, 0), dim, angle, rect, color);
 }
 
-void kDrawRectCentered(kVec3 pos, kVec2 dim, kVec2 uv_a, kVec2 uv_b, kVec2 uv_c, kVec2 uv_d, kVec4 color)
+void kRender2D::kDrawRectCentered(kVec3 pos, kVec2 dim, kVec2 uv_a, kVec2 uv_b, kVec2 uv_c, kVec2 uv_d, kVec4 color)
 {
 	kVec2 half_dim = 0.5f * dim;
 
@@ -784,22 +814,22 @@ void kDrawRectCentered(kVec3 pos, kVec2 dim, kVec2 uv_a, kVec2 uv_b, kVec2 uv_c,
 	kDrawQuad(a, b, c, d, uv_a, uv_b, uv_c, uv_d, color);
 }
 
-void kDrawRectCentered(kVec2 pos, kVec2 dim, kVec2 uv_a, kVec2 uv_b, kVec2 uv_c, kVec2 uv_d, kVec4 color)
+void kRender2D::kDrawRectCentered(kVec2 pos, kVec2 dim, kVec2 uv_a, kVec2 uv_b, kVec2 uv_c, kVec2 uv_d, kVec4 color)
 {
 	kDrawRectCentered(kVec3(pos, 0), dim, uv_a, uv_b, uv_c, uv_d, color);
 }
 
-void kDrawRectCentered(kVec3 pos, kVec2 dim, kVec4 color)
+void kRender2D::kDrawRectCentered(kVec3 pos, kVec2 dim, kVec4 color)
 {
 	kDrawRectCentered(pos, dim, kVec2(0, 0), kVec2(0, 1), kVec2(1, 1), kVec2(1, 0), color);
 }
 
-void kDrawRectCentered(kVec2 pos, kVec2 dim, kVec4 color)
+void kRender2D::kDrawRectCentered(kVec2 pos, kVec2 dim, kVec4 color)
 {
 	kDrawRectCentered(kVec3(pos, 0), dim, kVec2(0, 0), kVec2(0, 1), kVec2(1, 1), kVec2(1, 0), color);
 }
 
-void kDrawRectCentered(kVec3 pos, kVec2 dim, kRect rect, kVec4 color)
+void kRender2D::kDrawRectCentered(kVec3 pos, kVec2 dim, kRect rect, kVec4 color)
 {
 	kVec2 uv_a = rect.min;
 	kVec2 uv_b = kVec2(rect.min.x, rect.max.y);
@@ -808,13 +838,13 @@ void kDrawRectCentered(kVec3 pos, kVec2 dim, kRect rect, kVec4 color)
 	kDrawRectCentered(pos, dim, uv_a, uv_b, uv_c, uv_d, color);
 }
 
-void kDrawRectCentered(kVec2 pos, kVec2 dim, kRect rect, kVec4 color)
+void kRender2D::kDrawRectCentered(kVec2 pos, kVec2 dim, kRect rect, kVec4 color)
 {
 	kDrawRectCentered(kVec3(pos, 0), dim, rect, color);
 }
 
-void kDrawRectCenteredRotated(kVec3 pos, kVec2 dim, float angle, kVec2 uv_a, kVec2 uv_b, kVec2 uv_c, kVec2 uv_d,
-                              kVec4 color)
+void kRender2D::kDrawRectCenteredRotated(kVec3 pos, kVec2 dim, float angle, kVec2 uv_a, kVec2 uv_b, kVec2 uv_c,
+                                         kVec2 uv_d, kVec4 color)
 {
 	kVec2 center   = pos.xy;
 
@@ -850,23 +880,23 @@ void kDrawRectCenteredRotated(kVec3 pos, kVec2 dim, float angle, kVec2 uv_a, kVe
 	kDrawQuad(kVec3(a, pos.z), kVec3(b, pos.z), kVec3(c, pos.z), kVec3(d, pos.z), uv_a, uv_b, uv_c, uv_d, color);
 }
 
-void kDrawRectCenteredRotated(kVec2 pos, kVec2 dim, float angle, kVec2 uv_a, kVec2 uv_b, kVec2 uv_c, kVec2 uv_d,
-                              kVec4 color)
+void kRender2D::kDrawRectCenteredRotated(kVec2 pos, kVec2 dim, float angle, kVec2 uv_a, kVec2 uv_b, kVec2 uv_c,
+                                         kVec2 uv_d, kVec4 color)
 {
 	kDrawRectCenteredRotated(kVec3(pos, 0), dim, angle, uv_a, uv_b, uv_c, uv_d, color);
 }
 
-void kDrawRectCenteredRotated(kVec3 pos, kVec2 dim, float angle, kVec4 color)
+void kRender2D::kDrawRectCenteredRotated(kVec3 pos, kVec2 dim, float angle, kVec4 color)
 {
 	kDrawRectCenteredRotated(pos, dim, angle, kVec2(0, 0), kVec2(0, 1), kVec2(1, 1), kVec2(1, 0), color);
 }
 
-void kDrawRectCenteredRotated(kVec2 pos, kVec2 dim, float angle, kVec4 color)
+void kRender2D::kDrawRectCenteredRotated(kVec2 pos, kVec2 dim, float angle, kVec4 color)
 {
 	kDrawRectCenteredRotated(kVec3(pos, 0), dim, angle, kVec2(0, 0), kVec2(0, 1), kVec2(1, 1), kVec2(1, 0), color);
 }
 
-void kDrawRectCenteredRotated(kVec3 pos, kVec2 dim, float angle, kRect rect, kVec4 color)
+void kRender2D::kDrawRectCenteredRotated(kVec3 pos, kVec2 dim, float angle, kRect rect, kVec4 color)
 {
 	kVec2 uv_a = rect.min;
 	kVec2 uv_b = kVec2(rect.min.x, rect.max.y);
@@ -875,12 +905,12 @@ void kDrawRectCenteredRotated(kVec3 pos, kVec2 dim, float angle, kRect rect, kVe
 	kDrawRectCenteredRotated(pos, dim, angle, uv_a, uv_b, uv_c, uv_d, color);
 }
 
-void kDrawRectCenteredRotated(kVec2 pos, kVec2 dim, float angle, kRect rect, kVec4 color)
+void kRender2D::kDrawRectCenteredRotated(kVec2 pos, kVec2 dim, float angle, kRect rect, kVec4 color)
 {
 	kDrawRectCenteredRotated(kVec3(pos, 0), dim, angle, rect, color);
 }
 
-void kDrawEllipse(kVec3 pos, float radius_a, float radius_b, kVec4 color)
+void kRender2D::kDrawEllipse(kVec3 pos, float radius_a, float radius_b, kVec4 color)
 {
 	int segments = (int)kCeil(2 * K_PI * kSquareRoot(0.5f * (radius_a * radius_a + radius_b * radius_b)));
 	if (segments < kMinCircleSegments)
@@ -902,22 +932,22 @@ void kDrawEllipse(kVec3 pos, float radius_a, float radius_b, kVec4 color)
 	}
 }
 
-void kDrawEllipse(kVec2 pos, float radius_a, float radius_b, kVec4 color)
+void kRender2D::kDrawEllipse(kVec2 pos, float radius_a, float radius_b, kVec4 color)
 {
 	kDrawEllipse(kVec3(pos, 0), radius_a, radius_b, color);
 }
 
-void kDrawCircle(kVec3 pos, float radius, kVec4 color)
+void kRender2D::kDrawCircle(kVec3 pos, float radius, kVec4 color)
 {
 	kDrawEllipse(pos, radius, radius, color);
 }
 
-void kDrawCircle(kVec2 pos, float radius, kVec4 color)
+void kRender2D::kDrawCircle(kVec2 pos, float radius, kVec4 color)
 {
 	kDrawEllipse(kVec3(pos, 0), radius, radius, color);
 }
 
-void kDrawPie(kVec3 pos, float radius_a, float radius_b, float theta_a, float theta_b, kVec4 color)
+void kRender2D::kDrawPie(kVec3 pos, float radius_a, float radius_b, float theta_a, float theta_b, kVec4 color)
 {
 	theta_a = kWrapTurns(theta_a);
 	theta_b = kWrapTurns(theta_b);
@@ -929,8 +959,8 @@ void kDrawPie(kVec3 pos, float radius_a, float radius_b, float theta_a, float th
 		theta_b = t;
 	}
 
-	float segments =
-		kCeil(2.0f * (float)K_PI * kSquareRoot(0.5f * (radius_a * radius_a + radius_b * radius_b)) / (theta_b - theta_a));
+	float segments = kCeil(2.0f * (float)K_PI * kSquareRoot(0.5f * (radius_a * radius_a + radius_b * radius_b)) /
+	                       (theta_b - theta_a));
 	if (segments < kMinCircleSegments)
 		segments = kMinCircleSegments;
 
@@ -952,23 +982,23 @@ void kDrawPie(kVec3 pos, float radius_a, float radius_b, float theta_a, float th
 	}
 }
 
-void kDrawPie(kVec2 pos, float radius_a, float radius_b, float theta_a, float theta_b, kVec4 color)
+void kRender2D::kDrawPie(kVec2 pos, float radius_a, float radius_b, float theta_a, float theta_b, kVec4 color)
 {
 	kDrawPie(kVec3(pos, 0), radius_a, radius_b, theta_a, theta_b, color);
 }
 
-void kDrawPie(kVec3 pos, float radius, float theta_a, float theta_b, kVec4 color)
+void kRender2D::kDrawPie(kVec3 pos, float radius, float theta_a, float theta_b, kVec4 color)
 {
 	kDrawPie(pos, radius, radius, theta_a, theta_b, color);
 }
 
-void kDrawPie(kVec2 pos, float radius, float theta_a, float theta_b, kVec4 color)
+void kRender2D::kDrawPie(kVec2 pos, float radius, float theta_a, float theta_b, kVec4 color)
 {
 	kDrawPie(kVec3(pos, 0), radius, radius, theta_a, theta_b, color);
 }
 
-void kDrawPiePart(kVec3 pos, float radius_a_min, float radius_b_min, float radius_a_max, float radius_b_max,
-                  float theta_a, float theta_b, kVec4 color)
+void kRender2D::kDrawPiePart(kVec3 pos, float radius_a_min, float radius_b_min, float radius_a_max, float radius_b_max,
+                             float theta_a, float theta_b, kVec4 color)
 {
 	theta_a = kWrapTurns(theta_a);
 	theta_b = kWrapTurns(theta_b);
@@ -980,8 +1010,9 @@ void kDrawPiePart(kVec3 pos, float radius_a_min, float radius_b_min, float radiu
 		theta_b = t;
 	}
 
-	float segments = kCeil(2.0f * (float)K_PI * kSquareRoot(0.5f * (radius_a_max * radius_a_max + radius_b_max * radius_b_max)) /
-	                       (theta_b - theta_a));
+	float segments =
+		kCeil(2.0f * (float)K_PI * kSquareRoot(0.5f * (radius_a_max * radius_a_max + radius_b_max * radius_b_max)) /
+	          (theta_b - theta_a));
 	if (segments < kMinCircleSegments)
 		segments = kMinCircleSegments;
 
@@ -1011,23 +1042,23 @@ void kDrawPiePart(kVec3 pos, float radius_a_min, float radius_b_min, float radiu
 	}
 }
 
-void kDrawPiePart(kVec2 pos, float radius_a_min, float radius_b_min, float radius_a_max, float radius_b_max,
-                  float theta_a, float theta_b, kVec4 color)
+void kRender2D::kDrawPiePart(kVec2 pos, float radius_a_min, float radius_b_min, float radius_a_max, float radius_b_max,
+                             float theta_a, float theta_b, kVec4 color)
 {
 	kDrawPiePart(kVec3(pos, 0), radius_a_min, radius_b_min, radius_a_max, radius_b_max, theta_a, theta_b, color);
 }
 
-void kDrawPiePart(kVec3 pos, float radius_min, float radius_max, float theta_a, float theta_b, kVec4 color)
+void kRender2D::kDrawPiePart(kVec3 pos, float radius_min, float radius_max, float theta_a, float theta_b, kVec4 color)
 {
 	kDrawPiePart(pos, radius_min, radius_min, radius_max, radius_max, theta_a, theta_b, color);
 }
 
-void kDrawPiePart(kVec2 pos, float radius_min, float radius_max, float theta_a, float theta_b, kVec4 color)
+void kRender2D::kDrawPiePart(kVec2 pos, float radius_min, float radius_max, float theta_a, float theta_b, kVec4 color)
 {
 	kDrawPiePart(kVec3(pos, 0), radius_min, radius_min, radius_max, radius_max, theta_a, theta_b, color);
 }
 
-void kDrawLine(kVec3 a, kVec3 b, kVec4 color)
+void kRender2D::kDrawLine(kVec3 a, kVec3 b, kVec4 color)
 {
 	if (kIsNull(b - a))
 		return;
@@ -1047,12 +1078,12 @@ void kDrawLine(kVec3 a, kVec3 b, kVec4 color)
 	kDrawQuad(c0, c1, c2, c3, kVec2(0, 0), kVec2(0, 1), kVec2(1, 1), kVec2(1, 0), color);
 }
 
-void kDrawLine(kVec2 a, kVec2 b, kVec4 color)
+void kRender2D::kDrawLine(kVec2 a, kVec2 b, kVec4 color)
 {
 	kDrawLine(kVec3(a, 0), kVec3(b, 0), color);
 }
 
-void kPathTo(kVec2 a)
+void kRender2D::kPathTo(kVec2 a)
 {
 	if (g_Render2D.Stack.Paths.Count)
 	{
@@ -1064,7 +1095,7 @@ void kPathTo(kVec2 a)
 	g_Render2D.Stack.Paths.Add(a);
 }
 
-void kArcTo(kVec2 position, float radius_a, float radius_b, float theta_a, float theta_b)
+void kRender2D::kArcTo(kVec2 position, float radius_a, float radius_b, float theta_a, float theta_b)
 {
 	theta_a = kWrapTurns(theta_a);
 	theta_b = kWrapTurns(theta_b);
@@ -1076,8 +1107,8 @@ void kArcTo(kVec2 position, float radius_a, float radius_b, float theta_a, float
 		theta_b = t;
 	}
 
-	float segments =
-		kCeil(2.0f * (float)K_PI * kSquareRoot(0.5f * (radius_a * radius_a + radius_b * radius_b)) / (theta_b - theta_a));
+	float segments = kCeil(2.0f * (float)K_PI * kSquareRoot(0.5f * (radius_a * radius_a + radius_b * radius_b)) /
+	                       (theta_b - theta_a));
 	if (segments < kMinCircleSegments)
 		segments = kMinCircleSegments;
 
@@ -1092,7 +1123,7 @@ void kArcTo(kVec2 position, float radius_a, float radius_b, float theta_a, float
 	}
 }
 
-void kBezierQuadraticTo(kVec2 a, kVec2 b, kVec2 c)
+void kRender2D::kBezierQuadraticTo(kVec2 a, kVec2 b, kVec2 c)
 {
 	imem index    = g_Render2D.Stack.Paths.Count;
 	int  segments = (int)kCeil(kLength(a) + kLength(b) + kLength(c));
@@ -1102,7 +1133,7 @@ void kBezierQuadraticTo(kVec2 a, kVec2 b, kVec2 c)
 		kBuildBezierQuadratic(a, b, c, &g_Render2D.Stack.Paths[index], segments);
 }
 
-void kBezierCubicTo(kVec2 a, kVec2 b, kVec2 c, kVec2 d)
+void kRender2D::kBezierCubicTo(kVec2 a, kVec2 b, kVec2 c, kVec2 d)
 {
 	imem index    = g_Render2D.Stack.Paths.Count;
 	int  segments = (int)kCeil(kLength(a) + kLength(b) + kLength(c));
@@ -1129,7 +1160,7 @@ static inline kVec2 kLineLineIntersect(kVec2 p1, kVec2 q1, kVec2 p2, kVec2 q2)
 	return p1;
 }
 
-void kDrawPathStroked(kVec4 color, bool closed, float z)
+void kRender2D::kDrawPathStroked(kVec4 color, bool closed, float z)
 {
 	kArray<kVec2> &path = g_Render2D.Stack.Paths;
 
@@ -1254,7 +1285,7 @@ void kDrawPathStroked(kVec4 color, bool closed, float z)
 	path.Reset();
 }
 
-void kDrawPathFilled(kVec4 color, float z)
+void kRender2D::kDrawPathFilled(kVec4 color, float z)
 {
 	kArray<kVec2> &path = g_Render2D.Stack.Paths;
 
@@ -1273,19 +1304,19 @@ void kDrawPathFilled(kVec4 color, float z)
 	path.Reset();
 }
 
-void kDrawBezierQuadratic(kVec2 a, kVec2 b, kVec2 c, kVec4 color, float z)
+void kRender2D::kDrawBezierQuadratic(kVec2 a, kVec2 b, kVec2 c, kVec4 color, float z)
 {
 	kBezierQuadraticTo(a, b, c);
 	kDrawPathStroked(color, false, z);
 }
 
-void kDrawBezierCubic(kVec2 a, kVec2 b, kVec2 c, kVec2 d, kVec4 color, float z)
+void kRender2D::kDrawBezierCubic(kVec2 a, kVec2 b, kVec2 c, kVec2 d, kVec4 color, float z)
 {
 	kBezierCubicTo(a, b, c, d);
 	kDrawPathStroked(color, false, z);
 }
 
-void kDrawPolygon(const kVec2 *vertices, u32 count, float z, kVec4 color)
+void kRender2D::kDrawPolygon(const kVec2 *vertices, u32 count, float z, kVec4 color)
 {
 	kAssert(count >= 3);
 	u32 triangle_count = count - 2;
@@ -1296,12 +1327,12 @@ void kDrawPolygon(const kVec2 *vertices, u32 count, float z, kVec4 color)
 	}
 }
 
-void kDrawPolygon(const kVec2 *vertices, u32 count, kVec4 color)
+void kRender2D::kDrawPolygon(const kVec2 *vertices, u32 count, kVec4 color)
 {
 	kDrawPolygon(vertices, count, 0, color);
 }
 
-void kDrawTriangleOutline(kVec3 a, kVec3 b, kVec3 c, kVec4 color)
+void kRender2D::kDrawTriangleOutline(kVec3 a, kVec3 b, kVec3 c, kVec4 color)
 {
 	kPathTo(a.xy);
 	kPathTo(b.xy);
@@ -1309,7 +1340,7 @@ void kDrawTriangleOutline(kVec3 a, kVec3 b, kVec3 c, kVec4 color)
 	kDrawPathStroked(color, true, a.z);
 }
 
-void kDrawTriangleOutline(kVec2 a, kVec2 b, kVec2 c, kVec4 color)
+void kRender2D::kDrawTriangleOutline(kVec2 a, kVec2 b, kVec2 c, kVec4 color)
 {
 	kPathTo(a);
 	kPathTo(b);
@@ -1317,7 +1348,7 @@ void kDrawTriangleOutline(kVec2 a, kVec2 b, kVec2 c, kVec4 color)
 	kDrawPathStroked(color, true, 0.0f);
 }
 
-void kDrawQuadOutline(kVec3 a, kVec3 b, kVec3 c, kVec3 d, kVec4 color)
+void kRender2D::kDrawQuadOutline(kVec3 a, kVec3 b, kVec3 c, kVec3 d, kVec4 color)
 {
 	kPathTo(a.xy);
 	kPathTo(b.xy);
@@ -1326,7 +1357,7 @@ void kDrawQuadOutline(kVec3 a, kVec3 b, kVec3 c, kVec3 d, kVec4 color)
 	kDrawPathStroked(color, true, a.z);
 }
 
-void kDrawQuadOutline(kVec2 a, kVec2 b, kVec2 c, kVec2 d, kVec4 color)
+void kRender2D::kDrawQuadOutline(kVec2 a, kVec2 b, kVec2 c, kVec2 d, kVec4 color)
 {
 	kPathTo(a);
 	kPathTo(b);
@@ -1335,7 +1366,7 @@ void kDrawQuadOutline(kVec2 a, kVec2 b, kVec2 c, kVec2 d, kVec4 color)
 	kDrawPathStroked(color, true, 0.0f);
 }
 
-void kDrawRectOutline(kVec3 pos, kVec2 dim, kVec4 color)
+void kRender2D::kDrawRectOutline(kVec3 pos, kVec2 dim, kVec4 color)
 {
 	kVec3 a = pos;
 	kVec3 b = pos + kVec3(0, dim.y, 0);
@@ -1344,12 +1375,12 @@ void kDrawRectOutline(kVec3 pos, kVec2 dim, kVec4 color)
 	kDrawQuadOutline(a, b, c, d, color);
 }
 
-void kDrawRectOutline(kVec2 pos, kVec2 dim, kVec4 color)
+void kRender2D::kDrawRectOutline(kVec2 pos, kVec2 dim, kVec4 color)
 {
 	kDrawRectOutline(kVec3(pos, 0), dim, color);
 }
 
-void kDrawRectCenteredOutline(kVec3 pos, kVec2 dim, kVec4 color)
+void kRender2D::kDrawRectCenteredOutline(kVec3 pos, kVec2 dim, kVec4 color)
 {
 	kVec2 half_dim = 0.5f * dim;
 
@@ -1366,12 +1397,12 @@ void kDrawRectCenteredOutline(kVec3 pos, kVec2 dim, kVec4 color)
 	kDrawQuadOutline(a, b, c, d, color);
 }
 
-void kDrawRectCenteredOutline(kVec2 pos, kVec2 dim, kVec4 color)
+void kRender2D::kDrawRectCenteredOutline(kVec2 pos, kVec2 dim, kVec4 color)
 {
 	kDrawRectCenteredOutline(kVec3(pos, 0), dim, color);
 }
 
-void kDrawEllipseOutline(kVec3 pos, float radius_a, float radius_b, kVec4 color)
+void kRender2D::kDrawEllipseOutline(kVec3 pos, float radius_a, float radius_b, kVec4 color)
 {
 	int segments = (int)kCeil(2 * K_PI * kSquareRoot(0.5f * (radius_a * radius_a + radius_b * radius_b)));
 	if (segments < kMinCircleSegments)
@@ -1387,22 +1418,23 @@ void kDrawEllipseOutline(kVec3 pos, float radius_a, float radius_b, kVec4 color)
 	kDrawPathStroked(color, true, pos.z);
 }
 
-void kDrawEllipseOutline(kVec2 pos, float radius_a, float radius_b, kVec4 color)
+void kRender2D::kDrawEllipseOutline(kVec2 pos, float radius_a, float radius_b, kVec4 color)
 {
 	kDrawEllipseOutline(kVec3(pos, 0), radius_a, radius_b, color);
 }
 
-void kDrawCircleOutline(kVec3 pos, float radius, kVec4 color)
+void kRender2D::kDrawCircleOutline(kVec3 pos, float radius, kVec4 color)
 {
 	kDrawEllipseOutline(pos, radius, radius, color);
 }
 
-void kDrawCircleOutline(kVec2 pos, float radius, kVec4 color)
+void kRender2D::kDrawCircleOutline(kVec2 pos, float radius, kVec4 color)
 {
 	kDrawEllipseOutline(kVec3(pos, 0), radius, radius, color);
 }
 
-void kDrawArcOutline(kVec3 pos, float radius_a, float radius_b, float theta_a, float theta_b, kVec4 color, bool closed)
+void kRender2D::kDrawArcOutline(kVec3 pos, float radius_a, float radius_b, float theta_a, float theta_b, kVec4 color,
+                                bool closed)
 {
 	kArcTo(pos.xy, radius_a, radius_b, theta_a, theta_b);
 	if (closed)
@@ -1412,22 +1444,23 @@ void kDrawArcOutline(kVec3 pos, float radius_a, float radius_b, float theta_a, f
 	kDrawPathStroked(color, closed, pos.z);
 }
 
-void kDrawArcOutline(kVec2 pos, float radius_a, float radius_b, float theta_a, float theta_b, kVec4 color, bool closed)
+void kRender2D::kDrawArcOutline(kVec2 pos, float radius_a, float radius_b, float theta_a, float theta_b, kVec4 color,
+                                bool closed)
 {
 	kDrawArcOutline(kVec3(pos, 0), radius_a, radius_b, theta_a, theta_b, color, closed);
 }
 
-void kDrawArcOutline(kVec3 pos, float radius, float theta_a, float theta_b, kVec4 color, bool closed)
+void kRender2D::kDrawArcOutline(kVec3 pos, float radius, float theta_a, float theta_b, kVec4 color, bool closed)
 {
 	kDrawArcOutline(pos, radius, radius, theta_a, theta_b, color, closed);
 }
 
-void kDrawArcOutline(kVec2 pos, float radius, float theta_a, float theta_b, kVec4 color, bool closed)
+void kRender2D::kDrawArcOutline(kVec2 pos, float radius, float theta_a, float theta_b, kVec4 color, bool closed)
 {
 	kDrawArcOutline(kVec3(pos, 0), radius, radius, theta_a, theta_b, color, closed);
 }
 
-void kDrawPolygonOutline(const kVec2 *vertices, u32 count, float z, kVec4 color)
+void kRender2D::kDrawPolygonOutline(const kVec2 *vertices, u32 count, float z, kVec4 color)
 {
 	for (u32 Indices = 0; Indices < count; ++Indices)
 	{
@@ -1436,68 +1469,68 @@ void kDrawPolygonOutline(const kVec2 *vertices, u32 count, float z, kVec4 color)
 	kDrawPathStroked(color, true, z);
 }
 
-void kDrawPolygonOutline(const kVec2 *vertices, u32 count, kVec4 color)
+void kRender2D::kDrawPolygonOutline(const kVec2 *vertices, u32 count, kVec4 color)
 {
 	kDrawPolygonOutline(vertices, count, 0, color);
 }
 
-void kDrawTexture(kTexture texture, kVec3 pos, kVec2 dim, kVec4 color)
+void kRender2D::kDrawTexture(kTexture texture, kVec3 pos, kVec2 dim, kVec4 color)
 {
 	kPushTexture(texture, kTextureType_Color);
 	kDrawRect(pos, dim, color);
 	kPopTexture(kTextureType_Color);
 }
 
-void kDrawTexture(kTexture texture, kVec2 pos, kVec2 dim, kVec4 color)
+void kRender2D::kDrawTexture(kTexture texture, kVec2 pos, kVec2 dim, kVec4 color)
 {
 	kPushTexture(texture, kTextureType_Color);
 	kDrawRect(pos, dim, color);
 	kPopTexture(kTextureType_Color);
 }
 
-void kDrawTextureCentered(kTexture texture, kVec3 pos, kVec2 dim, kVec4 color)
+void kRender2D::kDrawTextureCentered(kTexture texture, kVec3 pos, kVec2 dim, kVec4 color)
 {
 	kPushTexture(texture, kTextureType_Color);
 	kDrawRectCentered(pos, dim, color);
 	kPopTexture(kTextureType_Color);
 }
 
-void kDrawTextureCentered(kTexture texture, kVec2 pos, kVec2 dim, kVec4 color)
+void kRender2D::kDrawTextureCentered(kTexture texture, kVec2 pos, kVec2 dim, kVec4 color)
 {
 	kPushTexture(texture, kTextureType_Color);
 	kDrawRectCentered(pos, dim, color);
 	kPopTexture(kTextureType_Color);
 }
 
-void kDrawTexture(kTexture texture, kVec3 pos, kVec2 dim, kRect rect, kVec4 color)
+void kRender2D::kDrawTexture(kTexture texture, kVec3 pos, kVec2 dim, kRect rect, kVec4 color)
 {
 	kPushTexture(texture, kTextureType_Color);
 	kDrawRect(pos, dim, rect, color);
 	kPopTexture(kTextureType_Color);
 }
 
-void kDrawTexture(kTexture texture, kVec2 pos, kVec2 dim, kRect rect, kVec4 color)
+void kRender2D::kDrawTexture(kTexture texture, kVec2 pos, kVec2 dim, kRect rect, kVec4 color)
 {
 	kPushTexture(texture, kTextureType_Color);
 	kDrawRect(pos, dim, rect, color);
 	kPopTexture(kTextureType_Color);
 }
 
-void kDrawTextureCentered(kTexture texture, kVec3 pos, kVec2 dim, kRect rect, kVec4 color)
+void kRender2D::kDrawTextureCentered(kTexture texture, kVec3 pos, kVec2 dim, kRect rect, kVec4 color)
 {
 	kPushTexture(texture, kTextureType_Color);
 	kDrawRectCentered(pos, dim, rect, color);
 	kPopTexture(kTextureType_Color);
 }
 
-void kDrawTextureCentered(kTexture texture, kVec2 pos, kVec2 dim, kRect rect, kVec4 color)
+void kRender2D::kDrawTextureCentered(kTexture texture, kVec2 pos, kVec2 dim, kRect rect, kVec4 color)
 {
 	kPushTexture(texture, kTextureType_Color);
 	kDrawRectCentered(pos, dim, rect, color);
 	kPopTexture(kTextureType_Color);
 }
 
-void kDrawTextureMasked(kTexture texture, kTexture mask, kVec3 pos, kVec2 dim, kVec4 color)
+void kRender2D::kDrawTextureMasked(kTexture texture, kTexture mask, kVec3 pos, kVec2 dim, kVec4 color)
 {
 	kPushTexture(texture, kTextureType_Color);
 	kPushTexture(mask, kTextureType_MaskSDF);
@@ -1506,7 +1539,7 @@ void kDrawTextureMasked(kTexture texture, kTexture mask, kVec3 pos, kVec2 dim, k
 	kPopTexture(kTextureType_Color);
 }
 
-void kDrawTextureCenteredMasked(kTexture texture, kTexture mask, kVec3 pos, kVec2 dim, kVec4 color)
+void kRender2D::kDrawTextureCenteredMasked(kTexture texture, kTexture mask, kVec3 pos, kVec2 dim, kVec4 color)
 {
 	kPushTexture(texture, kTextureType_Color);
 	kPushTexture(mask, kTextureType_MaskSDF);
@@ -1515,7 +1548,7 @@ void kDrawTextureCenteredMasked(kTexture texture, kTexture mask, kVec3 pos, kVec
 	kPopTexture(kTextureType_Color);
 }
 
-void kDrawTextureMasked(kTexture texture, kTexture mask, kVec2 pos, kVec2 dim, kVec4 color)
+void kRender2D::kDrawTextureMasked(kTexture texture, kTexture mask, kVec2 pos, kVec2 dim, kVec4 color)
 {
 	kPushTexture(texture, kTextureType_Color);
 	kPushTexture(mask, kTextureType_MaskSDF);
@@ -1524,7 +1557,7 @@ void kDrawTextureMasked(kTexture texture, kTexture mask, kVec2 pos, kVec2 dim, k
 	kPopTexture(kTextureType_Color);
 }
 
-void kDrawTextureCenteredMasked(kTexture texture, kTexture mask, kVec2 pos, kVec2 dim, kVec4 color)
+void kRender2D::kDrawTextureCenteredMasked(kTexture texture, kTexture mask, kVec2 pos, kVec2 dim, kVec4 color)
 {
 	kPushTexture(texture, kTextureType_Color);
 	kPushTexture(mask, kTextureType_MaskSDF);
@@ -1533,7 +1566,7 @@ void kDrawTextureCenteredMasked(kTexture texture, kTexture mask, kVec2 pos, kVec
 	kPopTexture(kTextureType_Color);
 }
 
-void kDrawRoundedRect(kVec3 pos, kVec2 dim, kVec4 color, float radius)
+void kRender2D::kDrawRoundedRect(kVec3 pos, kVec2 dim, kVec4 color, float radius)
 {
 	if (radius)
 	{
@@ -1562,12 +1595,12 @@ void kDrawRoundedRect(kVec3 pos, kVec2 dim, kVec4 color, float radius)
 	}
 }
 
-void kDrawRoundedRect(kVec2 pos, kVec2 dim, kVec4 color, float radius)
+void kRender2D::kDrawRoundedRect(kVec2 pos, kVec2 dim, kVec4 color, float radius)
 {
 	kDrawRoundedRect(kVec3(pos, 0), dim, color, radius);
 }
 
-void kDrawRoundedRectOutline(kVec3 pos, kVec2 dim, kVec4 color, float radius)
+void kRender2D::kDrawRoundedRectOutline(kVec3 pos, kVec2 dim, kVec4 color, float radius)
 {
 	if (radius)
 	{
@@ -1596,12 +1629,12 @@ void kDrawRoundedRectOutline(kVec3 pos, kVec2 dim, kVec4 color, float radius)
 	}
 }
 
-void kDrawRoundedRectOutline(kVec2 pos, kVec2 dim, kVec4 color, float radius)
+void kRender2D::kDrawRoundedRectOutline(kVec2 pos, kVec2 dim, kVec4 color, float radius)
 {
 	kDrawRoundedRectOutline(kVec3(pos, 0), dim, color, radius);
 }
 
-kGlyph *kFindFontGlyph(const kFont *font, u32 codepoint)
+kGlyph *kRender2D::kFindFontGlyph(const kFont *font, u32 codepoint)
 {
 	if (codepoint >= font->MinCodepoint && codepoint <= font->MaxCodepoint)
 	{
@@ -1612,14 +1645,14 @@ kGlyph *kFindFontGlyph(const kFont *font, u32 codepoint)
 	return font->Fallback;
 }
 
-kVec2 kAdjectCursorToBaseline(const kFont *font, kVec2 cursor, float scale)
+kVec2 kRender2D::kAdjectCursorToBaseline(const kFont *font, kVec2 cursor, float scale)
 {
 	cursor.y += (float)(font->Ascent) * scale;
 	return cursor;
 }
 
-bool kCalculateGlyphMetrics(const kFont *font, u32 codepoint, float scale, kVec2 *cursor, kVec2 *rpos, kVec2 *rsize,
-                            kRect *rect)
+bool kRender2D::kCalculateGlyphMetrics(const kFont *font, u32 codepoint, float scale, kVec2 *cursor, kVec2 *rpos,
+                                       kVec2 *rsize, kRect *rect)
 {
 	if (codepoint == '\r')
 		return false;
@@ -1645,7 +1678,7 @@ bool kCalculateGlyphMetrics(const kFont *font, u32 codepoint, float scale, kVec2
 	return true;
 }
 
-void kDrawTextQuad(u32 codepoint, const kFont *font, kVec3 pos, kVec4 color, float scale)
+void kRender2D::kDrawTextQuad(u32 codepoint, const kFont *font, kVec3 pos, kVec4 color, float scale)
 {
 	kPushTexture(g_Builtin.Textures[kTextureType_Color], kTextureType_Color);
 	kPushTexture(font->Atlas, kTextureType_MaskSDF);
@@ -1667,12 +1700,12 @@ void kDrawTextQuad(u32 codepoint, const kFont *font, kVec3 pos, kVec4 color, flo
 	kPopTexture(kTextureType_Color);
 }
 
-void kDrawTextQuad(u32 codepoint, const kFont *font, kVec2 pos, kVec4 color, float scale)
+void kRender2D::kDrawTextQuad(u32 codepoint, const kFont *font, kVec2 pos, kVec4 color, float scale)
 {
 	kDrawTextQuad(codepoint, font, kVec3(pos, 0), color, scale);
 }
 
-void kDrawTextQuadRotated(u32 codepoint, const kFont *font, kVec3 pos, float angle, kVec4 color, float scale)
+void kRender2D::kDrawTextQuadRotated(u32 codepoint, const kFont *font, kVec3 pos, float angle, kVec4 color, float scale)
 {
 	kPushTexture(g_Builtin.Textures[kTextureType_Color], kTextureType_Color);
 	kPushTexture(font->Atlas, kTextureType_MaskSDF);
@@ -1694,12 +1727,12 @@ void kDrawTextQuadRotated(u32 codepoint, const kFont *font, kVec3 pos, float ang
 	kPopTexture(kTextureType_Color);
 }
 
-void kDrawTextQuadRotated(u32 codepoint, const kFont *font, kVec2 pos, float angle, kVec4 color, float scale)
+void kRender2D::kDrawTextQuadRotated(u32 codepoint, const kFont *font, kVec2 pos, float angle, kVec4 color, float scale)
 {
 	kDrawTextQuadRotated(codepoint, font, kVec3(pos, 0), angle, color, scale);
 }
 
-void kDrawTextQuadCentered(u32 codepoint, const kFont *font, kVec3 pos, kVec4 color, float scale)
+void kRender2D::kDrawTextQuadCentered(u32 codepoint, const kFont *font, kVec3 pos, kVec4 color, float scale)
 {
 	kPushTexture(g_Builtin.Textures[kTextureType_Color], kTextureType_Color);
 	kPushTexture(font->Atlas, kTextureType_MaskSDF);
@@ -1721,12 +1754,13 @@ void kDrawTextQuadCentered(u32 codepoint, const kFont *font, kVec3 pos, kVec4 co
 	kPopTexture(kTextureType_Color);
 }
 
-void kDrawTextQuadCentered(u32 codepoint, const kFont *font, kVec2 pos, kVec4 color, float scale)
+void kRender2D::kDrawTextQuadCentered(u32 codepoint, const kFont *font, kVec2 pos, kVec4 color, float scale)
 {
 	kDrawTextQuadCentered(codepoint, font, kVec3(pos, 0), color, scale);
 }
 
-void kDrawTextQuadCenteredRotated(u32 codepoint, const kFont *font, kVec3 pos, float angle, kVec4 color, float scale)
+void kRender2D::kDrawTextQuadCenteredRotated(u32 codepoint, const kFont *font, kVec3 pos, float angle, kVec4 color,
+                                             float scale)
 {
 	kPushTexture(g_Builtin.Textures[kTextureType_Color], kTextureType_Color);
 	kPushTexture(font->Atlas, kTextureType_MaskSDF);
@@ -1748,60 +1782,61 @@ void kDrawTextQuadCenteredRotated(u32 codepoint, const kFont *font, kVec3 pos, f
 	kPopTexture(kTextureType_Color);
 }
 
-void kDrawTextQuadCenteredRotated(u32 codepoint, const kFont *font, kVec2 pos, float angle, kVec4 color, float scale)
+void kRender2D::kDrawTextQuadCenteredRotated(u32 codepoint, const kFont *font, kVec2 pos, float angle, kVec4 color,
+                                             float scale)
 {
 	kDrawTextQuadCenteredRotated(codepoint, font, kVec3(pos, 0), angle, color, scale);
 }
 
-void kDrawTextQuad(u32 codepoint, kVec3 pos, kVec4 color, float scale)
+void kRender2D::kDrawTextQuad(u32 codepoint, kVec3 pos, kVec4 color, float scale)
 {
 	kFont *font = g_Builtin.Font;
 	kDrawTextQuad(codepoint, font, pos, color, scale);
 }
 
-void kDrawTextQuad(u32 codepoint, kVec2 pos, kVec4 color, float scale)
+void kRender2D::kDrawTextQuad(u32 codepoint, kVec2 pos, kVec4 color, float scale)
 {
 	kFont *font = g_Builtin.Font;
 	kDrawTextQuad(codepoint, font, pos, color, scale);
 }
 
-void kDrawTextQuadRotated(u32 codepoint, kVec3 pos, float angle, kVec4 color, float scale)
+void kRender2D::kDrawTextQuadRotated(u32 codepoint, kVec3 pos, float angle, kVec4 color, float scale)
 {
 	kFont *font = g_Builtin.Font;
 	kDrawTextQuadRotated(codepoint, font, pos, angle, color, scale);
 }
 
-void kDrawTextQuadRotated(u32 codepoint, kVec2 pos, float angle, kVec4 color, float scale)
+void kRender2D::kDrawTextQuadRotated(u32 codepoint, kVec2 pos, float angle, kVec4 color, float scale)
 {
 	kFont *font = g_Builtin.Font;
 	kDrawTextQuadRotated(codepoint, font, pos, angle, color, scale);
 }
 
-void kDrawTextQuadCentered(u32 codepoint, kVec3 pos, kVec4 color, float scale)
+void kRender2D::kDrawTextQuadCentered(u32 codepoint, kVec3 pos, kVec4 color, float scale)
 {
 	kFont *font = g_Builtin.Font;
 	kDrawTextQuadCentered(codepoint, font, pos, color, scale);
 }
 
-void kDrawTextQuadCentered(u32 codepoint, kVec2 pos, kVec4 color, float scale)
+void kRender2D::kDrawTextQuadCentered(u32 codepoint, kVec2 pos, kVec4 color, float scale)
 {
 	kFont *font = g_Builtin.Font;
 	kDrawTextQuadCentered(codepoint, font, pos, color, scale);
 }
 
-void kDrawTextQuadCenteredRotated(u32 codepoint, kVec3 pos, float angle, kVec4 color, float scale)
+void kRender2D::kDrawTextQuadCenteredRotated(u32 codepoint, kVec3 pos, float angle, kVec4 color, float scale)
 {
 	kFont *font = g_Builtin.Font;
 	kDrawTextQuadCenteredRotated(codepoint, font, pos, angle, color, scale);
 }
 
-void kDrawTextQuadCenteredRotated(u32 codepoint, kVec2 pos, float angle, kVec4 color, float scale)
+void kRender2D::kDrawTextQuadCenteredRotated(u32 codepoint, kVec2 pos, float angle, kVec4 color, float scale)
 {
 	kFont *font = g_Builtin.Font;
 	kDrawTextQuadCenteredRotated(codepoint, font, pos, angle, color, scale);
 }
 
-kVec2 kCalculateText(kString text, const kFont *font, float scale)
+kVec2 kRender2D::kCalculateText(kString text, const kFont *font, float scale)
 {
 	u32   codepoint;
 	u8   *ptr = text.begin();
@@ -1829,13 +1864,13 @@ kVec2 kCalculateText(kString text, const kFont *font, float scale)
 	return r;
 }
 
-kVec2 kCalculateText(kString text, float scale)
+kVec2 kRender2D::kCalculateText(kString text, float scale)
 {
 	kFont *font = g_Builtin.Font;
 	return kCalculateText(text, font, scale);
 }
 
-void kDrawText(kString text, kVec3 pos, const kFont *font, kVec4 color, float scale)
+void kRender2D::kDrawText(kString text, kVec3 pos, const kFont *font, kVec4 color, float scale)
 {
 	kPushTexture(g_Builtin.Textures[kTextureType_Color], kTextureType_Color);
 	kPushTexture(font->Atlas, kTextureType_MaskSDF);
@@ -1865,18 +1900,18 @@ void kDrawText(kString text, kVec3 pos, const kFont *font, kVec4 color, float sc
 	kPopTexture(kTextureType_Color);
 }
 
-void kDrawText(kString text, kVec2 pos, const kFont *font, kVec4 color, float scale)
+void kRender2D::kDrawText(kString text, kVec2 pos, const kFont *font, kVec4 color, float scale)
 {
 	kDrawText(text, kVec3(pos, 0), font, color, scale);
 }
 
-void kDrawText(kString text, kVec3 pos, kVec4 color, float scale)
+void kRender2D::kDrawText(kString text, kVec3 pos, kVec4 color, float scale)
 {
 	kFont *font = g_Builtin.Font;
 	kDrawText(text, pos, font, color, scale);
 }
 
-void kDrawText(kString text, kVec2 pos, kVec4 color, float scale)
+void kRender2D::kDrawText(kString text, kVec2 pos, kVec4 color, float scale)
 {
 	kFont *font = g_Builtin.Font;
 	kDrawText(text, pos, font, color, scale);
@@ -1886,7 +1921,57 @@ void kDrawText(kString text, kVec2 pos, kVec4 color, float scale)
 //
 //
 
-void kCreateRenderContext(const kRenderSpec &spec, kTexture textures[kTextureType_Count], kFont *font)
+void kRender3D::kBeginScene(const kCameraView &view, const kViewport &viewport)
+{
+	kRenderScene *scene = g_Render3D.Scenes.Add();
+	scene->CameraView   = view;
+	scene->Viewport     = viewport;
+	scene->Commands     = kRangeT<u32>((u32)g_Render3D.Commands.Count);
+}
+
+void kRender3D::kEndScene(void)
+{
+	kRenderScene *scene = &g_Render3D.Scenes.Last();
+	scene->Commands.Max = (u32)g_Render3D.Commands.Count;
+	if (!scene->Commands.Length())
+	{
+		g_Render3D.Scenes.Pop();
+	}
+}
+
+void kRender3D::kDrawMesh(kMesh mesh, kTexture diffuse, const kMat4 &transform, kVec4 color)
+{
+	kAssert(g_Render3D.Scenes.Count);
+	kRenderCommand3D cmd = {.Flags = 0, .Transform = transform, .Mesh = mesh, .Diffuse = diffuse, .Color = color};
+	g_Render3D.Commands.Add(cmd);
+}
+
+void kRender3D::kDrawEmbeddedMesh(kEmbeddedMesh mesh, kTexture diffuse, const kMat4 &transform, kVec4 color)
+{
+	kDrawMesh(g_Builtin.Meshes[mesh], diffuse, transform, color);
+}
+
+void kRender3D::kDrawCube(kTexture diffuse, const kMat4 &transform, kVec4 color)
+{
+	kDrawMesh(g_Builtin.Meshes[kEmbeddedMesh_Cube], diffuse, transform, color);
+}
+
+void kRender3D::kDrawEmbeddedMesh(kEmbeddedMesh mesh, const kMat4 &transform, kVec4 color)
+{
+	kDrawEmbeddedMesh(mesh, g_Builtin.Textures[0], transform, color);
+}
+
+void kRender3D::kDrawCube(const kMat4 &transform, kVec4 color)
+{
+	kDrawCube(g_Builtin.Textures[0], transform, color);
+}
+
+//
+//
+//
+
+void kCreateRenderContext(const kRenderSpec &spec, kMesh meshes[kEmbeddedMesh_Count],
+                          kTexture textures[kTextureType_Count], kFont *font)
 {
 	for (u32 i = 0; i < kMaxCircleSegments; ++i)
 	{
@@ -1898,6 +1983,9 @@ void kCreateRenderContext(const kRenderSpec &spec, kTexture textures[kTextureTyp
 	Cosines[kMaxCircleSegments - 1] = 1;
 	Sines[kMaxCircleSegments - 1]   = 0;
 
+	for (u32 i = 0; i < kEmbeddedMesh_Count; ++i)
+		g_Builtin.Meshes[i] = meshes[i];
+
 	for (u32 i = 0; i < kTextureType_Count; ++i)
 		g_Builtin.Textures[i] = textures[i];
 	g_Builtin.Font             = font;
@@ -1907,7 +1995,7 @@ void kCreateRenderContext(const kRenderSpec &spec, kTexture textures[kTextureTyp
 	g_Render2D.Vertices.Reserve(spec.Vertices);
 	g_Render2D.Indices.Reserve(spec.Indices);
 	g_Render2D.Commands.Reserve(spec.Commands);
-	for (int i = 0; i < kRenderPass_Count; ++i)
+	for (int i = 0; i < (int)kRenderPass::Count; ++i)
 		g_Render2D.Scenes[i].Reserve(spec.Scenes);
 	g_Render2D.Rects.Reserve(spec.Commands);
 
@@ -1920,14 +2008,14 @@ void kCreateRenderContext(const kRenderSpec &spec, kTexture textures[kTextureTyp
 	g_Render2D.Stack.Normals.Reserve(4096);
 	g_Render2D.Stack.BlendModes.Reserve(32);
 
-	g_Render2D.Stack.RenderPass.Add(kRenderPass_Default);
+	g_Render2D.Stack.RenderPass.Add(kRenderPass::Default);
 	g_Render2D.Stack.Rects.Add(kRect{});
 	g_Render2D.Stack.Transforms.Add(kIdentity3x3());
 	for (u32 i = 0; i < kTextureType_Count; ++i)
 		g_Render2D.Stack.Textures[i].Add(g_Builtin.Textures[i]);
 	g_Render2D.Stack.OutLineStyles.Add(kVec4(0));
-	g_Render2D.Stack.BlendModes.Add(kBlendMode_Normal);
-	g_Render2D.Stack.TextureFilters.Add(kTextureFilter_LinearWrap);
+	g_Render2D.Stack.BlendModes.Add(kBlendMode::Normal);
+	g_Render2D.Stack.TextureFilters.Add(kTextureFilter::LinearWrap);
 
 	kResetFrame();
 }
@@ -1937,7 +2025,7 @@ void kDestroyRenderContext(void)
 	kFree(&g_Render2D.Vertices);
 	kFree(&g_Render2D.Indices);
 	kFree(&g_Render2D.Commands);
-	for (int i = 0; i < kRenderPass_Count; ++i)
+	for (int i = 0; i < (int)kRenderPass::Count; ++i)
 		kFree(&g_Render2D.Scenes[i]);
 	kFree(&g_Render2D.Rects);
 	kFree(&g_Render2D.OutLineStyles);
@@ -1957,10 +2045,13 @@ void kDestroyRenderContext(void)
 
 void kResetFrame(void)
 {
+	g_Render3D.Scenes.Count   = 0;
+	g_Render3D.Commands.Count = 0;
+
 	g_Render2D.Vertices.Count = 0;
 	g_Render2D.Indices.Count  = 0;
 	g_Render2D.Commands.Count = 0;
-	for (int i = 0; i < kRenderPass_Count; ++i)
+	for (int i = 0; i < (int)kRenderPass::Count; ++i)
 		g_Render2D.Scenes[i].Count = 0;
 	g_Render2D.Rects.Count            = 0;
 	g_Render2D.OutLineStyles.Count    = 0;
@@ -1993,7 +2084,7 @@ static void kUpdateMemoryStatictics(void)
 	g_Memory.Caps.VertexSize  = (u32)(g_Render2D.Vertices.Capacity * sizeof(kVertex2D));
 	g_Memory.Caps.IndexSize   = (u32)(g_Render2D.Indices.Capacity * sizeof(kIndex2D));
 	g_Memory.Caps.CommandSize = (u32)(g_Render2D.Commands.Capacity * sizeof(kRenderCommand2D));
-	for (int i = 0; i < kRenderPass_Count; ++i)
+	for (int i = 0; i < (int)kRenderPass::Count; ++i)
 		g_Memory.Caps.SceneSize = (u32)(g_Render2D.Scenes[i].Capacity * sizeof(kRenderScene));
 
 	g_Memory.Caps.MB = 0;
@@ -2006,7 +2097,7 @@ static void kUpdateMemoryStatictics(void)
 	g_Memory.Used.VertexSize  = (u32)(g_Render2D.Vertices.Count * sizeof(kVertex2D));
 	g_Memory.Used.IndexSize   = (u32)(g_Render2D.Indices.Count * sizeof(kIndex2D));
 	g_Memory.Used.CommandSize = (u32)(g_Render2D.Commands.Count * sizeof(kRenderCommand2D));
-	for (int i = 0; i < kRenderPass_Count; ++i)
+	for (int i = 0; i < (int)kRenderPass::Count; ++i)
 		g_Memory.Used.SceneSize = (u32)(g_Render2D.Scenes[i].Count * sizeof(kRenderScene));
 
 	g_Memory.Used.MB = 0;
@@ -2017,15 +2108,21 @@ static void kUpdateMemoryStatictics(void)
 	g_Memory.Used.MB /= (1024 * 1024);
 }
 
-void kGetFrameData(kRenderFrame2D *frame)
+void kGetFrameData(kRenderFrame *frame)
 {
-	for (int i = 0; i < kRenderPass_Count; ++i)
-		frame->Scenes[i] = g_Render2D.Scenes[i];
-	frame->Commands      = g_Render2D.Commands;
-	frame->OutLineStyles = g_Render2D.OutLineStyles;
-	frame->Rects         = g_Render2D.Rects;
-	frame->Vertices      = g_Render2D.Vertices;
-	frame->Indices       = g_Render2D.Indices;
+	kRenderFrame2D &render2d = frame->Frame2D;
+
+	for (int i = 0; i < (int)kRenderPass::Count; ++i)
+		render2d.Scenes[i] = g_Render2D.Scenes[i];
+	render2d.Commands        = g_Render2D.Commands;
+	render2d.OutLineStyles   = g_Render2D.OutLineStyles;
+	render2d.Rects           = g_Render2D.Rects;
+	render2d.Vertices        = g_Render2D.Vertices;
+	render2d.Indices         = g_Render2D.Indices;
+
+	kRenderFrame3D &render3d = frame->Frame3D;
+	render3d.Scenes          = g_Render3D.Scenes;
+	render3d.Commands        = g_Render3D.Commands;
 
 	kUpdateMemoryStatictics();
 }

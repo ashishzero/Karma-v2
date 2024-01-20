@@ -30,35 +30,70 @@ void Update(float dt, float alpha)
 		kRestartLoop();
 	}
 
-	kVec2i      size     = kGetWindowSize();
-	float       ar       = kGetWindowAspectRatio();
-	float       yfactor  = kGetWindowDpiScale();
-	kViewport   viewport = {0, 0, size.x, size.y};
+	kVec2i    size     = kGetWindowSize();
+	float     ar       = kGetWindowAspectRatio();
+	float     yfactor  = kGetWindowDpiScale();
+	kViewport viewport = {0, 0, size.x, size.y};
 
-	kCameraView view     = kOrthographicView(ar, 100.0f);
+	kVec2i    pos      = kGetCursorPosition();
+	float     sx       = ar * 50.0f * ((float)pos.x / size.x * 2.0f - 1.0f);
+	float     sy       = 50.0f * ((float)(pos.y) / size.y * 2.0f - 1.0f);
 
-	kVec2i      pos      = kGetCursorPosition();
-	float       sx       = ar * 50.0f * ((float)pos.x / size.x * 2.0f - 1.0f);
-	float       sy       = 50.0f * ((float)(pos.y) / size.y * 2.0f - 1.0f);
+	{
+		kMat4        tranform = kIdentity();
+		kCameraView  view     = kPerspectiveView(0.16f, ar, 0.1f, 1000.0f, tranform);
 
-	kLineThickness(0.1f);
+		kRotor3      rotor    = kAngleAxisToRotor3(kNormalize(kVec3(0, 1, 1)), 0.5);
 
-	kBeginScene(view, viewport);
+		static float angle    = 0.05f;
 
-	kDrawCircle(kVec2(sx, sy), 0.5f, kVec4(2, 2, 1, 1));
+		kMat4        modal    = kTranslation(0, 0, 10) * kRotationX(0.15f) * kRotationY(angle);
 
-	kEndScene();
+		kRender3D::kBeginScene(view, viewport);
+		kRender3D::kDrawCube(modal, kVec4(5, 3, 0, 1));
+		kRender3D::kEndScene();
 
-	kCameraView ui = KOrthographicView(0, (float)size.x, 0, (float)size.y);
+		angle += dt * 0.1f;
+	}
 
-	kBeginRenderPass(kRenderPass_HUD);
-	kBeginScene(ui, viewport);
-	kPushOutLineStyle(kVec3(0.1f), 0.4f);
+	kCameraView view = kOrthographicView(ar, 100.0f);
+
+	kRender2D::kLineThickness(0.1f);
+
+	kRender2D::kBeginScene(view, viewport);
+	kRender2D::kDrawCircle(kVec2(sx, sy), 15, kVec4(2, 20, 20, 1));
+
+	kRender2D::kLineThickness(2);
+
+	kRender2D::kDrawBezierCubic(kVec2(0), kVec2(20, -50), kVec2(50, -10), kVec2(80, -40), kVec4(3, 20, 3, 1));
+
+	kRender2D::kEndScene();
+
+	kCameraView  ui    = KOrthographicView(0, (float)size.x, 0, (float)size.y);
+
+	static kVec4 color = kVec4(1);
+
+	kRender2D::kBeginScene(ui, viewport);
+	kRender2D::kDrawText("HDR Bloom", kVec2(50, 100), color, 8);
+	kRender2D::kEndScene();
+
 	kString FPS = kFormatString(arena, "FPS: %d (%.2fms)", (int)(1.0f / dt), 1000.0f * dt);
-	kDrawText(FPS, kVec2(4), kVec4(1, 1, 1, 1), 0.5f * yfactor);
-	kPopOutLineStyle();
-	kEndScene();
-	kEndRenderPass();
+
+	kRender2D::kBeginRenderPass(kRenderPass::HUD);
+	kRender2D::kBeginScene(ui, viewport);
+	kRender2D::kPushOutLineStyle(kVec3(0.1f), 0.4f);
+	kRender2D::kDrawText(FPS, kVec2(4), kVec4(1, 1, 1, 1), 0.5f * yfactor);
+	kRender2D::kPopOutLineStyle();
+	kRender2D::kEndScene();
+	kRender2D::kEndRenderPass();
+
+	ImGui::Begin("Config");
+
+	ImGui::DragFloat("R", &color.x, 0.1f, 0.0f, 5000.0f);
+	ImGui::DragFloat("G", &color.y, 0.1f, 0.0f, 5000.0f);
+	ImGui::DragFloat("B", &color.z, 0.1f, 0.0f, 5000.0f);
+
+	ImGui::End();
 }
 
 static float           g_Now;
@@ -91,7 +126,11 @@ void OnUpdateEvent(float dt, void *data)
 
 void Main(int argc, const char **argv)
 {
+	auto spec = kDefaultSpec;
+	//spec.RenderPipeline.Hdr = kHighDynamicRange::Disabled;
+	//spec.RenderPipeline.Bloom = kBloom::Disabled;
+
 	kSetLogLevel(kLogLevel::Trace);
 	kMediaUserEvents user = {.Update = OnUpdateEvent, .Load = OnLoadEvent, .Release = OnReleaseEvent};
-	kEventLoop(kDefaultSpec, user);
+	kEventLoop(spec, user);
 }
