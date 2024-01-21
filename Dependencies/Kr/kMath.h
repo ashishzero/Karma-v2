@@ -779,6 +779,7 @@ kRotor3  kReverse(kRotor3 q);
 kRotor3  operator*(kRotor3 q1, kRotor3 q2);
 kVec3    operator*(kRotor3 q, kVec3 v);
 kVec3    kRotate(kRotor3 q, kVec3 v);
+kRotor3 &operator*=(kRotor3 &p, kRotor3 q);
 
 //
 //

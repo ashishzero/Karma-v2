@@ -8,6 +8,12 @@
 #include "kPlatform.h"
 #include "kImGui.h"
 
+static struct Camera3D
+{
+	kVec3   Position;
+	kRotor3 Orientation;
+} Camera;
+
 void Tick(float t, float dt)
 {}
 
@@ -30,6 +36,41 @@ void Update(float dt, float alpha)
 		kRestartLoop();
 	}
 
+	float         sensitivity = 0.1f;
+
+	static kVec2i cursor      = kVec2i(0);
+
+	if (kButtonPressed(kButton::Right))
+	{
+		kCaptureCursor();
+		cursor = kGetCursorPosition();
+	}
+
+	if (kButtonReleased(kButton::Right))
+	{
+		kReleaseCursor();
+	}
+
+	if (kIsButtonDown(kButton::Right))
+	{
+		kVec2i  delta = cursor - kGetCursorPosition();
+		float   angle = delta.x * sensitivity * dt;
+		kRotor3 turn  = kAngleAxisToRotor3(kVec3(0, -1, 0), angle);
+
+		kLogTrace("Angle: %f", angle);
+
+		Camera.Orientation *= turn;
+		cursor = kGetCursorPosition();
+	}
+
+	float forward   = (float)kIsKeyDown(kKey::W) - (float)kIsKeyDown(kKey::S);
+	float right     = (float)kIsKeyDown(kKey::D) - (float)kIsKeyDown(kKey::A);
+
+	kVec3 direction = forward * kForwardDirection(Camera.Orientation) + right * kRightDirection(Camera.Orientation);
+
+	float speed     = 20.0f;
+	Camera.Position += dt * speed * kNormalizeZ(direction);
+
 	kVec2i    size     = kGetWindowSize();
 	float     ar       = kGetWindowAspectRatio();
 	float     yfactor  = kGetWindowDpiScale();
@@ -39,18 +80,33 @@ void Update(float dt, float alpha)
 	float     sx       = ar * 50.0f * ((float)pos.x / size.x * 2.0f - 1.0f);
 	float     sy       = 50.0f * ((float)(pos.y) / size.y * 2.0f - 1.0f);
 
+	static float fov      = 0.08f;
+
 	{
-		kMat4        tranform = kIdentity();
-		kCameraView  view     = kPerspectiveView(0.16f, ar, 0.1f, 1000.0f, tranform);
+		kMat4        tranform = kTranslation(Camera.Position) * kRotor3ToMat4(Camera.Orientation);
+		kCameraView  view     = kPerspectiveView(fov, ar, 0.1f, 1000.0f, tranform);
 
 		kRotor3      rotor    = kAngleAxisToRotor3(kNormalize(kVec3(0, 1, 1)), 0.5);
 
 		static float angle    = 0.05f;
 
-		kMat4        modal    = kTranslation(0, 0, 10) * kRotationX(0.15f) * kRotationY(angle);
+		static float time     = 0.0f;
+
+
+		float        rot       = kSin(time);
+
+		kMat4        modal1    = kTranslation(0, 0, 10) * kRotationX(rot) * kRotationY(angle);
+		kMat4        modal2    = kTranslation(0, 0, 20) * kRotationX(0.15f) * kRotationY(angle);
+		kMat4        modal3    = kTranslation(0, 0, 30) * kRotationX(0.15f) * kRotationY(angle);
+
+
+		float        red      = kAbsolute(kSin(time)) * 5.0f;
+		time += dt * 0.1f;
 
 		kRender3D::kBeginScene(view, viewport);
-		kRender3D::kDrawCube(modal, kVec4(5, 3, 0, 1));
+		kRender3D::kDrawCube(modal1, kVec4(red, 3, 0, 1));
+		kRender3D::kDrawCube(modal2, kVec4(3, red, 0, 1));
+		kRender3D::kDrawCube(modal3, kVec4(0, 3, red, 1));
 		kRender3D::kEndScene();
 
 		angle += dt * 0.1f;
@@ -89,9 +145,11 @@ void Update(float dt, float alpha)
 
 	ImGui::Begin("Config");
 
-	ImGui::DragFloat("R", &color.x, 0.1f, 0.0f, 5000.0f);
-	ImGui::DragFloat("G", &color.y, 0.1f, 0.0f, 5000.0f);
-	ImGui::DragFloat("B", &color.z, 0.1f, 0.0f, 5000.0f);
+	ImGui::DragFloat("FOV", &fov, 0.001f, 0.03f, 0.4f);
+
+	// ImGui::DragFloat("R", &color.x, 0.1f, 0.0f, 5000.0f);
+	// ImGui::DragFloat("G", &color.y, 0.1f, 0.0f, 5000.0f);
+	// ImGui::DragFloat("B", &color.z, 0.1f, 0.0f, 5000.0f);
 
 	ImGui::End();
 }
@@ -101,7 +159,10 @@ static float           g_Accumulator;
 static constexpr float FixedDeltaTime = 1.0f / 60.0f;
 
 void                   OnLoadEvent(void *data)
-{}
+{
+	Camera.Position    = kVec3(0, 0, 0);
+	Camera.Orientation = kRotor3();
+}
 
 void OnReleaseEvent(void *data)
 {}
@@ -127,8 +188,8 @@ void OnUpdateEvent(float dt, void *data)
 void Main(int argc, const char **argv)
 {
 	auto spec = kDefaultSpec;
-	//spec.RenderPipeline.Hdr = kHighDynamicRange::Disabled;
-	//spec.RenderPipeline.Bloom = kBloom::Disabled;
+	// spec.RenderPipeline.Hdr = kHighDynamicRange::Disabled;
+	// spec.RenderPipeline.Bloom = kBloom::Disabled;
 
 	kSetLogLevel(kLogLevel::Trace);
 	kMediaUserEvents user = {.Update = OnUpdateEvent, .Load = OnLoadEvent, .Release = OnReleaseEvent};

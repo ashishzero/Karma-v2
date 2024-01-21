@@ -688,6 +688,12 @@ kVec3 kRotate(kRotor3 q, kVec3 v)
 	return q * v;
 }
 
+kRotor3 &operator*=(kRotor3& p, kRotor3 q)
+{
+	p = p * q;
+	return p;
+}
+
 //
 //
 //
