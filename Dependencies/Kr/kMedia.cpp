@@ -242,6 +242,7 @@ void kClearFrame(void)
 	}
 
 	memset(&g_Media.Mouse.Wheel, 0, sizeof(g_Media.Mouse.Wheel));
+	memset(&g_Media.Mouse.Delta, 0, sizeof(g_Media.Mouse.Delta));
 
 	g_Media.Window.Flags[kWindow_Resized] = false;
 	g_Media.Window.Flags[kWindow_Closed]  = false;

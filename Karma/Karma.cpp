@@ -10,8 +10,8 @@
 
 static struct Camera3D
 {
-	kVec3   Position;
-	kRotor3 Orientation;
+	kVec3 Position;
+	kVec3 Forward;
 } Camera;
 
 void Tick(float t, float dt)
@@ -36,37 +36,36 @@ void Update(float dt, float alpha)
 		kRestartLoop();
 	}
 
-	float         sensitivity = 0.05f;
-
-	static kVec2i cursor      = kVec2i(0);
+	float sensitivity = 0.05f;
 
 	if (kButtonPressed(kButton::Right))
 	{
-		// kCaptureCursor();
-		cursor = kGetCursorPosition();
+		kCaptureCursor();
 	}
 
 	if (kButtonReleased(kButton::Right))
 	{
-		// kReleaseCursor();
+		kReleaseCursor();
 	}
 
 	if (kIsButtonDown(kButton::Right))
 	{
-		kVec2i  delta  = cursor - kGetCursorPosition();
-		float   angle1 = delta.x * sensitivity * dt;
-		float   angle2 = delta.y * sensitivity * dt;
-		kRotor3 turn1  = kAngleAxisToRotor3(kVec3(0, -1, 0), angle1);
-		kRotor3 turn2  = kAngleAxisToRotor3(kVec3(1, 0, 0), angle2);
+		kVec2i  delta  = kGetCursorDelta();
+		float   xaxis  = delta.x * sensitivity * dt;
+		float   yaxis  = delta.y * sensitivity * dt;
 
-		Camera.Orientation *= (turn1 * turn2);
-		cursor = kGetCursorPosition();
+		kVec3   right  = kNormalize(kCrossProduct(kVec3(0, 1, 0), Camera.Forward));
+		kRotor3 turn1  = kAngleAxisToRotor3(kVec3(0, 1, 0), xaxis);
+		kRotor3 turn2  = kAngleAxisToRotor3(right, -yaxis);
+
+		Camera.Forward = kRotate(turn2 * turn1, Camera.Forward);
+		Camera.Forward = kNormalize(Camera.Forward);
 	}
 
 	float forward   = (float)kIsKeyDown(kKey::W) - (float)kIsKeyDown(kKey::S);
 	float right     = (float)kIsKeyDown(kKey::D) - (float)kIsKeyDown(kKey::A);
 
-	kVec3 direction = forward * kForwardDirection(Camera.Orientation) + right * kRightDirection(Camera.Orientation);
+	kVec3 direction = forward * Camera.Forward + right * kNormalize(kCrossProduct(kVec3(0, 1, 0), Camera.Forward));
 
 	float speed     = 20.0f;
 	Camera.Position += dt * speed * kNormalizeZ(direction);
@@ -83,22 +82,24 @@ void Update(float dt, float alpha)
 	static float fov      = 0.2f;
 
 	{
-		kMat4        tranform = kTranslation(Camera.Position) * kRotor3ToMat4(Camera.Orientation);
-		kCameraView  view     = kPerspectiveView(fov, ar, 0.1f, 1000.0f, tranform);
+		kMat4        orientation = kLookAtDirection(Camera.Forward, kVec3(0, 1, 0));
 
-		kRotor3      rotor    = kAngleAxisToRotor3(kNormalize(kVec3(0, 1, 1)), 0.5);
+		kMat4        tranform    = kTranslation(Camera.Position) * orientation;
+		kCameraView  view        = kPerspectiveView(fov, ar, 0.1f, 1000.0f, tranform);
 
-		static float angle    = 0.05f;
+		kRotor3      rotor       = kAngleAxisToRotor3(kNormalize(kVec3(0, 1, 1)), 0.5);
 
-		static float time     = 0.0f;
+		static float angle       = 0.05f;
 
-		float        rot      = kSin(time);
+		static float time        = 0.0f;
 
-		kMat4        modal1   = kTranslation(0, 0, 10) * kRotationX(rot) * kRotationY(angle);
-		kMat4        modal2   = kTranslation(0, 0, 20) * kRotationX(0.15f) * kRotationY(angle);
-		kMat4        modal3   = kTranslation(0, 0, 30) * kRotationX(0.15f) * kRotationY(angle);
+		float        rot         = kSin(time);
 
-		float        red      = 5;
+		kMat4        modal1      = kTranslation(0, 0, 10) * kRotationX(rot) * kRotationY(angle);
+		kMat4        modal2      = kTranslation(0, 0, 20) * kRotationX(0.15f) * kRotationY(angle);
+		kMat4        modal3      = kTranslation(0, 0, 30) * kRotationX(0.15f) * kRotationY(angle);
+
+		float        red         = 5;
 		// kAbsolute(kSin(time)) * 5.0f;
 		time += dt * 0.1f;
 
@@ -142,15 +143,15 @@ void Update(float dt, float alpha)
 	kRender2D::kEndScene();
 	kRender2D::kEndRenderPass();
 
-//	 ImGui::Begin("Config");
-//
-////	 ImGui::DragFloat("FOV", &fov, 0.001f, 0.03f, 0.4f);
-//
-//	 ImGui::DragFloat("R", &color.x, 0.1f, 0.0f, 5000.0f);
-//	 ImGui::DragFloat("G", &color.y, 0.1f, 0.0f, 5000.0f);
-//	 ImGui::DragFloat("B", &color.z, 0.1f, 0.0f, 5000.0f);
-//
-//	 ImGui::End();
+	//	 ImGui::Begin("Config");
+	//
+	////	 ImGui::DragFloat("FOV", &fov, 0.001f, 0.03f, 0.4f);
+	//
+	//	 ImGui::DragFloat("R", &color.x, 0.1f, 0.0f, 5000.0f);
+	//	 ImGui::DragFloat("G", &color.y, 0.1f, 0.0f, 5000.0f);
+	//	 ImGui::DragFloat("B", &color.z, 0.1f, 0.0f, 5000.0f);
+	//
+	//	 ImGui::End();
 }
 
 static float           g_Now;
@@ -159,8 +160,8 @@ static constexpr float FixedDeltaTime = 1.0f / 60.0f;
 
 void                   OnLoadEvent(void *data)
 {
-	Camera.Position    = kVec3(0, 0, 0);
-	Camera.Orientation = kRotor3();
+	Camera.Position = kVec3(0, 0, 0);
+	Camera.Forward  = kVec3(0, 0, 1);
 }
 
 void OnReleaseEvent(void *data)

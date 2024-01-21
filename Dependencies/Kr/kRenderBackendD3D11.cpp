@@ -1307,7 +1307,7 @@ static void kD3D11_RenderFrame3D(const kRenderFrame3D &render)
 			g_DeviceContext->IASetIndexBuffer(md->IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
 
 			ID3D11ShaderResourceView *r = kD3D11_GetTextureSRV(cmd.Diffuse);
-			g_DeviceContext->PSSetShaderResources(kTextureType_Color, 1, &r);
+			g_DeviceContext->PSSetShaderResources(0, 1, &r);
 
 			g_DeviceContext->DrawIndexed(md->IndexCount, 0, 0);
 		}

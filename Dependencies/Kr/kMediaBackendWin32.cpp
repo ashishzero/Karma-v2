@@ -186,7 +186,6 @@ static void kWin32_ForceCaptureCursor(kWin32Window *window)
 	if (GetActiveWindow() == window->Wnd)
 	{
 		ShowCursor(FALSE);
-		kWin32_ClipCursorToWindow(window);
 	}
 
 	RAWINPUTDEVICE rid = {.usUsagePage = 0x1, .usUsage = 0x2, .dwFlags = RIDEV_REMOVE, .hwndTarget = window->Wnd};
