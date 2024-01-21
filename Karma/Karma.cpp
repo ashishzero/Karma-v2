@@ -36,30 +36,30 @@ void Update(float dt, float alpha)
 		kRestartLoop();
 	}
 
-	float         sensitivity = 0.1f;
+	float         sensitivity = 0.05f;
 
 	static kVec2i cursor      = kVec2i(0);
 
 	if (kButtonPressed(kButton::Right))
 	{
-		kCaptureCursor();
+		// kCaptureCursor();
 		cursor = kGetCursorPosition();
 	}
 
 	if (kButtonReleased(kButton::Right))
 	{
-		kReleaseCursor();
+		// kReleaseCursor();
 	}
 
 	if (kIsButtonDown(kButton::Right))
 	{
-		kVec2i  delta = cursor - kGetCursorPosition();
-		float   angle = delta.x * sensitivity * dt;
-		kRotor3 turn  = kAngleAxisToRotor3(kVec3(0, -1, 0), angle);
+		kVec2i  delta  = cursor - kGetCursorPosition();
+		float   angle1 = delta.x * sensitivity * dt;
+		float   angle2 = delta.y * sensitivity * dt;
+		kRotor3 turn1  = kAngleAxisToRotor3(kVec3(0, -1, 0), angle1);
+		kRotor3 turn2  = kAngleAxisToRotor3(kVec3(1, 0, 0), angle2);
 
-		kLogTrace("Angle: %f", angle);
-
-		Camera.Orientation *= turn;
+		Camera.Orientation *= (turn1 * turn2);
 		cursor = kGetCursorPosition();
 	}
 
@@ -71,16 +71,16 @@ void Update(float dt, float alpha)
 	float speed     = 20.0f;
 	Camera.Position += dt * speed * kNormalizeZ(direction);
 
-	kVec2i    size     = kGetWindowSize();
-	float     ar       = kGetWindowAspectRatio();
-	float     yfactor  = kGetWindowDpiScale();
-	kViewport viewport = {0, 0, size.x, size.y};
+	kVec2i       size     = kGetWindowSize();
+	float        ar       = kGetWindowAspectRatio();
+	float        yfactor  = kGetWindowDpiScale();
+	kViewport    viewport = {0, 0, size.x, size.y};
 
-	kVec2i    pos      = kGetCursorPosition();
-	float     sx       = ar * 50.0f * ((float)pos.x / size.x * 2.0f - 1.0f);
-	float     sy       = 50.0f * ((float)(pos.y) / size.y * 2.0f - 1.0f);
+	kVec2i       pos      = kGetCursorPosition();
+	float        sx       = ar * 50.0f * ((float)pos.x / size.x * 2.0f - 1.0f);
+	float        sy       = 50.0f * ((float)(pos.y) / size.y * 2.0f - 1.0f);
 
-	static float fov      = 0.08f;
+	static float fov      = 0.2f;
 
 	{
 		kMat4        tranform = kTranslation(Camera.Position) * kRotor3ToMat4(Camera.Orientation);
@@ -92,15 +92,14 @@ void Update(float dt, float alpha)
 
 		static float time     = 0.0f;
 
+		float        rot      = kSin(time);
 
-		float        rot       = kSin(time);
+		kMat4        modal1   = kTranslation(0, 0, 10) * kRotationX(rot) * kRotationY(angle);
+		kMat4        modal2   = kTranslation(0, 0, 20) * kRotationX(0.15f) * kRotationY(angle);
+		kMat4        modal3   = kTranslation(0, 0, 30) * kRotationX(0.15f) * kRotationY(angle);
 
-		kMat4        modal1    = kTranslation(0, 0, 10) * kRotationX(rot) * kRotationY(angle);
-		kMat4        modal2    = kTranslation(0, 0, 20) * kRotationX(0.15f) * kRotationY(angle);
-		kMat4        modal3    = kTranslation(0, 0, 30) * kRotationX(0.15f) * kRotationY(angle);
-
-
-		float        red      = kAbsolute(kSin(time)) * 5.0f;
+		float        red      = 5;
+		// kAbsolute(kSin(time)) * 5.0f;
 		time += dt * 0.1f;
 
 		kRender3D::kBeginScene(view, viewport);
@@ -143,15 +142,15 @@ void Update(float dt, float alpha)
 	kRender2D::kEndScene();
 	kRender2D::kEndRenderPass();
 
-	ImGui::Begin("Config");
-
-	ImGui::DragFloat("FOV", &fov, 0.001f, 0.03f, 0.4f);
-
-	// ImGui::DragFloat("R", &color.x, 0.1f, 0.0f, 5000.0f);
-	// ImGui::DragFloat("G", &color.y, 0.1f, 0.0f, 5000.0f);
-	// ImGui::DragFloat("B", &color.z, 0.1f, 0.0f, 5000.0f);
-
-	ImGui::End();
+//	 ImGui::Begin("Config");
+//
+////	 ImGui::DragFloat("FOV", &fov, 0.001f, 0.03f, 0.4f);
+//
+//	 ImGui::DragFloat("R", &color.x, 0.1f, 0.0f, 5000.0f);
+//	 ImGui::DragFloat("G", &color.y, 0.1f, 0.0f, 5000.0f);
+//	 ImGui::DragFloat("B", &color.z, 0.1f, 0.0f, 5000.0f);
+//
+//	 ImGui::End();
 }
 
 static float           g_Now;
