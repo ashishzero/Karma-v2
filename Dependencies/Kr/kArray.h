@@ -256,12 +256,14 @@ template <typename T>
 void kFree(kArray<T> *arr)
 {
 	kFree(arr->Items, arr->Capacity * sizeof(T));
+	*arr = {};
 }
 
 template <typename T>
 void kFree(kSpan<T> *arr)
 {
 	kFree(arr->Items, arr->Count * sizeof(T));
+	*arr = {};
 }
 
 //

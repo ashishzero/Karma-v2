@@ -428,6 +428,16 @@ void kDestroyTexture(kTexture texture)
 	g_Media.Render.DestroyTexture(texture);
 }
 
+kMesh kCreateMesh(const kMeshSpec &spec)
+{
+	return g_Media.Render.CreateMesh(spec);
+}
+
+void kDestroyMesh(kMesh mesh)
+{
+	g_Media.Render.DestroyMesh(mesh);
+}
+
 //
 //
 //

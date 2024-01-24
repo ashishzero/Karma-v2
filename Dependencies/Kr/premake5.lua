@@ -10,12 +10,14 @@ project "Kr"
    vpaths
    {
         ["Resources"] = { "Resources/**.h" },
+        ["glTF"] = { "glTF/*.h" },
         ["Image"] = { "Image/*.h" },
         ["ImGui"] = { "ImGui/*.h", "ImGui/*.cpp", "kImGui.h" },
         ["Shaders"] = { "*.hlsl", "*.fx" },
         ["Basic"] = {
             "kArray.h", "kLinkedList.h", "kStrings.h", "kPool.h",
             "kImage.h", "kImage.cpp",
+            "kScene.h", "kScene.cpp",
             "kCmdLine.h", "kCmdLine.cpp",
             "kCommon.h", "kCommon.cpp",
             "kContext.h", "kContext.cpp",

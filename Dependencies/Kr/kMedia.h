@@ -345,6 +345,8 @@ void     kGetRenderPipelineConfig(kRenderPipelineConfig *config);
 void     kApplyRenderPipelineConfig(const kRenderPipelineConfig &config);
 kTexture kCreateTexture(const kTextureSpec &spec);
 void     kDestroyTexture(kTexture texture);
+kMesh    kCreateMesh(const kMeshSpec &spec);
+void     kDestroyMesh(kMesh mesh);
 
 //
 //

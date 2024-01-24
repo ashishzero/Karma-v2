@@ -1946,6 +1946,11 @@ void kRender3D::kDrawMesh(kMesh mesh, kTexture diffuse, const kMat4 &transform, 
 	g_Render3D.Commands.Add(cmd);
 }
 
+void kRender3D::kDrawMesh(kMesh mesh, const kMat4 &transform, kVec4 color)
+{
+	kDrawMesh(mesh, g_Builtin.Textures[0], transform, color);
+}
+
 void kRender3D::kDrawEmbeddedMesh(kEmbeddedMesh mesh, kTexture diffuse, const kMat4 &transform, kVec4 color)
 {
 	kDrawMesh(g_Builtin.Meshes[mesh], diffuse, transform, color);
