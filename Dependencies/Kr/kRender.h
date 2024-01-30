@@ -294,6 +294,9 @@ struct kRender3D
 	static void kBeginScene(const kCameraView &view, const kViewport &viewport);
 	static void kEndScene(void);
 
+	static void kPushSkeleton(const kSkeleton &skeleton);
+	static void kPopSkeleton(void);
+
 	static void kDrawMesh(kMesh mesh, kTexture diffuse, const kMat4 &transform, kVec4 color = kVec4(1));
 	static void kDrawMesh(kMesh mesh, const kMat4 &transform, kVec4 color = kVec4(1));
 	static void kDrawEmbeddedMesh(kEmbeddedMesh mesh, kTexture diffuse, const kMat4 &transform, kVec4 color = kVec4(1));

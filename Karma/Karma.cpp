@@ -15,12 +15,133 @@ static struct Camera3D
 	kVec3 Forward;
 } Camera;
 
+struct kAnimationTranform
+{
+	kVec3   Position;
+	kRotor3 Orientation;
+	kVec3   Scale;
+};
+
+struct kAnimationNode
+{
+	int Parent;
+};
+
+struct kAnimationKeyFrame
+{
+	kAnimationTranform Transformations[K_MAX_BONES];
+	float              Duration;
+};
+
+struct kAnimation
+{
+	kArray<kAnimationKeyFrame> KeyFrames;
+	int                        NodeCount;
+	kAnimationNode             Nodes[K_MAX_BONES];
+};
+
+static kAnimation       DragonAnimation;
+static float            DragonAnimationTime;
+
 static kArray<kMesh>    DragonMeshes;
 static kArray<kTexture> DragonTextures;
 static kArray<kVec4>    DragonColors;
 
 void                    Tick(float t, float dt)
 {}
+
+struct kAnimationBlend
+{
+	int   Key0, Key1;
+	float Alpha;
+};
+
+// static void AnimateNode(kSkeleton *skeleton, int index, const kMat4 &transform, const kAnimation &animation,
+//                         const kAnimationBlend &blend)
+//{
+//	const kAnimationNode     &parent = animation.Nodes[index];
+//	const kAnimationTranform &t0     = animation.KeyFrames[blend.Key0].Transformations[index];
+//	const kAnimationTranform &t1     = animation.KeyFrames[blend.Key1].Transformations[index];
+//
+//	kVec3                     p      = kLerp(t0.Position, t1.Position, blend.Alpha);
+//	kRotor3                   r      = kSlerp(t0.Orientation, t1.Orientation, blend.Alpha);
+//	kVec3                     s      = kLerp(t0.Scale, t1.Scale, blend.Alpha);
+//
+//	skeleton->Bones[index]           = transform * kTranslation(p) * kScale(s) * kRotor3ToMat4(r);
+//
+//	for (int iter = 0; iter < parent.ChildrenCount; ++iter)
+//	{
+//		AnimateNode(skeleton, parent.Children[iter], skeleton->Bones[index], animation, blend);
+//	}
+// }
+
+static void AnimateNode(kSkeleton *skeleton, const kAnimation &animation, const kAnimationBlend &blend)
+{
+	const kAnimationKeyFrame &key0 = animation.KeyFrames[blend.Key0];
+	const kAnimationKeyFrame &key1 = animation.KeyFrames[blend.Key1];
+
+	for (int iter = 0; iter < animation.NodeCount; ++iter)
+	{
+		const kAnimationTranform &t0     = key0.Transformations[iter];
+		const kAnimationTranform &t1     = key1.Transformations[iter];
+
+		kVec3                     p      = kLerp(t0.Position, t1.Position, blend.Alpha);
+		kRotor3                   r      = kSlerp(t0.Orientation, t1.Orientation, blend.Alpha);
+		kVec3                     s      = kLerp(t0.Scale, t1.Scale, blend.Alpha);
+
+		const kAnimationNode     &node   = animation.Nodes[iter];
+		kMat4                     parent = node.Parent >= 0 ? skeleton->Bones[node.Parent] : kMat4(1);
+		kMat4                     child  = kTranslation(p) * kScale(s) * kRotor3ToMat4(r);
+		skeleton->Bones[iter]            = parent * child;
+	}
+}
+
+static kSkeleton Animate(float dt)
+{
+	DragonAnimationTime += dt;
+
+	float           t     = DragonAnimationTime;
+
+	kAnimationBlend blend = {};
+
+	float           t0    = 0;
+
+	for (int iter = 0; iter < DragonAnimation.KeyFrames.Count; ++iter)
+	{
+		kAnimationKeyFrame &key = DragonAnimation.KeyFrames[iter];
+		float               t1  = t0 + key.Duration;
+
+		if (t >= t0 && t < t1)
+		{
+			blend.Key0  = iter;
+			blend.Key1  = (iter + 1) % DragonAnimation.KeyFrames.Count;
+			blend.Alpha = (t1 - t) / key.Duration;
+
+			if (iter + 1 >= DragonAnimation.KeyFrames.Count)
+			{
+				DragonAnimationTime -= t1;
+			}
+
+			break;
+		}
+
+		t0 = t1;
+	}
+
+	kSkeleton skeleton;
+
+	for (int iter = 0; iter < K_MAX_BONES; ++iter)
+	{
+		skeleton.Bones[iter] = kMat4(1);
+	}
+
+	if (DragonAnimation.KeyFrames.Count)
+	{
+		AnimateNode(&skeleton, DragonAnimation, blend);
+	}
+
+	return skeleton;
+}
 
 void Update(float dt, float alpha)
 {
@@ -72,7 +193,7 @@ void Update(float dt, float alpha)
 
 	kVec3 direction = forward * Camera.Forward + right * kNormalize(kCrossProduct(kVec3(0, 1, 0), Camera.Forward));
 
-	float speed     = 20.0f;
+	float speed     = 200.0f;
 	Camera.Position += dt * speed * kNormalizeZ(direction);
 
 	kVec2i       size     = kGetWindowSize();
@@ -110,7 +231,11 @@ void Update(float dt, float alpha)
 
 		kRender3D::kBeginScene(view, viewport);
 
-		kMat4 dragon = kTranslation(0, 0, 30) * kScale(kVec3(0.1f));
+		kMat4     dragon   = kTranslation(0, 0, 30) * kScale(kVec3(0.1f));
+
+		kSkeleton skeleton = Animate(dt);
+
+		kRender3D::kPushSkeleton(skeleton);
 
 		for (imem iter = 0; iter < DragonMeshes.Count; ++iter)
 		{
@@ -118,6 +243,10 @@ void Update(float dt, float alpha)
 			color.xyz *= 5.0f;
 			kRender3D::kDrawMesh(DragonMeshes[iter], DragonTextures[iter], dragon, color);
 		}
+
+		kRender3D::kPopSkeleton();
+
+		// kRender3D::kDrawCube(kTranslation(0, 0, 10), kVec4(5, 5, 5, 1));
 
 		/*kRender3D::kDrawCube(modal1, kVec4(red, 3, 0, 1));
 		kRender3D::kDrawCube(modal2, kVec4(3, red, 0, 1));
@@ -173,7 +302,11 @@ static float           g_Now;
 static float           g_Accumulator;
 static constexpr float FixedDeltaTime = 1.0f / 60.0f;
 
-void                   OnLoadEvent(void *data)
+//
+//
+//
+
+void OnLoadEvent(void *data)
 {
 	Camera.Position        = kVec3(0, 0, 0);
 	Camera.Forward         = kVec3(0, 0, 1);
@@ -194,8 +327,8 @@ void                   OnLoadEvent(void *data)
 		DragonTextures.Resize(out->meshes_count);
 		DragonColors.Resize(out->meshes_count);
 
-		kArray<kVertex3D> vertices;
-		kArray<u32>       indices;
+		kArray<kDynamicVertex3D> vertices;
+		kArray<u32>              indices;
 
 		for (umem mesh_iter = 0; mesh_iter < out->meshes_count; ++mesh_iter)
 		{
@@ -217,7 +350,7 @@ void                   OnLoadEvent(void *data)
 							cgltf_texture *texture =
 								primitive.material->pbr_specular_glossiness.diffuse_texture.texture;
 
-							kString      name = kFormatString("%s%s", dirpath, texture->image->uri);
+							kString name = kFormatString("%s%s", dirpath, texture->image->uri);
 
 							kDefer
 							{
@@ -347,22 +480,141 @@ void                   OnLoadEvent(void *data)
 							vertices[iter].TexCoord = texcoords[iter];
 						}
 					}
+					else if (attribute.type == cgltf_attribute_type_joints)
+					{
+						kAssert(accessor->type == cgltf_type_vec4);
+
+						if (accessor->component_type == cgltf_component_type_r_8u)
+						{
+							u8 *joints = (u8 *)ptr;
+							for (umem iter = 0; iter < attribute.data->count; ++iter)
+							{
+								for (int weight_iter = 0; weight_iter < 4; ++weight_iter)
+									vertices[iter].Bones[weight_iter] = joints[iter * 4 + weight_iter];
+							}
+						}
+						else if (accessor->component_type == cgltf_component_type_r_16u)
+						{
+							int  max_bi = -1;
+
+							u16 *joints = (u16 *)ptr;
+							for (umem iter = 0; iter < attribute.data->count; ++iter)
+							{
+								for (int weight_iter = 0; weight_iter < 4; ++weight_iter)
+								{
+									vertices[iter].Bones[weight_iter] = joints[iter * 4 + weight_iter];
+									max_bi = kMax(max_bi, (int)joints[iter * 4 + weight_iter]);
+								}
+							}
+
+							kLogWarning("Max Bone Index: %d", max_bi);
+						}
+						else if (accessor->component_type == cgltf_component_type_r_32u)
+						{
+							u32 *joints = (u32 *)ptr;
+							for (umem iter = 0; iter < attribute.data->count; ++iter)
+							{
+								for (int weight_iter = 0; weight_iter < 4; ++weight_iter)
+									vertices[iter].Bones[weight_iter] = joints[iter * 4 + weight_iter];
+							}
+						}
+						else
+						{
+							kTriggerBreakpoint();
+						}
+					}
+					else if (attribute.type == cgltf_attribute_type_weights)
+					{
+						kAssert(accessor->component_type == cgltf_component_type_r_32f &&
+						        accessor->type == cgltf_type_vec4);
+
+						float *weights = (float *)ptr;
+
+						for (umem iter = 0; iter < attribute.data->count; ++iter)
+						{
+							for (int weight_iter = 0; weight_iter < 4; ++weight_iter)
+								vertices[iter].Weights[weight_iter] = weights[iter * 4 + weight_iter];
+						}
+					}
 				}
 
 				if (!color_attr)
 				{
-					for (kVertex3D &vtx : vertices)
+					for (auto &vtx : vertices)
 					{
 						vtx.Color = kVec4(1);
 					}
 				}
 			}
 
-			kMeshSpec spec          = {.Vertices = vertices, .Indices = indices, .Name = "Dragon"};
+			kMeshSpec spec          = {.Kind            = kMeshKind::Dynamic,
+			                           .DynamicVertices = vertices,
+			                           .Indices         = indices,
+			                           .Name            = "Dragon"};
 			DragonMeshes[mesh_iter] = kCreateMesh(spec);
 
 			kFree(&vertices);
 			kFree(&indices);
+		}
+
+		if (out->skins_count == 1)
+		{
+			cgltf_skin &skin = out->skins[0];
+			kAssert(skin.joints_count < K_MAX_BONES);
+
+			DragonAnimation.NodeCount = (int)skin.joints_count;
+
+			for (int iter = 0; iter < skin.joints_count; ++iter)
+			{
+				cgltf_node *node   = skin.joints[iter];
+
+				int         parent = -1;
+
+				for (int index = 0; index < skin.joints_count; ++index)
+				{
+					if (node->parent == skin.joints[index])
+					{
+						parent = index;
+						break;
+					}
+				}
+
+				DragonAnimation.Nodes[iter].Parent = parent;
+			}
+
+			kAnimationKeyFrame frame;
+
+			for (int iter = 0; iter < K_MAX_BONES; ++iter)
+			{
+				frame.Transformations[iter].Position    = kVec3(0);
+				frame.Transformations[iter].Orientation = kRotor3();
+				frame.Transformations[iter].Scale       = kVec3(1);
+			}
+
+			int bone                                = 67;
+
+			frame.Duration                          = 1.0f;
+			frame.Transformations[bone].Position    = kVec3(0);
+			frame.Transformations[bone].Orientation = kRotor3();
+			frame.Transformations[bone].Scale       = kVec3(1);
+
+			kAnimationKeyFrame frame1;
+
+			for (int iter = 0; iter < K_MAX_BONES; ++iter)
+			{
+				frame1.Transformations[iter].Position    = kVec3(0);
+				frame1.Transformations[iter].Orientation = kRotor3();
+				frame1.Transformations[iter].Scale       = kVec3(1);
+			}
+
+			frame1.Duration                          = 1.0f;
+			frame1.Transformations[bone].Position    = kVec3(0, 0, 0);
+			frame1.Transformations[bone].Orientation = kAngleAxisNormalizedToRotor3(kVec3(0, 1, 0), 0.25f);
+			frame1.Transformations[bone].Scale       = kVec3(1);
+
+			DragonAnimation.KeyFrames.Add(frame);
+			DragonAnimation.KeyFrames.Add(frame1);
+			DragonAnimation.KeyFrames.Add(frame);
 		}
 
 		cgltf_free(out);
@@ -395,6 +647,7 @@ void Main(int argc, const char **argv)
 	auto spec = kDefaultSpec;
 	// spec.RenderPipeline.Hdr = kHighDynamicRange::Disabled;
 	// spec.RenderPipeline.Bloom = kBloom::Disabled;
+	// spec.RenderPipeline.Clear = kVec4(1);
 
 	kSetLogLevel(kLogLevel::Trace);
 	kMediaUserEvents user = {.Update = OnUpdateEvent, .Load = OnLoadEvent, .Release = OnReleaseEvent};

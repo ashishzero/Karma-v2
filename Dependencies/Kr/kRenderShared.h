@@ -1,6 +1,8 @@
 #pragma once
 #include "kCommon.h"
 
+constexpr int K_MAX_BONES = 256;
+
 enum class kResourceState
 {
 	Error = -1,
@@ -80,11 +82,29 @@ typedef struct kVertex3D
 	kVec4 Color;
 } kVertex3D;
 
+typedef struct kDynamicVertex3D
+{
+	kVec3 Position;
+	kVec3 Normal;
+	kVec2 TexCoord;
+	kVec4 Color;
+	float Weights[4];
+	u32   Bones[4];
+} kDynamicVertex3D;
+
+enum class kMeshKind
+{
+	Static,
+	Dynamic
+};
+
 struct kMeshSpec
 {
-	kSpan<kVertex3D> Vertices;
-	kSpan<u32>       Indices;
-	kString          Name;
+	kMeshKind               Kind;
+	kSpan<kDynamicVertex3D> DynamicVertices;
+	kSpan<kVertex3D>        Vertices;
+	kSpan<u32>              Indices;
+	kString                 Name;
 };
 
 struct kTextureSpec

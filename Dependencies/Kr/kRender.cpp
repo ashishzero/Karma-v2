@@ -37,10 +37,17 @@ typedef struct kRenderContext2D
 	kRenderStack2D           Stack;
 } kRenderContext2D;
 
+typedef struct kRenderStack3D
+{
+	kArray<kSkeleton> Skeletons;
+} kRenderStack3D;
+
 typedef struct kRenderContext3D
 {
 	kArray<kRenderCommand3D> Commands;
 	kArray<kRenderScene>     Scenes;
+	kArray<kSkeleton>        Skeletons;
+	kRenderStack3D           Stack;
 } kRenderContext3D;
 
 typedef struct kRenderContextBuiltin
@@ -1939,10 +1946,31 @@ void kRender3D::kEndScene(void)
 	}
 }
 
+void kRender3D::kPushSkeleton(const kSkeleton &skeleton)
+{
+	// @todo: speed
+	g_Render3D.Stack.Skeletons.Add(skeleton);
+	g_Render3D.Skeletons.Add(skeleton);
+}
+
+void kRender3D::kPopSkeleton(void)
+{
+	// @todo: speed
+	kAssert(g_Render3D.Stack.Skeletons.Count > 1);
+	g_Render3D.Stack.Skeletons.Pop();
+	g_Render3D.Skeletons.Add(g_Render3D.Stack.Skeletons.Last());
+}
+
 void kRender3D::kDrawMesh(kMesh mesh, kTexture diffuse, const kMat4 &transform, kVec4 color)
 {
 	kAssert(g_Render3D.Scenes.Count);
-	kRenderCommand3D cmd = {.Flags = 0, .Transform = transform, .Mesh = mesh, .Diffuse = diffuse, .Color = color};
+	kRenderCommand3D cmd;
+	cmd.Flags     = 0;
+	cmd.Skeleton  = (u32)g_Render3D.Skeletons.Count - 1;
+	cmd.Transform = transform;
+	cmd.Mesh      = mesh;
+	cmd.Diffuse   = diffuse;
+	cmd.Color     = color;
 	g_Render3D.Commands.Add(cmd);
 }
 
@@ -2022,6 +2050,14 @@ void kCreateRenderContext(const kRenderSpec &spec, kMesh meshes[kEmbeddedMesh_Co
 	g_Render2D.Stack.BlendModes.Add(kBlendMode::Normal);
 	g_Render2D.Stack.TextureFilters.Add(kTextureFilter::LinearWrap);
 
+	kSkeleton skeleton;
+	for (int iter = 0; iter < K_MAX_BONES; ++iter)
+	{
+		skeleton.Bones[iter] = kIdentity();
+	}
+	g_Render3D.Skeletons.Add(skeleton);
+	g_Render3D.Stack.Skeletons.Add(skeleton);
+
 	kResetFrame();
 }
 
@@ -2050,12 +2086,14 @@ void kDestroyRenderContext(void)
 
 void kResetFrame(void)
 {
-	g_Render3D.Scenes.Count   = 0;
-	g_Render3D.Commands.Count = 0;
+	g_Render3D.Scenes.Count          = 0;
+	g_Render3D.Commands.Count        = 0;
+	g_Render3D.Skeletons.Count       = 1;
+	g_Render3D.Stack.Skeletons.Count = 1;
 
-	g_Render2D.Vertices.Count = 0;
-	g_Render2D.Indices.Count  = 0;
-	g_Render2D.Commands.Count = 0;
+	g_Render2D.Vertices.Count        = 0;
+	g_Render2D.Indices.Count         = 0;
+	g_Render2D.Commands.Count        = 0;
 	for (int i = 0; i < (int)kRenderPass::Count; ++i)
 		g_Render2D.Scenes[i].Count = 0;
 	g_Render2D.Rects.Count            = 0;
@@ -2128,6 +2166,7 @@ void kGetFrameData(kRenderFrame *frame)
 	kRenderFrame3D &render3d = frame->Frame3D;
 	render3d.Scenes          = g_Render3D.Scenes;
 	render3d.Commands        = g_Render3D.Commands;
+	render3d.Skeletons       = g_Render3D.Skeletons;
 
 	kUpdateMemoryStatictics();
 }

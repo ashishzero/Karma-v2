@@ -5,7 +5,8 @@
 #include "Shaders/Generated/kMix.ps.hlsl.h"
 #include "Shaders/Generated/kQuad.vs.hlsl.h"
 #include "Shaders/Generated/kQuad.ps.hlsl.h"
-#include "Shaders/Generated/kMesh.vs.hlsl.h"
+#include "Shaders/Generated/kStaticMesh.vs.hlsl.h"
+#include "Shaders/Generated/kDynamicMesh.vs.hlsl.h"
 #include "Shaders/Generated/kMesh.ps.hlsl.h"
 #include "Shaders/Generated/kToneMap.ps.hlsl.h"
 #include "Shaders/Generated/kThreshold.cs.hlsl.h"
@@ -17,12 +18,13 @@
 enum kVertexShaderKind
 {
 	kVertexShader_Quad,
-	kVertexShader_Mesh,
+	kVertexShader_StaticMesh,
+	kVertexShader_DynamicMesh,
 	kVertexShader_Blit,
 	kVertexShader_Count
 };
 
-static const kString kVertexShaderStrings[] = {"Quad", "Mesh", "Blit"};
+static const kString kVertexShaderStrings[] = {"Quad", "StaticMesh", "DynamicMesh", "Blit"};
 static_assert(kArrayCount(kVertexShaderStrings) == kVertexShader_Count, "");
 
 enum kPixelShaderKind
@@ -52,7 +54,8 @@ static const kString kComputeShaderStrings[] = {
 	"Blit", "Threshold", "BloomDownSample", "BloomDownSampleKarisAvg", "BlurUpSample", "UpSampleMix"};
 static_assert(kArrayCount(kComputeShaderStrings) == kComputeShader_Count, "");
 
-static const kString kVertexShadersMap[] = {kString(kQuadVS), kString(kMeshVS), kString(kBlitVS)};
+static const kString kVertexShadersMap[] = {kString(kQuadVS), kString(kStaticMeshVS), kString(kDynamicMeshVS),
+                                            kString(kBlitVS)};
 static_assert(kArrayCount(kVertexShadersMap) == kVertexShader_Count, "");
 
 static const kString kPixelShadersMap[] = {kString(kQuadPS), kString(kMeshPS), kString(kMixPS), kString(kToneMapPS)};

@@ -1,16 +1,25 @@
 struct kVertexInput
 {
-	float3 Position : POS;
-	float3 Normal   : NOR;
-	float2 TexCoord : TEX;
-	float4 Color    : COL;
+	float3 Position : POSITION;
+	float3 Normal : NORMAL;
+	float2 TexCoord : TEXCOORD;
+	float4 Color : COLOR;
+};
+
+struct kDynamicVertexInput
+{
+	float3 Position : POSITION;
+	float3 Normal : NORMAL;
+	float2 TexCoord : TEXCOORD;
+	float4 Color : COLOR;
+	float4 Weight : WEIGHTS;
+	uint4 Bones : BONES;
 };
 
 struct kVertexOutput
 {
 	float4 Position : SV_Position;
-	float4 Color : COL;
-	float3 Normal: NOR;
-	float3 Vertex: VTX;
-	float2 TexCoord : TEX;
+	float4 Color : COLOR;
+	float3 Normal : NORMAL;
+	float2 TexCoord : TEXCOORD;
 };

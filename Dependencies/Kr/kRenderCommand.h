@@ -45,9 +45,15 @@ typedef struct kRenderCommand2D
 	u32            IndexCount;
 } kRenderCommand2D;
 
+typedef struct kSkeleton
+{
+	kMat4 Bones[K_MAX_BONES];
+} kSkeleton;
+
 typedef struct kRenderCommand3D
 {
 	u32      Flags;
+	u32      Skeleton;
 	kMat4    Transform;
 	kMesh    Mesh;
 	kTexture Diffuse;
@@ -116,6 +122,7 @@ typedef struct kRenderFrame3D
 {
 	kSpan<kRenderScene>     Scenes;
 	kSpan<kRenderCommand3D> Commands;
+	kSpan<kSkeleton>        Skeletons;
 } kRenderFrame3D;
 
 //

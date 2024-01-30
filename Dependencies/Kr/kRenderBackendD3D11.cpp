@@ -46,6 +46,7 @@ enum kD3D11_Buffer
 	kD3D11_Buffer_TonemapParams,
 	kD3D11_Buffer_ProjectionView,
 	kD3D11_Buffer_Transform,
+	kD3D11_Buffer_Skeleton,
 	kD3D11_Buffer_Material,
 	kD3D11_Buffer_Transform2D,
 	kD3D11_Buffer_OutLineStyle2D,
@@ -82,6 +83,11 @@ struct alignas(16) kD3D11_Transform
 	kMat4 Model;
 	// @todo: Use of kVec4[3] or kVec4x3 would be more space efficient
 	kMat4 Normal;
+};
+
+struct alignas(16) kD3D11_Skeleton
+{
+	kMat4 Bones[K_MAX_BONES];
 };
 
 struct alignas(16) kD3D11_Material
@@ -143,6 +149,7 @@ struct kD3D11_MeshData
 	ID3D11Buffer  *VertexBuffer;
 	ID3D11Buffer  *IndexBuffer;
 	UINT           IndexCount;
+	kMeshKind      Kind;
 	kResourceState State;
 };
 
@@ -170,7 +177,8 @@ static ID3D11PixelShader       *g_PixelShaders[kPixelShader_Count];
 static ID3D11ComputeShader     *g_ComputeShaders[kComputeShader_Count];
 
 static ID3D11InputLayout       *g_InputLayoutVertex2D;
-static ID3D11InputLayout       *g_InputLayoutVertex3D;
+static ID3D11InputLayout       *g_InputLayoutStaticVertex3D;
+static ID3D11InputLayout       *g_InputLayoutDynamicVertex3D;
 
 static ID3D11Buffer            *g_Buffers[kD3D11_Buffer_Count];
 static UINT                     g_VertexBufferSize2D;
@@ -212,20 +220,20 @@ static constexpr D3D11_TEXTURE_ADDRESS_MODE kD3D11_TextureAddressModeMap[] = {
 static_assert(kArrayCount(kD3D11_TextureAddressModeMap) == (int)kTextureFilter::Count, "");
 
 static constexpr UINT kD3D11_BufferSizeMap[] = {
-	sizeof(kD3D11_BloomParams),  sizeof(kD3D11_TonemapParams),   sizeof(kMat4),
-	sizeof(kD3D11_Transform),    sizeof(kD3D11_Material),        sizeof(kMat4),
-	sizeof(kD3D11_OutLineStyle), K_INITIAL_VERTEX_BUFFER2D_SIZE, K_INITIAL_INDEX_BUFFER2D_SIZE};
+	sizeof(kD3D11_BloomParams),     sizeof(kD3D11_TonemapParams), sizeof(kMat4), sizeof(kD3D11_Transform),
+	sizeof(kD3D11_Skeleton),        sizeof(kD3D11_Material),      sizeof(kMat4), sizeof(kD3D11_OutLineStyle),
+	K_INITIAL_VERTEX_BUFFER2D_SIZE, K_INITIAL_INDEX_BUFFER2D_SIZE};
 static_assert(kArrayCount(kD3D11_BufferSizeMap) == kD3D11_Buffer_Count, "");
 
-static constexpr D3D11_USAGE kD3D11_BufferUsageMap[] = {D3D11_USAGE_DEFAULT, D3D11_USAGE_DEFAULT, D3D11_USAGE_DYNAMIC,
-                                                        D3D11_USAGE_DYNAMIC, D3D11_USAGE_DYNAMIC, D3D11_USAGE_DYNAMIC,
-                                                        D3D11_USAGE_DYNAMIC, D3D11_USAGE_DYNAMIC, D3D11_USAGE_DYNAMIC};
+static constexpr D3D11_USAGE kD3D11_BufferUsageMap[] = {
+	D3D11_USAGE_DEFAULT, D3D11_USAGE_DEFAULT, D3D11_USAGE_DYNAMIC, D3D11_USAGE_DYNAMIC, D3D11_USAGE_DYNAMIC,
+	D3D11_USAGE_DYNAMIC, D3D11_USAGE_DYNAMIC, D3D11_USAGE_DYNAMIC, D3D11_USAGE_DYNAMIC, D3D11_USAGE_DYNAMIC};
 static_assert(kArrayCount(kD3D11_BufferUsageMap) == kD3D11_Buffer_Count, "");
 
 static constexpr UINT kD3D11_BufferBindMap[] = {
-	D3D11_BIND_CONSTANT_BUFFER, D3D11_BIND_CONSTANT_BUFFER, D3D11_BIND_CONSTANT_BUFFER,
-	D3D11_BIND_CONSTANT_BUFFER, D3D11_BIND_CONSTANT_BUFFER, D3D11_BIND_CONSTANT_BUFFER,
-	D3D11_BIND_CONSTANT_BUFFER, D3D11_BIND_VERTEX_BUFFER,   D3D11_BIND_INDEX_BUFFER};
+	D3D11_BIND_CONSTANT_BUFFER, D3D11_BIND_CONSTANT_BUFFER, D3D11_BIND_CONSTANT_BUFFER, D3D11_BIND_CONSTANT_BUFFER,
+	D3D11_BIND_CONSTANT_BUFFER, D3D11_BIND_CONSTANT_BUFFER, D3D11_BIND_CONSTANT_BUFFER, D3D11_BIND_CONSTANT_BUFFER,
+	D3D11_BIND_VERTEX_BUFFER,   D3D11_BIND_INDEX_BUFFER};
 static_assert(kArrayCount(kD3D11_BufferBindMap) == kD3D11_Buffer_Count, "");
 
 static constexpr UINT kD3D11_BufferCPUAccessMap[] = {0,
@@ -236,12 +244,13 @@ static constexpr UINT kD3D11_BufferCPUAccessMap[] = {0,
                                                      D3D11_CPU_ACCESS_WRITE,
                                                      D3D11_CPU_ACCESS_WRITE,
                                                      D3D11_CPU_ACCESS_WRITE,
+                                                     D3D11_CPU_ACCESS_WRITE,
                                                      D3D11_CPU_ACCESS_WRITE};
 static_assert(kArrayCount(kD3D11_BufferCPUAccessMap) == kD3D11_Buffer_Count, "");
 
-static const kString kD3D11_BufferStrings[] = {"BloomParams",    "TonemapParams", "ProjectionView",
-                                               "Transform",      "Material",      "Transform2D",
-                                               "OutLineStyle2D", "Vertex2D",      "Index2D"};
+static const kString kD3D11_BufferStrings[] = {"BloomParams", "TonemapParams", "ProjectionView", "Transform",
+                                               "Skeleton",    "Material",      "Transform2D",    "OutLineStyle2D",
+                                               "Vertex2D",    "Index2D"};
 static_assert(kArrayCount(kD3D11_BufferStrings) == kD3D11_Buffer_Count, "");
 
 //
@@ -499,7 +508,8 @@ static void kD3D11_DestroyGraphicsDevice(void)
 		kRelease(&buff);
 
 	kRelease(&g_InputLayoutVertex2D);
-	kRelease(&g_InputLayoutVertex3D);
+	kRelease(&g_InputLayoutStaticVertex3D);
+	kRelease(&g_InputLayoutDynamicVertex3D);
 
 	g_VertexBufferSize2D = g_IndexBufferSize2D = 0;
 
@@ -677,9 +687,10 @@ static bool kD3D11_CreateVertexShaders(void)
 
 	{
 		D3D11_INPUT_ELEMENT_DESC attrs[] = {
-			{"POS", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-			{"TEX", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
-			{"COL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+			{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+			{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+			{"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA,
+		     0},
 		};
 
 		kString vs = kVertexShadersMap[kVertexShader_Quad];
@@ -696,22 +707,49 @@ static bool kD3D11_CreateVertexShaders(void)
 
 	{
 		D3D11_INPUT_ELEMENT_DESC attrs[] = {
-			{"POS", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-			{"NOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
-			{"TEX", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
-			{"COL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+			{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+			{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+			{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+			{"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA,
+		     0},
 		};
 
-		kString vs = kVertexShadersMap[kVertexShader_Mesh];
+		kString vs = kVertexShadersMap[kVertexShader_StaticMesh];
 
-		HRESULT hr = g_Device->CreateInputLayout(attrs, kArrayCount(attrs), vs.Items, vs.Count, &g_InputLayoutVertex3D);
+		HRESULT hr =
+			g_Device->CreateInputLayout(attrs, kArrayCount(attrs), vs.Items, vs.Count, &g_InputLayoutStaticVertex3D);
 		if (FAILED(hr))
 		{
 			kLogHresultError(hr, "D3D11", "Failed to create input layout");
 			return false;
 		}
 
-		kD3D11_Name(g_InputLayoutVertex3D, "InputLayoutVertex3D");
+		kD3D11_Name(g_InputLayoutStaticVertex3D, "InputLayoutStaticVertex3D");
+	}
+
+	{
+		D3D11_INPUT_ELEMENT_DESC attrs[] = {
+			{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+			{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+			{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+			{"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA,
+		     0},
+			{"WEIGHTS", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA,
+		     0},
+			{"BONES", 0, DXGI_FORMAT_R32G32B32A32_UINT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+		};
+
+		kString vs = kVertexShadersMap[kVertexShader_DynamicMesh];
+
+		HRESULT hr =
+			g_Device->CreateInputLayout(attrs, kArrayCount(attrs), vs.Items, vs.Count, &g_InputLayoutDynamicVertex3D);
+		if (FAILED(hr))
+		{
+			kLogHresultError(hr, "D3D11", "Failed to create input layout");
+			return false;
+		}
+
+		kD3D11_Name(g_InputLayoutDynamicVertex3D, "InputLayoutDynamicVertex3D");
 	}
 
 	return true;
@@ -942,6 +980,21 @@ static bool kD3D11_UploadTransform(const kD3D11_Transform &transform)
 		return false;
 	}
 	memcpy(mapped.pData, &transform, sizeof(transform));
+	g_DeviceContext->Unmap(xform, 0);
+	return true;
+}
+
+static bool kD3D11_UploadSkeleton(const kSkeleton &skeleton)
+{
+	ID3D11Buffer            *xform = g_Buffers[kD3D11_Buffer_Skeleton];
+	D3D11_MAPPED_SUBRESOURCE mapped;
+	HRESULT                  hr = g_DeviceContext->Map(xform, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+	if (FAILED(hr))
+	{
+		kLogHresultError(hr, "D3D11", "Failed to map constant buffer");
+		return false;
+	}
+	memcpy(mapped.pData, skeleton.Bones, sizeof(skeleton.Bones));
 	g_DeviceContext->Unmap(xform, 0);
 	return true;
 }
@@ -1236,11 +1289,11 @@ static void kD3D11_RenderFrame3D(const kRenderFrame3D &render)
 {
 	g_DeviceContext->VSSetConstantBuffers(0, 1, &g_Buffers[kD3D11_Buffer_ProjectionView]);
 	g_DeviceContext->VSSetConstantBuffers(1, 1, &g_Buffers[kD3D11_Buffer_Transform]);
+	g_DeviceContext->VSSetConstantBuffers(2, 1, &g_Buffers[kD3D11_Buffer_Skeleton]);
 	g_DeviceContext->PSSetConstantBuffers(0, 1, &g_Buffers[kD3D11_Buffer_Material]);
 
-	g_DeviceContext->VSSetShader(g_VertexShaders[kVertexShader_Mesh], nullptr, 0);
 	g_DeviceContext->PSSetShader(g_PixelShaders[kPixelShader_Mesh], nullptr, 0);
-	g_DeviceContext->IASetInputLayout(g_InputLayoutVertex3D);
+
 	g_DeviceContext->RSSetState(g_RasterizerStates[kD3D11_RasterizerState_ScissorDisabled]);
 	g_DeviceContext->OMSetDepthStencilState(g_DepthStencilStates[(int)kDepthTest::LessEquals], 0);
 	g_DeviceContext->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -1299,10 +1352,29 @@ static void kD3D11_RenderFrame3D(const kRenderFrame3D &render)
 			if (!kD3D11_UploadMaterial(material))
 				continue;
 
-			UINT             stride = sizeof(kVertex3D);
+			UINT             stride = 0;
 			UINT             offset = 0;
 
 			kD3D11_MeshData *md     = kD3D11_GetMeshData(cmd.Mesh);
+
+			if (md->Kind == kMeshKind::Dynamic)
+			{
+				if (!kD3D11_UploadSkeleton(render.Skeletons[cmd.Skeleton]))
+					continue;
+
+				stride = sizeof(kDynamicVertex3D);
+
+				g_DeviceContext->VSSetShader(g_VertexShaders[kVertexShader_DynamicMesh], nullptr, 0);
+				g_DeviceContext->IASetInputLayout(g_InputLayoutDynamicVertex3D);
+			}
+			else
+			{
+				stride = sizeof(kVertex3D);
+
+				g_DeviceContext->VSSetShader(g_VertexShaders[kVertexShader_StaticMesh], nullptr, 0);
+				g_DeviceContext->IASetInputLayout(g_InputLayoutStaticVertex3D);
+			}
+
 			g_DeviceContext->IASetVertexBuffers(0, 1, &md->VertexBuffer, &stride, &offset);
 			g_DeviceContext->IASetIndexBuffer(md->IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
 
@@ -1336,7 +1408,7 @@ static void kD3D11_ExecuteGeometryPass(const kRenderFrame &frame)
 	if (vtx_uploaded && idx_uploaded)
 	{
 		// @nocheckin
-		//kD3D11_RenderFrame2D(frame.Frame2D);
+		// kD3D11_RenderFrame2D(frame.Frame2D);
 	}
 
 	g_DeviceContext->ClearState();
@@ -1473,18 +1545,18 @@ static kMesh kD3D11_CreateMesh(const kMeshSpec &spec)
 	if (id.Index == 0)
 		return id;
 
-	kD3D11_MeshData  *r            = &g_Meshes.Data[id.Index];
+	kD3D11_MeshData  *r   = &g_Meshes.Data[id.Index];
 
-	D3D11_BUFFER_DESC vtx          = {};
-	vtx.ByteWidth                  = (UINT)(sizeof(kVertex3D) * spec.Vertices.Count);
-	vtx.Usage                      = D3D11_USAGE_IMMUTABLE;
-	vtx.BindFlags                  = D3D11_BIND_VERTEX_BUFFER;
+	D3D11_BUFFER_DESC vtx = {};
+	vtx.ByteWidth = spec.Kind == kMeshKind::Static ? (UINT)spec.Vertices.Size() : (UINT)spec.DynamicVertices.Size();
+	vtx.Usage     = D3D11_USAGE_IMMUTABLE;
+	vtx.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 
 	D3D11_SUBRESOURCE_DATA vtx_src = {};
-	vtx_src.pSysMem                = spec.Vertices.Items;
+	vtx_src.pSysMem = spec.Kind == kMeshKind::Static ? (void *)spec.Vertices.Items : (void *)spec.DynamicVertices.Items;
 
 	D3D11_BUFFER_DESC idx          = {};
-	idx.ByteWidth                  = (UINT)(sizeof(u32) * spec.Indices.Count);
+	idx.ByteWidth                  = (UINT)spec.Indices.Size();
 	idx.Usage                      = D3D11_USAGE_IMMUTABLE;
 	idx.BindFlags                  = D3D11_BIND_INDEX_BUFFER;
 
@@ -1513,6 +1585,7 @@ static kMesh kD3D11_CreateMesh(const kMeshSpec &spec)
 	kD3D11_Name(r->IndexBuffer, spec.Name);
 
 	r->IndexCount = (u32)spec.Indices.Count;
+	r->Kind       = spec.Kind;
 
 	r->State      = kResourceState::Ready;
 	return id;
